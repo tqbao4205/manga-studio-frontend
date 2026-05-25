@@ -14,16 +14,16 @@
  *   4. App() là component gốc chứa toàn bộ Router và Pages
  */
 
-import React from 'react'
-import ReactDOM from 'react-dom/client'
-import App from './App'
-import { ErrorBoundary } from './components/shared/ErrorBoundary'
-import './styles/globals.css'
+import React from "react";
+import ReactDOM from "react-dom/client";
+import App from "./app/router";
+import { AppProviders } from "./app/providers";
+import "./styles/globals.css";
 
-ReactDOM.createRoot(document.getElementById('root')).render(
+ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
-    <ErrorBoundary>
+    <AppProviders>
       <App />
-    </ErrorBoundary>
-  </React.StrictMode>
-)
+    </AppProviders>
+  </React.StrictMode>,
+);
