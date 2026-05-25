@@ -144,7 +144,6 @@ function checkDangerZones(rankings) {
       tracker.warningLevel = 0
     }
 
-    // Luôn thông báo cho mangaka khi thứ hạng thay đổi (tăng/giảm)
     if (r.trend === 'UP' || r.trend === 'DOWN') {
       const trendWord = r.trend === 'UP' ? 'risen' : 'fallen'
       mangakaIds.forEach(uid => {

@@ -141,7 +141,7 @@ export function WorkspaceCanvas() {
   const [highlightCurrent, setHighlightCurrent] = useState(null); // Điểm kết thúc highlight
 
   // --- Tính toán dữ liệu hiển thị ---
-  const commentsOnPage = allComments.filter((c) => c.pageId === currentPageId);
+  const commentsOnPage = allComments.filter((c) => c.pageId === currentPageId && c.status !== 'RESOLVED');
 
   const page = pages.find((p) => p.id === currentPageId);
   const pageImage = usePageImage(
@@ -834,6 +834,32 @@ export function WorkspaceCanvas() {
               );
             }
             return null;
+          })}
+
+          {/* Comment markers */}
+          {commentsOnPage.map((c) => {
+            const isSelected = selectedCommentId === c.id;
+            const r = isSelected ? 14 / scale : 10 / scale;
+            return (
+              <Group
+                key={`comment-${c.id}`}
+                x={c.positionX}
+                y={c.positionY}
+                onClick={(e) => {
+                  e.cancelBubble = true;
+                  selectComment(selectedCommentId === c.id ? null : c.id);
+                }}
+              >
+                <Circle
+                  radius={r}
+                  fill={c.status === 'RESOLVED' ? '#16a34a' : '#f59e0b'}
+                  stroke="#fff"
+                  strokeWidth={1.5 / scale}
+                  offsetX={r}
+                  offsetY={r}
+                />
+              </Group>
+            );
           })}
         </Layer>
       </Stage>

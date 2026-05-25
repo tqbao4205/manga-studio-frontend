@@ -48,6 +48,7 @@ export function TaskPanel() {
   const addPendingSubmission = useWorkspaceStore((s) => s.addPendingSubmission)
   const approveSubmission = useWorkspaceStore((s) => s.approveSubmission)
   const addTask = useTaskStore((s) => s.addTask)
+  const updateTaskStatus = useTaskStore((s) => s.updateTaskStatus)
   const user = useAuthStore((s) => s.user)
   const { data: allTasks } = useTasks()
   const addToast = useUIStore((s) => s.addToast)
@@ -79,7 +80,7 @@ export function TaskPanel() {
   const assignedRegionIds = new Set(pageTasks.map(t => t.regionId))
   const unassignedRegions = regions.filter(r => !assignedRegionIds.has(r.id))
 
-  const canSubmit = (status) => status === 'PENDING' || status === 'IN_PROGRESS'
+  const canSubmit = (status) => status === 'TODO' || status === 'IN_PROGRESS'
   const assistants = mockUsers.filter(u => u.role === 'ASSISTANT')
 
   /**
@@ -114,26 +115,17 @@ export function TaskPanel() {
       description: taskDescription.trim() || '',
       notes: taskNotes.trim() || '',
       priority: taskPriority,
-      deadline: taskDeadline || defaultDeadline,
-      assistant: { id: assistant.id, displayName: assistant.displayName, avatarUrl: '' },
-      assignedBy: { id: user?.id || 1, displayName: user?.displayName || 'Unknown' },
-      status: 'PENDING',
-      attachments: [],
+      dueDate: taskDeadline || defaultDeadline,
+      assistantId: assistant.id,
+      assignedBy: user?.id || 1,
+      status: 'TODO',
+      referenceImageUrl: '',
       pageImageUrl: currentPage?.webImageUrl || currentPage?.originalImageUrl || '',
+      assignedAt: new Date().toISOString(),
       createdAt: new Date().toISOString(),
     }
 
     addTask(newTask)
-
-    // Cập nhật region với task info
-    updateRegion(region.id, {
-      task: {
-        id: newTask.id,
-        assistantName: assistant.displayName,
-        status: 'PENDING',
-        deadline: taskDeadline || defaultDeadline,
-      },
-    })
 
     addToast({
       title: 'Task assigned',
@@ -155,16 +147,9 @@ export function TaskPanel() {
       imageDataUrl,
       label: submitTarget.label,
       pageId: currentPageId,
-      createdBy: { id: user.id, displayName: user.displayName },
+      createdBy: user.id,
     })
-    updateRegion(submitTarget.regionId, {
-      task: {
-        id: submitTarget.taskId,
-        assistantName: '',
-        status: 'SUBMITTED',
-        deadline: '',
-      },
-    })
+    updateTaskStatus(submitTarget.taskId, 'DONE')
     addToast({ title: 'Submitted', description: `${submitTarget.label} submitted for review`, variant: 'success' })
     setSubmitTarget(null)
   }
@@ -174,21 +159,17 @@ export function TaskPanel() {
    * ảnh submission sẽ được thêm vào layer
    */
   const handleApprove = (regionId, taskId, label) => {
-    updateRegion(regionId, {
-      task: { id: taskId, assistantName: '', status: 'APPROVED', deadline: '' },
-    })
+    updateTaskStatus(taskId, 'DONE')
     approveSubmission(taskId)
     addToast({ title: 'Approved', description: `${label} approved — layer added`, variant: 'success' })
   }
 
   /**
-   * Xử lý yêu cầu revision: cập nhật trạng thái region thành REVISION_REQUIRED
+   * Xử lý yêu cầu revision: cập nhật trạng thái task_submission thành REVISION_REQUIRED
    */
   const handleRequestRevision = () => {
     if (!revisionTarget) return
-    updateRegion(revisionTarget.regionId, {
-      task: { id: Date.now(), assistantName: '', status: 'REVISION_REQUIRED', deadline: '' },
-    })
+    updateTaskStatus(revisionTarget.taskId, 'IN_PROGRESS')
     addToast({ title: 'Revision requested', description: `${revisionTarget.label} needs revision: ${revisionNote}`, variant: 'info' })
     setRevisionTarget(null)
     setRevisionNote('')
@@ -251,8 +232,7 @@ export function TaskPanel() {
         <div className="space-y-1 px-2">
           {pageTasks.map((t) => {
             const region = regions.find(r => r.id === t.regionId)
-            const regionTask = region?.task
-            const taskStatus = regionTask?.status || t.status
+            const taskStatus = t.status
 
             return (
               <div key={t.id} className="px-3 py-2 bg-workspace-bg/40 border border-workspace-border/20 rounded">
@@ -267,7 +247,7 @@ export function TaskPanel() {
                     </div>
                     {/* Tên assistant + priority */}
                     <div className="flex items-center gap-1.5 text-[10px] text-workspace-text-secondary">
-                      <span className="truncate">{t.assistant.displayName}</span>
+                      <span className="truncate">{mockUsers.find(u => u.id === t.assistantId)?.displayName || 'Unknown'}</span>
                       {t.priority && (
                         <span className="flex items-center gap-0.5 flex-shrink-0" style={{ color: getPriorityColor(t.priority) }}>
                           <Flag size={8} /> {t.priority}
@@ -286,12 +266,12 @@ export function TaskPanel() {
                 )}
 
                 {/* Hạn chót */}
-                {t.deadline && (
-                  <p className="text-[10px] text-workspace-text-secondary/60 mt-1">Due {t.deadline}</p>
+                {t.dueDate && (
+                  <p className="text-[10px] text-workspace-text-secondary/60 mt-1">Due {t.dueDate}</p>
                 )}
 
                 {/* Nút Download Page (chỉ ASSISTANT được gán) */}
-                {t.pageImageUrl && user?.role === 'ASSISTANT' && t.assistant.id === user.id && (
+                {t.pageImageUrl && user?.role === 'ASSISTANT' && t.assistantId === user.id && (
                   <button
                     onClick={(e) => {
                       e.stopPropagation()
@@ -317,10 +297,10 @@ export function TaskPanel() {
                 )}
 
                 {/* Nút Compare + Approve + Revise (chỉ MANAGA, khi SUBMITTED) */}
-                {user?.role === 'MANGAKA' && taskStatus === 'SUBMITTED' && (
+                {user?.role === 'MANGAKA' && taskStatus === 'DONE' && (
                   <div className="mt-1.5 flex items-center gap-2">
                     <button
-                      onClick={() => setCompareTarget({ region: region?.label || `Region #${t.regionId}`, originalLabel: 'Original Page', submissionLabel: `${t.assistant.displayName}'s Submission` })}
+                      onClick={() => setCompareTarget({ region: region?.label || `Region #${t.regionId}`, originalLabel: 'Original Page', submissionLabel: `${mockUsers.find(u => u.id === t.assistantId)?.displayName || 'Unknown'}'s Submission` })}
                       className="flex items-center gap-0.5 text-[10px] font-medium text-workspace-accent hover:text-workspace-accent/80 transition-colors"
                     >
                       <Eye size={10} /> Compare

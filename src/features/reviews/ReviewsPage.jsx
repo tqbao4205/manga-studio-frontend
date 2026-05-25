@@ -15,6 +15,7 @@ import { useNavigate } from 'react-router-dom'
 import { MessageSquare, Calendar } from 'lucide-react'
 import { useAuthStore } from '../../app/stores/authStore'
 import { useSeriesStore } from '../../app/stores/seriesStore'
+import { mockUsers } from '../../shared/constants/mock-data'
 import { Card, CardContent, CardHeader, CardTitle } from '../../shared/components/ui/card'
 import { Button } from '../../shared/components/ui/button'
 import { StatusBadge } from '../../shared/components/shared/StatusBadge'
@@ -34,7 +35,7 @@ export function ReviewsPage() {
     Nếu là EDITORIAL_BOARD, xem tất cả.
   */
   const assignedSeries = seriesList.filter(s =>
-    isTantou ? s.tantouEditor?.displayName === user?.displayName : true
+    isTantou ? s.tantouEditorId === user?.id : true
   )
 
   const allChapters = Object.values(chapters).flat()
@@ -86,7 +87,7 @@ export function ReviewsPage() {
                 </div>
                 <div className="min-w-0">
                   <p className="text-sm font-medium text-on-surface truncate">{s.title}</p>
-                  <p className="text-xs text-on-surface-variant/60">{s.mangaka.displayName} · {chs.length} pending</p>
+                  <p className="text-xs text-on-surface-variant/60">{mockUsers.find(u => u.id === s.mangakaId)?.displayName || 'Unknown'} · {chs.length} pending</p>
                 </div>
               </CardTitle>
             </CardHeader>

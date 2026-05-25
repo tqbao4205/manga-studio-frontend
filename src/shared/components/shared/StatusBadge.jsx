@@ -9,11 +9,11 @@ import { cn, getStatusColor } from "../../utils";
  *   - size     : Kích thước badge ('sm' | 'md'), mặc định 'md'
  *
  * Danh sách trạng thái hỗ trợ (labels):
- *   - DRAFT, PENDING_APPROVAL, PENDING_BOARD_APPROVAL, APPROVED
- *   - ONGOING, HIATUS, AT_RISK, CANCELLED, COMPLETED
- *   - PLANNED, IN_PROGRESS, IN_REVIEW, PUBLISHED, REJECTED
- *   - PENDING, SUBMITTED, REVISION_REQUIRED, SCHEDULED
- *   - IN_PRESS, REISSUED, UPLOADED, REGIONS_DEFINED, IN_PRODUCTION
+ *   - DRAFT, PENDING_BOARD_APPROVAL, APPROVED
+ *   - CANCELLED, COMPLETED
+ *   - PLANNED, IN_PROGRESS, IN_REVIEW, REVISION_REQUIRED, PUBLISHED, REJECTED
+ *   - PENDING, SUBMITTED, SCHEDULED
+ *   - IN_PRESS, UPLOADED, REGIONS_DEFINED, IN_PRODUCTION
  *
  * Cách hoạt động:
  *   - Tra bảng labels để lấy tên hiển thị, fallback về chính status nếu không tìm thấy
@@ -23,28 +23,25 @@ import { cn, getStatusColor } from "../../utils";
 
 const labels = {
   DRAFT: "Draft",
-  PENDING_APPROVAL: "Pending",
   PENDING_BOARD_APPROVAL: "Pending Board",
   APPROVED: "Approved",
-  ONGOING: "Ongoing",
-  HIATUS: "Hiatus",
-  AT_RISK: "At Risk",
+  PUBLISHED: "Published",
   CANCELLED: "Cancelled",
   COMPLETED: "Completed",
   PLANNED: "Planned",
   IN_PROGRESS: "In Progress",
   IN_REVIEW: "In Review",
-  PUBLISHED: "Published",
   REJECTED: "Rejected",
   PENDING: "Pending",
   SUBMITTED: "Submitted",
   REVISION_REQUIRED: "Revision",
   SCHEDULED: "Scheduled",
   IN_PRESS: "In Press",
-  REISSUED: "Reissued",
   UPLOADED: "Uploaded",
   REGIONS_DEFINED: "Regions Set",
   IN_PRODUCTION: "In Production",
+  TODO: "Todo",
+  DONE: "Done",
 };
 
 export function StatusBadge({ status, className, size = "md" }) {

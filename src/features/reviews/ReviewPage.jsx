@@ -13,6 +13,7 @@ import { useNavigate } from "react-router-dom";
 import { Check, RotateCcw, MessageSquare } from "lucide-react";
 import { useTasks } from "../../shared/hooks/useMockData";
 import { useUIStore } from "../../app/stores/uiStore";
+import { mockUsers } from "../../shared/constants/mock-data";
 import { Card, CardContent } from "../../shared/components/ui/card";
 import { Button } from "../../shared/components/ui/button";
 import { StatusBadge } from "../../shared/components/shared/StatusBadge";
@@ -22,10 +23,10 @@ import { FilterBar } from "../../shared/components/shared/FilterBar";
 import { Dialog } from "../../shared/components/ui/dialog";
 
 const filterStatuses = [
-  "SUBMITTED",
+  "DONE",
   "IN_PROGRESS",
-  "REVISION_REQUIRED",
-  "APPROVED",
+  "TODO",
+  "REJECTED",
 ];
 
 export function ReviewPage() {
@@ -86,7 +87,7 @@ export function ReviewPage() {
     addToast({
       type: "success",
       title: "Approved",
-      message: `Region #${reviewTarget.task.regionId} by ${reviewTarget.task.assistant.displayName} approved.`,
+      message: `Region #${reviewTarget.task.regionId} by ${mockUsers.find(u => u.id === reviewTarget.task.assistantId)?.displayName || 'Unknown'} approved.`,
     });
     setReviewTarget(null);
   };
@@ -155,21 +156,21 @@ export function ReviewPage() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="w-9 h-9 bg-accent-purple/10 border border-accent-purple/30 flex items-center justify-center text-xs font-bold text-accent-purple">
-                      {task.assistant.displayName[0]}
+                      {(mockUsers.find(u => u.id === task.assistantId)?.displayName || '?')[0]}
                     </div>
                     <div>
                       <p className="text-sm font-medium text-on-surface">
-                        {task.assistant.displayName}'s submission
+                        {(mockUsers.find(u => u.id === task.assistantId)?.displayName || 'Unknown')}'s submission
                       </p>
                       <p className="text-xs text-on-surface-variant/60 mt-0.5">
                         Region #{task.regionId} · Due{" "}
-                        {task.deadline || "No deadline"}
+                        {task.dueDate || "No deadline"}
                       </p>
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
                     <StatusBadge status={task.status} />
-                    {task.status === "SUBMITTED" && (
+                    {task.status === "DONE" && (
                       <div
                         className="flex items-center gap-1"
                         onClick={(e) => e.stopPropagation()}
@@ -208,7 +209,7 @@ export function ReviewPage() {
           open={true}
           onClose={() => setReviewTarget(null)}
           title="Approve Task"
-          description={`Approve Region #${reviewTarget.task.regionId} by ${reviewTarget.task.assistant.displayName}?`}
+          description={`Approve Region #${reviewTarget.task.regionId} by ${mockUsers.find(u => u.id === reviewTarget.task.assistantId)?.displayName || 'Unknown'}?`}
           size="sm"
         >
           <div className="flex justify-end gap-2 pt-2">
@@ -235,7 +236,7 @@ export function ReviewPage() {
             setRevisionNote("");
           }}
           title="Request Revision"
-          description={`Notes for ${reviewTarget.task.assistant.displayName}`}
+          description={`Notes for ${mockUsers.find(u => u.id === reviewTarget.task.assistantId)?.displayName || 'Unknown'}`}
           size="sm"
         >
           <div className="space-y-3">

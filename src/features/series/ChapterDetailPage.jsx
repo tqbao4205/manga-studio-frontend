@@ -177,12 +177,12 @@ export function ChapterDetailPage() {
               <p className="text-[10px] text-on-surface-variant/60 uppercase tracking-wider">
                 {chapter.deadline
                   ? "Deadline"
-                  : chapter.publishedAt
+                  : chapter.publishDate
                     ? "Published"
                     : "Created"}
               </p>
               <p className="text-sm font-medium text-on-surface">
-                {chapter.deadline || chapter.publishedAt || chapter.createdAt}
+                {chapter.deadline || chapter.publishDate || chapter.createdAt}
               </p>
             </div>
           </CardContent>

@@ -14,13 +14,8 @@ import { mockUsers } from '../../shared/constants/mock-data'
 export const useAuthStore = create((set) => ({
   // ── State ──────────────────────────────────────────────
 
-  /** Người dùng hiện tại (null nếu chưa đăng nhập) */
   user: mockUsers[0],
-
-  /** Token JWT dùng để xác thực request lên backend */
   accessToken: 'mock-token',
-
-  /** Cờ đánh dấu trạng thái đã xác thực hay chưa */
   isAuthenticated: true,
 
   /** Cờ loading dùng để hiển thị spinner khi đang xử lý login */

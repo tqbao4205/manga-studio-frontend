@@ -24,12 +24,12 @@ import { FilterBar } from '../../shared/components/shared/FilterBar'
 import { getRankColor, cn } from '../../shared/utils'
 import { useAuthStore } from '../../app/stores/authStore'
 import { useTasks } from '../../shared/hooks/useMockData'
-import { mockPages, mockRegions, mockChapters } from '../../shared/constants/mock-data'
+import { mockUsers, mockPages, mockRegions, mockChapters } from '../../shared/constants/mock-data'
 import { Pagination } from '../../shared/components/shared/Pagination'
 
 /* Các lựa chọn filter cố định */
 const genres = ['ACTION', 'FANTASY', 'ROMANCE', 'COMEDY', 'DRAMA']
-const statuses = ['ONGOING', 'HIATUS', 'DRAFT', 'PENDING_TANTOU_REVIEW', 'PENDING_APPROVAL', 'AT_RISK', 'CANCELLED', 'REJECTED', 'COMPLETED']
+const statuses = ['DRAFT', 'IN_REVIEW', 'APPROVED', 'REJECTED', 'PUBLISHED', 'CANCELLED', 'COMPLETED']
 
 export function SeriesListPage() {
   const navigate = useNavigate()
@@ -51,7 +51,7 @@ export function SeriesListPage() {
     if (user?.role !== 'ASSISTANT') return seriesList
     const taskSeriesIds = new Set()
     ;(allTasks || []).forEach(t => {
-      if (t.assistant.id !== user.id) return
+      if (t.assistantId !== user.id) return
       const regPage = Object.entries(mockRegions).find(([, regions]) => regions.some(r => r.id === t.regionId))
       if (!regPage) return
       const pageId = Number(regPage[0])
@@ -203,29 +203,24 @@ export function SeriesListPage() {
                 </div>
 
                 <div className="p-4 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <StatusBadge status={series.status} size="sm" />
-                    <div className="flex items-center gap-2 text-xs text-on-surface-variant">
-                      <span>{series.chapterCount} chapters</span>
-                      {series.currentTier && (
-                        <span className="font-bold" style={{ color: getRankColor(series.currentTier) }}>
-                          Tier {series.currentTier}
-                        </span>
-                      )}
+                    <div className="flex items-center justify-between">
+                      <StatusBadge status={series.status} size="sm" />
+                      <div className="flex items-center gap-2 text-xs text-on-surface-variant">
+                        <span>{series.chapterCount} chapters</span>
+                      </div>
                     </div>
-                  </div>
 
                   <p className="text-sm text-on-surface-variant line-clamp-2 leading-relaxed">{series.synopsis}</p>
 
                   <div className="flex items-center justify-between pt-1">
-                    <div className="flex items-center gap-2">
-                      <div className="w-6 h-6 bg-accent-purple/10 border border-accent-purple/30 flex items-center justify-center text-[10px] font-medium text-accent-purple">
-                        {series.mangaka.displayName[0]}
+                      <div className="flex items-center gap-2">
+                        <div className="w-6 h-6 bg-accent-purple/10 border border-accent-purple/30 flex items-center justify-center text-[10px] font-medium text-accent-purple">
+                          {(mockUsers.find(u => u.id === series.mangakaId)?.displayName?.[0] || '?')}
+                        </div>
+                        <span className="text-xs text-on-surface-variant">{mockUsers.find(u => u.id === series.mangakaId)?.displayName || 'Unknown'}</span>
                       </div>
-                      <span className="text-xs text-on-surface-variant">{series.mangaka.displayName}</span>
+                      <span className="text-[10px] px-2 py-1 border border-border-light text-on-surface-variant">{series.genre}</span>
                     </div>
-                    <span className="text-[10px] px-2 py-1 border border-border-light text-on-surface-variant">{series.genre}</span>
-                  </div>
                 </div>
               </CardContent>
             </Card>

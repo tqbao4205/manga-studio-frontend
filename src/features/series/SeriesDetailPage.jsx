@@ -1,16 +1,3 @@
-/*
-  ==========================================================
-  PAGE: SeriesDetailPage
-  ROUTE: /series/:seriesId
-  MỤC ĐÍCH: Xem chi tiết một series, danh sách chapters,
-  overview, và rankings.
-  QUYỀN TRUY CẬP:
-    - MANGAKA (chủ series): Edit, New Chapter, Submit chapter
-    - TANTOU_EDITOR: Submit to Board / Revise / Reject chapter
-    - EDITORIAL_BOARD: Approve / Reject chapter, quản lý status series
-  ==========================================================
-*/
-
 import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
@@ -21,6 +8,7 @@ import { useSeriesDetail, useChaptersBySeries, useCurrentRankings } from '../../
 import { useSeriesStore } from '../../app/stores/seriesStore'
 import { useAuthStore } from '../../app/stores/authStore'
 import { useUIStore } from '../../app/stores/uiStore'
+import { mockUsers } from '../../shared/constants/mock-data'
 import { Card, CardContent, CardHeader, CardTitle } from '../../shared/components/ui/card'
 import { Button } from '../../shared/components/ui/button'
 import { Tabs } from '../../shared/components/ui/tabs'
@@ -31,13 +19,6 @@ import { DataTable } from '../../shared/components/shared/DataTable'
 import { Dialog } from '../../shared/components/ui/dialog'
 import { getRankColor, cn } from '../../shared/utils'
 
-/*
-  ========== Cấu hình cột cho bảng chapters ==========
-  Mỗi role sẽ thấy actions khác nhau dựa vào trạng thái chapter.
-  - isMangaka: Submit (PLANNED/IN_PROGRESS), Resubmit (REVISION_REQUIRED)
-  - isTantou: Submit to Board / Revise / Reject (IN_REVIEW/SUBMITTED)
-  - isEb: Approve / Reject (PENDING_BOARD_APPROVAL)
-*/
 const chapterColumns = (isEditor, isTantou, isEb, isMangaka, handleStatusUpdate) => [
   { id: 'number', header: 'Ch.', accessorKey: 'chapterNumber', sortable: true, width: '60px' },
   { id: 'title', header: 'Title', cell: (row) => row.title || `Chapter ${row.chapterNumber}`, sortable: true },
@@ -76,7 +57,7 @@ const chapterColumns = (isEditor, isTantou, isEb, isMangaka, handleStatusUpdate)
       }
       if (isMangaka && row.status === 'REVISION_REQUIRED') {
         return (
-          <Button variant="primary" size="sm" onClick={() => handleStatusUpdate(row.id, 'IN_REVIEW')}>
+          <Button variant="primary" size="sm" onClick={() => handleStatusUpdate(row.id, 'SUBMITTED')}>
             <Send size={14} /> Resubmit
           </Button>
         )
@@ -108,6 +89,13 @@ const chapterColumns = (isEditor, isTantou, isEb, isMangaka, handleStatusUpdate)
           </div>
         )
       }
+      if (isTantou && row.status === 'APPROVED') {
+        return (
+          <Button variant="primary" size="sm" onClick={() => handleStatusUpdate(row.id, 'PUBLISHED')}>
+            <Send size={14} /> Publish
+          </Button>
+        )
+      }
       return null
     },
   },
@@ -128,17 +116,12 @@ export function SeriesDetailPage() {
   const { data: rankingsData, isLoading: rankingsLoading } = useCurrentRankings()
   const [tab, setTab] = useState('chapters')
 
-  /*
-    series: ưu tiên dữ liệu từ API mock, fallback về seriesStore
-    ranking: thông tin xếp hạng hiện tại
-    role checks: xác định quyền của user hiện tại
-  */
   const series = seriesFromMock || seriesList.find((s) => s.id === id)
   const ranking = rankingsData?.content?.find(r => r.seriesId === id)
   const isMangaka = user?.role === 'MANGAKA'
   const isTantou = user?.role === 'TANTOU_EDITOR'
   const isEb = user?.role === 'EDITORIAL_BOARD'
-  const isOwner = isMangaka && series?.mangaka?.displayName === user?.displayName
+  const isOwner = isMangaka && series?.mangakaId === user?.id
   const isEditor = isTantou || isEb
   const seriesChapters = chapters[id] || chaptersData?.content || []
 
@@ -148,46 +131,38 @@ export function SeriesDetailPage() {
     return <EmptyState title="Series not found" description="The series you're looking for doesn't exist." />
   }
 
-  /** Cập nhật trạng thái chapter và hiển thị toast thông báo */
   const handleChapterStatusUpdate = (chapterId, newStatus) => {
     updateChapterStatus(chapterId, newStatus)
-    const labels = { PENDING_BOARD_APPROVAL: 'submitted to Editorial Board', APPROVED: 'approved', REVISION_REQUIRED: 'requested revision', REJECTED: 'rejected' }
+    const labels = {
+      PENDING_BOARD_APPROVAL: 'submitted to Editorial Board',
+      APPROVED: 'approved',
+      REVISION_REQUIRED: 'requested revision',
+      REJECTED: 'rejected',
+      PUBLISHED: 'published',
+    }
     addToast({ type: 'success', title: 'Chapter updated', message: `Chapter has been ${labels[newStatus] || newStatus}.` })
   }
 
-  /** Hiển thị actions quản lý status series (chỉ EDITORIAL_BOARD) */
+  const mangaka = mockUsers.find(u => u.id === series.mangakaId)
+  const tantou = mockUsers.find(u => u.id === series.tantouEditorId)
+
   const statusActions = () => {
     if (!isEb) return null
     const actions = []
-    if (series.status === 'ONGOING') {
+    if (series.status === 'PUBLISHED') {
       actions.push(
-        { label: 'Mark At Risk', status: 'AT_RISK', variant: 'warning' },
-        { label: 'Put on Hiatus', status: 'HIATUS', variant: 'warning' },
         { label: 'Complete Series', status: 'COMPLETED', variant: 'primary' },
+        { label: 'Cancel Series', status: 'CANCELLED', variant: 'danger' },
       )
     }
-    if (series.status === 'AT_RISK') {
-      actions.push(
-        { label: 'Restore to Ongoing', status: 'ONGOING', variant: 'primary' },
-        { label: 'Initiate Cancellation', status: 'CANCELLED', variant: 'danger' },
-      )
-    }
-    if (series.status === 'HIATUS') {
-      actions.push(
-        { label: 'Resume', status: 'ONGOING', variant: 'primary' },
-      )
+    if (series.status === 'CANCELLED' || series.status === 'COMPLETED') {
+      return null
     }
     return actions.length > 0 ? (
       <div className="flex items-center gap-2">
-        {series.status === 'AT_RISK' && (
-          <span className="flex items-center gap-1 text-xs text-status-warning border border-status-warning/30 px-2 py-1 bg-status-warning/5">
-            <AlertTriangle size={12} /> At Risk
-          </span>
-        )}
         {actions.map((a) => (
           <Button key={a.status} variant="outline" size="sm" onClick={() => { updateSeries(id, { status: a.status }); addToast({ type: 'success', title: 'Series status updated', message: `"${series.title}" is now ${a.label.toLowerCase()}.` }) }}>
             {a.status === 'CANCELLED' ? <X size={14} /> : null}
-            {a.status === 'AT_RISK' ? <AlertTriangle size={14} /> : null}
             {a.label}
           </Button>
         ))}
@@ -197,7 +172,6 @@ export function SeriesDetailPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header: nút back + thông tin series + actions */}
       <div className="space-y-4">
         <button onClick={() => navigate('/series')} className="inline-flex items-center gap-1.5 text-sm text-on-surface-variant/60 hover:text-on-surface transition-colors">
           <ArrowLeft size={16} /> Back to Series
@@ -216,6 +190,12 @@ export function SeriesDetailPage() {
                 <span className="text-xs text-on-surface-variant/60">{series.genre}</span>
                 <span className="text-xs text-on-surface-variant/30">•</span>
                 <span className="text-xs text-on-surface-variant/60">{series.targetDemographic}</span>
+                {series.publishFrequency && (
+                  <>
+                    <span className="text-xs text-on-surface-variant/30">•</span>
+                    <span className="text-xs text-on-surface-variant/60">{series.publishFrequency}</span>
+                  </>
+                )}
                 {ranking && (
                   <>
                     <span className="text-xs text-on-surface-variant/30">•</span>
@@ -234,7 +214,12 @@ export function SeriesDetailPage() {
                 <Pencil size={14} /> Edit
               </Button>
             )}
-            {isMangaka && (
+            {isOwner && (
+              <Button variant="outline" onClick={() => navigate(`/series/${id}/edit`)}>
+                <Pencil size={14} /> Edit
+              </Button>
+            )}
+            {isMangaka && series.status !== 'CANCELLED' && series.status !== 'COMPLETED' && (
               <Button onClick={() => navigate(`/series/${id}/chapters/new`)}>
                 <Plus size={16} /> New Chapter
               </Button>
@@ -245,7 +230,15 @@ export function SeriesDetailPage() {
         {series.status === 'DRAFT' && isOwner && (
           <div className="border border-status-warning/30 bg-status-warning/5 p-4">
             <p className="text-sm text-on-surface-variant font-medium">
-              Your series is in draft mode. Work on chapters in the workspace, then submit for Tantou review.
+              Your series is in draft mode. Work on chapters in the workspace, then submit for review.
+            </p>
+          </div>
+        )}
+
+        {series.status === 'IN_REVIEW' && isOwner && (
+          <div className="border border-status-warning/30 bg-status-warning/5 p-4">
+            <p className="text-sm text-on-surface-variant font-medium">
+              Your series is under review. Wait for the editorial feedback.
             </p>
           </div>
         )}
@@ -253,7 +246,6 @@ export function SeriesDetailPage() {
         {statusActions()}
       </div>
 
-      {/* Tabs: Chapters / Overview / Rankings */}
       <Tabs
         value={tab}
         onValueChange={setTab}
@@ -291,12 +283,12 @@ export function SeriesDetailPage() {
             <CardContent className="space-y-4">
               <div>
                 <p className="section-label">Mangaka</p>
-                <p className="text-sm text-on-surface mt-0.5">{series.mangaka.displayName}</p>
+                <p className="text-sm text-on-surface mt-0.5">{mangaka?.displayName || 'Unknown'}</p>
               </div>
-              {series.tantouEditor && (
+              {tantou && (
                 <div>
                   <p className="section-label">Tantou Editor</p>
-                  <p className="text-sm text-on-surface mt-0.5">{series.tantouEditor.displayName}</p>
+                  <p className="text-sm text-on-surface mt-0.5">{tantou.displayName}</p>
                 </div>
               )}
               <div>
@@ -307,6 +299,12 @@ export function SeriesDetailPage() {
                 <p className="section-label">Target Demographic</p>
                 <p className="text-sm text-on-surface mt-0.5">{series.targetDemographic}</p>
               </div>
+              {series.publishFrequency && (
+                <div>
+                  <p className="section-label">Publish Frequency</p>
+                  <p className="text-sm text-on-surface mt-0.5">{series.publishFrequency}</p>
+                </div>
+              )}
               <div>
                 <p className="section-label">Total Chapters</p>
                 <p className="text-sm text-on-surface mt-0.5 tabular-nums">{series.chapterCount}</p>

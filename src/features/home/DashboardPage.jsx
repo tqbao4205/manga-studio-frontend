@@ -1,14 +1,3 @@
-/*
-  ==========================================================
-  PAGE: DashboardPage
-  ROUTE: /dashboard
-  MỤC ĐÍCH: Trang tổng quan chính của ứng dụng. Dựa vào role
-  của user (MANGAKA, ASSISTANT, TANTOU_EDITOR, EDITORIAL_BOARD)
-  để render các dashboard khác nhau.
-  QUYỀN TRUY CẬP: Tất cả user đã đăng nhập.
-  ==========================================================
-*/
-
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import {
@@ -44,6 +33,7 @@ import {
 import { useSeriesStore } from "../../app/stores/seriesStore";
 import { useRankingStore } from "../../app/stores/rankingStore";
 import { useScheduleStore } from "../../app/stores/scheduleStore";
+import { mockUsers } from "../../shared/constants/mock-data";
 import {
   Card,
   CardContent,
@@ -56,13 +46,7 @@ import { StatusBadge } from "../../shared/components/shared/StatusBadge";
 import { PageLoading } from "../../shared/components/shared/LoadingSpinner";
 import { Dialog } from "../../shared/components/ui/dialog";
 import { formatRelativeTime, cn, getRankColor } from "../../shared/utils";
-import {
-  mockRegions,
-  mockPages,
-  mockChapters,
-} from "../../shared/constants/mock-data";
 
-/* ========== Định nghĩa các actions nhanh theo role ========== */
 const quickActions = [
   {
     label: "Review Submissions",
@@ -81,7 +65,6 @@ const quickActions = [
   },
 ];
 
-/* ========== Component StatCard hiển thị thẻ thống kê ========== */
 function StatCard({ label, value, trend, icon: Icon, variant = "default" }) {
   return (
     <Card
@@ -146,7 +129,6 @@ function StatCard({ label, value, trend, icon: Icon, variant = "default" }) {
   );
 }
 
-/* ========== QuickActions: Menu shortcuts theo role ========== */
 function QuickActions() {
   const user = useAuthStore((s) => s.user);
   const navigate = useNavigate();
@@ -177,20 +159,11 @@ function QuickActions() {
   );
 }
 
-/*
-  ==========================================================
-  MangakaDashboard: Dashboard dành cho MANGAKA
-  - Xem danh sách series của mình
-  - Xem các task cần review (submissions từ assistant)
-  - Thống kê số series active, chờ review, rank hiện tại
-  - Approve/Revise submissions qua Dialog
-  ==========================================================
-*/
 function MangakaDashboard() {
   const navigate = useNavigate();
   const addToast = useUIStore((s) => s.addToast);
   const user = useAuthStore((s) => s.user);
-  const { data: stats, isLoading: statsLoading } = useDashboardStats(1);
+  const { data: stats, isLoading: statsLoading } = useDashboardStats(user?.id);
   const { data: activities, isLoading: activitiesLoading } = useActivities();
   const { data: tasksData, isLoading: tasksLoading } = useTasks();
   const seriesList = useSeriesStore((s) => s.seriesList);
@@ -199,27 +172,24 @@ function MangakaDashboard() {
 
   if (statsLoading || activitiesLoading || tasksLoading) return <PageLoading />;
 
-  /* Filter dữ liệu cần thiết */
   const submittedTasks = (tasksData || []).filter(
-    (t) => t.status === "SUBMITTED",
+    (t) => t.status === "DONE",
   );
   const mySeries = seriesList.filter(
-    (s) => s.mangaka.displayName === user?.displayName,
+    (s) => s.mangakaId === user?.id,
   );
-  const pendingTantouSeries = mySeries.filter(
-    (s) => s.status === "PENDING_TANTOU_REVIEW",
+  const inReviewSeries = mySeries.filter(
+    (s) => s.status === "IN_REVIEW",
   );
-  const pendingApprovalSeries = mySeries.filter(
-    (s) => s.status === "PENDING_APPROVAL",
-  );
-  const ongoingSeries = mySeries.filter((s) => s.status === "ONGOING");
+  const publishedSeries = mySeries.filter((s) => s.status === "PUBLISHED");
+  const draftSeries = mySeries.filter((s) => s.status === "DRAFT");
 
   const handleApprove = () => {
     if (!reviewTarget) return;
     addToast({
       type: "success",
       title: "Approved",
-      message: `Region #${reviewTarget.task.regionId} by ${reviewTarget.task.assistant.displayName} approved.`,
+      message: `Task #${reviewTarget.task.id} approved.`,
     });
     setReviewTarget(null);
   };
@@ -229,30 +199,30 @@ function MangakaDashboard() {
     addToast({
       type: "success",
       title: "Revision requested",
-      message: `Region #${reviewTarget.task.regionId}: ${revisionNote}`,
+      message: `Task #${reviewTarget.task.id}: ${revisionNote}`,
     });
     setReviewTarget(null);
     setRevisionNote("");
   };
 
+  const getUserName = (id) => {
+    const u = mockUsers.find(u => u.id === id);
+    return u ? u.displayName : 'Unknown';
+  };
+
   return (
     <div className="space-y-6">
-      {/* Hàng thống kê */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
-          label="Active Series"
-          value={ongoingSeries.length}
+          label="Published Series"
+          value={publishedSeries.length + inReviewSeries.length}
           icon={BookOpen}
         />
         <StatCard
-          label="Awaiting Review"
-          value={pendingTantouSeries.length + pendingApprovalSeries.length}
+          label="Draft Series"
+          value={draftSeries.length}
           icon={FileTextIcon}
-          variant={
-            pendingTantouSeries.length + pendingApprovalSeries.length > 0
-              ? "warning"
-              : "default"
-          }
+          variant={draftSeries.length > 0 ? "warning" : "default"}
         />
         <StatCard
           label="Tasks to Review"
@@ -274,12 +244,11 @@ function MangakaDashboard() {
         </div>
 
         <div className="lg:col-span-3 space-y-4">
-          {/* Danh sách submissions chờ duyệt */}
           {submittedTasks.length > 0 && (
             <Card className="border-b-status-warning">
               <CardHeader>
                 <CardTitle>
-                  Pending Submissions ({submittedTasks.length})
+                  Completed Tasks ({submittedTasks.length})
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
@@ -290,15 +259,15 @@ function MangakaDashboard() {
                   >
                     <div className="flex items-center gap-3 flex-1 min-w-0">
                       <div className="w-8 h-8 bg-accent-purple/10 border border-accent-purple/30 flex items-center justify-center text-xs font-bold text-accent-purple flex-shrink-0">
-                        {task.assistant.displayName[0]}
+                        {getUserName(task.assistantId)[0]}
                       </div>
                       <div className="min-w-0">
                         <p className="text-sm font-medium text-on-surface truncate">
-                          {task.assistant.displayName}
+                          {getUserName(task.assistantId)}
                         </p>
                         <p className="text-xs text-on-surface-variant">
                           Region #{task.regionId} · Due{" "}
-                          {task.deadline || "No deadline"}
+                          {task.dueDate || "No deadline"}
                         </p>
                       </div>
                     </div>
@@ -329,7 +298,6 @@ function MangakaDashboard() {
             </Card>
           )}
 
-          {/* Series và hoạt động gần đây */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <Card>
               <CardHeader>
@@ -363,14 +331,6 @@ function MangakaDashboard() {
                         </p>
                         <div className="flex items-center gap-2 mt-0.5">
                           <StatusBadge status={s.status} size="sm" />
-                          {s.currentTier && (
-                            <span
-                              className="text-xs font-bold"
-                              style={{ color: getRankColor(s.currentTier) }}
-                            >
-                              #{s.currentRank} · Tier {s.currentTier}
-                            </span>
-                          )}
                         </div>
                       </div>
                     </Link>
@@ -412,13 +372,12 @@ function MangakaDashboard() {
         </div>
       </div>
 
-      {/* Dialog xác nhận Approve */}
       {reviewTarget?.action === "approve" && (
         <Dialog
           open={true}
           onClose={() => setReviewTarget(null)}
           title="Approve Task"
-          description={`Approve Region #${reviewTarget.task.regionId} by ${reviewTarget.task.assistant.displayName}?`}
+          description={`Approve task #${reviewTarget.task.id}?`}
           size="sm"
         >
           <div className="flex justify-end gap-2 pt-2">
@@ -436,7 +395,6 @@ function MangakaDashboard() {
         </Dialog>
       )}
 
-      {/* Dialog yêu cầu Revision */}
       {reviewTarget?.action === "revise" && (
         <Dialog
           open={true}
@@ -445,7 +403,7 @@ function MangakaDashboard() {
             setRevisionNote("");
           }}
           title="Request Revision"
-          description={`Notes for ${reviewTarget.task.assistant.displayName}`}
+          description={`Notes for task #${reviewTarget.task.id}`}
           size="sm"
         >
           <div className="space-y-3">
@@ -483,57 +441,45 @@ function MangakaDashboard() {
   );
 }
 
-/*
-  Helper: Tra ngược từ regionId → pageId → chapterId
-  Dùng trong AssistantDashboard để biết task thuộc chapter/series nào.
-*/
-function getTaskChapterId(regionId) {
-  for (const [pageIdStr, regions] of Object.entries(mockRegions)) {
-    if (regions.some((r) => r.id === regionId)) {
-      const pageId = Number(pageIdStr);
-      for (const [chIdStr, pages] of Object.entries(mockPages)) {
-        if (pages.some((p) => p.id === pageId)) {
-          return Number(chIdStr);
-        }
-      }
-    }
-  }
-  return null;
-}
-
-function getTaskSeriesInfo(regionId) {
-  const chId = getTaskChapterId(regionId);
-  if (!chId) return null;
-  const allChs = Object.values(mockChapters).flat();
-  const ch = allChs.find((c) => c.id === chId);
-  if (!ch) return null;
-  return {
-    chapterId: chId,
-    chapterNumber: ch.chapterNumber,
-    chapterTitle: ch.title,
-    seriesId: ch.seriesId,
-  };
-}
-
-/*
-  ==========================================================
-  AssistantDashboard: Dashboard dành cho ASSISTANT
-  - Xem các task được giao và trạng thái
-  - Xem series mình đang làm việc (thông qua task regionId)
-  - Click vào task để vào Workspace
-  ==========================================================
-*/
 function AssistantDashboard() {
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
   const { data: tasksData, isLoading: tasksLoading } = useTasks();
   const seriesList = useSeriesStore((s) => s.seriesList);
+  const { mockChapters, mockPages, mockRegions } = require('../../shared/constants/mock-data');
 
   if (tasksLoading) return <PageLoading />;
 
-  const myTasks = (tasksData || []).filter((t) => t.assistant.id === user?.id);
+  const myTasks = (tasksData || []).filter((t) => t.assistantId === user?.id);
 
-  /* Tìm các series có liên quan đến task của assistant */
+  const getTaskChapterId = (regionId) => {
+    for (const [pageIdStr, regions] of Object.entries(mockRegions)) {
+      if (regions.some((r) => r.id === regionId)) {
+        const pageId = Number(pageIdStr);
+        for (const [chIdStr, pages] of Object.entries(mockPages)) {
+          if (pages.some((p) => p.id === pageId)) {
+            return Number(chIdStr);
+          }
+        }
+      }
+    }
+    return null;
+  };
+
+  const getTaskSeriesInfo = (regionId) => {
+    const chId = getTaskChapterId(regionId);
+    if (!chId) return null;
+    const allChs = Object.values(mockChapters).flat();
+    const ch = allChs.find((c) => c.id === chId);
+    if (!ch) return null;
+    return {
+      chapterId: chId,
+      chapterNumber: ch.chapterNumber,
+      chapterTitle: ch.title,
+      seriesId: ch.seriesId,
+    };
+  };
+
   const taskSeriesIds = new Set();
   myTasks.forEach((t) => {
     const info = getTaskSeriesInfo(t.regionId);
@@ -552,13 +498,13 @@ function AssistantDashboard() {
           variant="warning"
         />
         <StatCard
-          label="Pending"
-          value={myTasks.filter((t) => t.status === "PENDING").length}
+          label="Todo"
+          value={myTasks.filter((t) => t.status === "TODO").length}
           icon={AlertCircle}
         />
         <StatCard
-          label="Approved"
-          value={myTasks.filter((t) => t.status === "APPROVED").length}
+          label="Done"
+          value={myTasks.filter((t) => t.status === "DONE").length}
           icon={CheckCircle}
         />
       </div>
@@ -638,7 +584,7 @@ function AssistantDashboard() {
                             {info
                               ? `${info.chapterTitle || `Chapter ${info.chapterNumber}`}`
                               : `Region #${task.regionId}`}
-                            {task.deadline ? ` · Due ${task.deadline}` : ""}
+                            {task.dueDate ? ` · Due ${task.dueDate}` : ""}
                           </p>
                         </div>
                       </div>
@@ -655,28 +601,19 @@ function AssistantDashboard() {
   );
 }
 
-/*
-  ==========================================================
-  EditorDashboard: Dashboard dành cho TANTOU_EDITOR
-  - Xem các series được phân công (assignedSeries)
-  - Xem danh sách series chờ review manuscript (PENDING_TANTOU_REVIEW)
-  - Có thể vào SeriesDetail để review
-  ==========================================================
-*/
 function EditorDashboard() {
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
   const { data: stats, isLoading: statsLoading } = useDashboardStats(user?.id);
   const { data: seriesData, isLoading: seriesLoading } = useSeriesList();
-  const seriesList = useSeriesStore((s) => s.seriesList);
   if (statsLoading || seriesLoading) return <PageLoading />;
 
   const assignedSeries =
     seriesData?.content?.filter(
-      (s) => s.tantouEditor?.displayName === user?.displayName,
+      (s) => s.tantouEditorId === user?.id,
     ) || [];
-  const pendingReviewSeries = seriesList.filter(
-    (s) => s.status === "PENDING_TANTOU_REVIEW",
+  const inReviewSeries = assignedSeries.filter(
+    (s) => s.status === "IN_REVIEW",
   );
 
   return (
@@ -688,10 +625,10 @@ function EditorDashboard() {
           icon={BookOpen}
         />
         <StatCard
-          label="Series Pending Review"
-          value={pendingReviewSeries.length}
+          label="In Review"
+          value={inReviewSeries.length}
           icon={FileTextIcon}
-          variant={pendingReviewSeries.length > 0 ? "warning" : "default"}
+          variant={inReviewSeries.length > 0 ? "warning" : "default"}
         />
         <StatCard
           label="Pending Comments"
@@ -706,16 +643,15 @@ function EditorDashboard() {
         </div>
 
         <div className="lg:col-span-3 space-y-4">
-          {pendingReviewSeries.length > 0 && (
+          {inReviewSeries.length > 0 && (
             <Card className="border-b-status-warning">
               <CardHeader>
                 <CardTitle>
-                  Series Pending Manuscript Review ({pendingReviewSeries.length}
-                  )
+                  Series In Review ({inReviewSeries.length})
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
-                {pendingReviewSeries.map((s) => (
+                {inReviewSeries.map((s) => (
                   <div
                     key={s.id}
                     className="flex items-center justify-between p-2.5 border border-border-light/30 hover:bg-black/[0.02] transition-colors"
@@ -736,7 +672,7 @@ function EditorDashboard() {
                           {s.title}
                         </p>
                         <p className="text-xs text-on-surface-variant">
-                          {s.mangaka.displayName} · {s.genre}
+                          {s.genre}
                         </p>
                       </div>
                     </div>
@@ -744,7 +680,7 @@ function EditorDashboard() {
                       size="sm"
                       onClick={() => navigate(`/series/${s.id}`)}
                     >
-                      <FileTextIcon size={14} /> Review Manuscript
+                      <FileTextIcon size={14} /> Review
                     </Button>
                   </div>
                 ))}
@@ -758,18 +694,12 @@ function EditorDashboard() {
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
-                {assignedSeries.length === 0 &&
-                pendingReviewSeries.length === 0 ? (
+                {assignedSeries.length === 0 ? (
                   <p className="text-sm text-on-surface-variant text-center py-6">
                     No series assigned to you.
                   </p>
                 ) : (
-                  [
-                    ...assignedSeries,
-                    ...pendingReviewSeries.filter(
-                      (s) => !assignedSeries.find((a) => a.id === s.id),
-                    ),
-                  ].map((s) => (
+                  assignedSeries.map((s) => (
                     <div
                       key={s.id}
                       className="flex items-center justify-between p-3 border-b border-border-light/30 last:border-0 hover:bg-black/[0.02] transition-colors"
@@ -813,15 +743,6 @@ function EditorDashboard() {
   );
 }
 
-/*
-  ==========================================================
-  EditorialBoardDashboard: Dashboard dành cho EDITORIAL_BOARD
-  - Xem tổng quan series, pending reviews, votes, at-risk series
-  - Approve/Reject series chờ vote
-  - Quản lý at-risk series (mark at risk, restore, cancel)
-  - Xem lịch xuất bản sắp tới
-  ==========================================================
-*/
 function EditorialBoardDashboard() {
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
@@ -830,49 +751,50 @@ function EditorialBoardDashboard() {
   const { data: stats, isLoading: statsLoading } = useDashboardStats(user?.id);
   const { data: seriesData } = useSeriesList();
   const { data: schedules } = useSchedules();
-  const seriesList = useSeriesStore((s) => s.seriesList);
   const rankings = useRankingStore((s) => s.rankings);
   const schedulesList = useScheduleStore((s) => s.schedules);
+  const seriesListRef = useSeriesStore((s) => s.seriesList);
 
   if (statsLoading) return <PageLoading />;
 
-  const pendingTantouSeries = seriesList.filter(
-    (s) => s.status === "PENDING_TANTOU_REVIEW",
+  const inReviewSeries = seriesListRef.filter(
+    (s) => s.status === "IN_REVIEW",
   );
-  const pendingApprovalSeries = seriesList.filter(
-    (s) => s.status === "PENDING_APPROVAL",
+  const approvedSeries = seriesListRef.filter(
+    (s) => s.status === "APPROVED",
   );
   const upcomingSchedules =
     (schedules || schedulesList).filter((s) => s.status === "SCHEDULED") || [];
-  const series = seriesData?.content || [];
-  const atRisk = seriesList.filter((s) => {
-    const rank = rankings.find((r) => r.seriesId === s.id);
-    return (
-      s.status === "AT_RISK" ||
-      (rank &&
-        (rank.tier === "C" || rank.tier === "D") &&
-        s.status === "ONGOING")
-    );
-  });
 
-  const handleApprove = (id, title) => {
-    updateSeries(id, {
-      status: "ONGOING",
-      tantouEditor: { id: user.id, displayName: user.displayName },
-    });
+  const atRisk = rankings.filter((r) => r.tier === "C" || r.tier === "D").map(r => {
+    const series = seriesListRef.find(s => s.id === r.seriesId);
+    return series ? { ...series, rank: r } : null;
+  }).filter(Boolean);
+
+  const handleApproveSeries = (id, title) => {
+    updateSeries(id, { status: 'APPROVED', tantouEditorId: user?.id });
     addToast({
       type: "success",
       title: "Series approved",
-      message: `"${title}" has been approved and announced for publication.`,
+      message: `"${title}" has been approved.`,
     });
   };
 
-  const handleReject = (id, title) => {
+  const handleRejectSeries = (id, title) => {
     updateSeries(id, { status: "REJECTED" });
     addToast({
       type: "success",
       title: "Series rejected",
       message: `"${title}" has been rejected.`,
+    });
+  };
+
+  const handlePublish = (id, title) => {
+    updateSeries(id, { status: "PUBLISHED" });
+    addToast({
+      type: "success",
+      title: "Series published",
+      message: `"${title}" has been published.`,
     });
   };
 
@@ -890,20 +812,20 @@ function EditorialBoardDashboard() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           label="Total Series"
-          value={stats?.totalSeries || seriesList.length}
+          value={stats?.totalSeries || seriesListRef.length}
           icon={BookOpen}
         />
         <StatCard
-          label="Pending Tantou Review"
-          value={pendingTantouSeries.length}
+          label="In Review"
+          value={inReviewSeries.length}
           icon={FileTextIcon}
-          variant={pendingTantouSeries.length > 0 ? "warning" : "default"}
+          variant={inReviewSeries.length > 0 ? "warning" : "default"}
         />
         <StatCard
-          label="Pending Board Vote"
-          value={pendingApprovalSeries.length}
+          label="Approved"
+          value={approvedSeries.length}
           icon={ThumbsUp}
-          variant={pendingApprovalSeries.length > 0 ? "warning" : "default"}
+          variant={approvedSeries.length > 0 ? "warning" : "default"}
         />
         <StatCard
           label="At-Risk Series"
@@ -919,15 +841,15 @@ function EditorialBoardDashboard() {
         </div>
 
         <div className="lg:col-span-3 space-y-4">
-          {pendingTantouSeries.length > 0 && (
+          {inReviewSeries.length > 0 && (
             <Card className="border-b-status-warning">
               <CardHeader>
                 <CardTitle>
-                  Series Awaiting Tantou Review ({pendingTantouSeries.length})
+                  Series In Review ({inReviewSeries.length})
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
-                {pendingTantouSeries.map((s) => (
+                {inReviewSeries.map((s) => (
                   <div
                     key={s.id}
                     className="flex items-center justify-between p-2.5 border border-border-light/30 hover:bg-black/[0.02] transition-colors"
@@ -946,56 +868,6 @@ function EditorialBoardDashboard() {
                       <div className="min-w-0">
                         <p className="text-sm font-medium text-on-surface truncate">
                           {s.title}
-                        </p>
-                        <p className="text-xs text-on-surface-variant">
-                          {s.mangaka.displayName} · {s.genre}
-                        </p>
-                      </div>
-                    </div>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => navigate(`/series/${s.id}`)}
-                    >
-                      View
-                    </Button>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-          )}
-
-          {pendingApprovalSeries.length > 0 && (
-            <Card className="border-b-status-warning">
-              <CardHeader>
-                <CardTitle>
-                  Pending Board Vote ({pendingApprovalSeries.length})
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                {pendingApprovalSeries.map((s) => (
-                  <div
-                    key={s.id}
-                    className="flex items-center justify-between p-2.5 border border-border-light/30 hover:bg-black/[0.02] transition-colors"
-                  >
-                    <div className="flex items-center gap-3 flex-1 min-w-0">
-                      <div
-                        className="w-8 h-10 flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
-                        style={{ background: s.coverColor }}
-                      >
-                        {s.title
-                          .split(" ")
-                          .map((w) => w[0])
-                          .join("")
-                          .slice(0, 2)}
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium text-on-surface truncate">
-                          {s.title}
-                        </p>
-                        <p className="text-xs text-on-surface-variant">
-                          {s.mangaka.displayName} · {s.genre} ·{" "}
-                          {s.targetDemographic}
                         </p>
                       </div>
                     </div>
@@ -1003,7 +875,7 @@ function EditorialBoardDashboard() {
                       <Button
                         size="sm"
                         className="text-status-success border-status-success/30 bg-transparent hover:bg-status-success/5"
-                        onClick={() => handleApprove(s.id, s.title)}
+                        onClick={() => handleApproveSeries(s.id, s.title)}
                       >
                         <ThumbsUp size={14} /> Approve
                       </Button>
@@ -1011,11 +883,53 @@ function EditorialBoardDashboard() {
                         size="sm"
                         variant="outline"
                         className="text-status-danger border-status-danger/30 hover:bg-status-danger/5"
-                        onClick={() => handleReject(s.id, s.title)}
+                        onClick={() => handleRejectSeries(s.id, s.title)}
                       >
                         <ThumbsDown size={14} /> Reject
                       </Button>
                     </div>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          )}
+
+          {approvedSeries.length > 0 && (
+            <Card className="border-b-status-warning">
+              <CardHeader>
+                <CardTitle>
+                  Approved — Ready to Publish ({approvedSeries.length})
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {approvedSeries.map((s) => (
+                  <div
+                    key={s.id}
+                    className="flex items-center justify-between p-2.5 border border-border-light/30 hover:bg-black/[0.02] transition-colors"
+                  >
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <div
+                        className="w-8 h-10 flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
+                        style={{ background: s.coverColor }}
+                      >
+                        {s.title
+                          .split(" ")
+                          .map((w) => w[0])
+                          .join("")
+                          .slice(0, 2)}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-on-surface truncate">
+                          {s.title}
+                        </p>
+                      </div>
+                    </div>
+                    <Button
+                      size="sm"
+                      onClick={() => handlePublish(s.id, s.title)}
+                    >
+                      Publish
+                    </Button>
                   </div>
                 ))}
               </CardContent>
@@ -1029,11 +943,8 @@ function EditorialBoardDashboard() {
               </CardHeader>
               <CardContent className="space-y-2">
                 {atRisk.map((s) => {
-                  const rank = rankings.find((r) => r.seriesId === s.id);
-                  const wl =
-                    useRankingStore.getState().warningLevels?.[s.id] || 0;
-                  const dp =
-                    useRankingStore.getState().dangerPeriods?.[s.id] || 0;
+                  const wl = useRankingStore.getState().warningLevels?.[s.id] || 0;
+                  const dp = useRankingStore.getState().dangerPeriods?.[s.id] || 0;
                   return (
                     <div
                       key={s.id}
@@ -1054,36 +965,19 @@ function EditorialBoardDashboard() {
                           <p className="text-sm font-medium text-on-surface truncate flex items-center gap-1.5">
                             {s.title}
                             {wl >= 3 && (
-                              <SirenIcon
-                                size={12}
-                                className="text-status-danger"
-                              />
+                              <SirenIcon size={12} className="text-status-danger" />
                             )}
                             {wl === 2 && (
-                              <AlertCircle
-                                size={12}
-                                className="text-status-warning"
-                              />
+                              <AlertCircle size={12} className="text-status-warning" />
                             )}
                             {wl === 1 && (
-                              <AlertTriangle
-                                size={12}
-                                className="text-status-warning/60"
-                              />
+                              <AlertTriangle size={12} className="text-status-warning/60" />
                             )}
                           </p>
                           <p className="text-xs text-on-surface-variant">
-                            {s.mangaka.displayName}
-                            {rank && (
-                              <>
-                                {" "}
-                                · #{rank.rank} · Tier {rank.tier} ·{" "}
-                                {rank.totalVotes.toLocaleString()} votes
-                              </>
-                            )}
+                            #{s.rank.rank} · Tier {s.rank.tier} · {s.rank.totalVotes.toLocaleString()} votes
                             {dp > 0 && (
                               <span className="ml-1 text-status-danger">
-                                {" "}
                                 · {dp} period{dp > 1 ? "s" : ""} in danger
                               </span>
                             )}
@@ -1091,47 +985,13 @@ function EditorialBoardDashboard() {
                         </div>
                       </div>
                       <div className="flex items-center gap-1.5 flex-shrink-0">
-                        {s.status === "AT_RISK" ? (
-                          <>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => {
-                                updateSeries(s.id, { status: "ONGOING" });
-                                addToast({
-                                  type: "success",
-                                  title: "Series restored",
-                                  message: `"${s.title}" restored to ongoing.`,
-                                });
-                              }}
-                            >
-                              Restore
-                            </Button>
-                            <Button
-                              size="sm"
-                              className="text-status-danger border-status-danger/30 bg-transparent hover:bg-status-danger/5"
-                              onClick={() => handleCancel(s.id, s.title)}
-                            >
-                              <X size={14} /> Cancel
-                            </Button>
-                          </>
-                        ) : (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="text-status-warning border-status-warning/30 hover:bg-status-warning/5"
-                            onClick={() => {
-                              updateSeries(s.id, { status: "AT_RISK" });
-                              addToast({
-                                type: "success",
-                                title: "Marked at risk",
-                                message: `"${s.title}" marked as at-risk.`,
-                              });
-                            }}
-                          >
-                            <AlertTriangle size={14} /> Mark At Risk
-                          </Button>
-                        )}
+                        <Button
+                          size="sm"
+                          className="text-status-danger border-status-danger/30 bg-transparent hover:bg-status-danger/5"
+                          onClick={() => handleCancel(s.id, s.title)}
+                        >
+                          <X size={14} /> Cancel
+                        </Button>
                       </div>
                     </div>
                   );
@@ -1173,12 +1033,6 @@ function EditorialBoardDashboard() {
   );
 }
 
-/*
-  ==========================================================
-  DashboardPage (export chính)
-  - Dựa vào user.role để render dashboard phù hợp
-  ==========================================================
-*/
 export function DashboardPage() {
   const user = useAuthStore((s) => s.user);
   if (!user) return null;

@@ -4,6 +4,7 @@ import { Vote, Save, TrendingUp } from "lucide-react";
 import { useSeriesList } from "../../shared/hooks/useMockData";
 import { useRankingStore } from "../../app/stores/rankingStore";
 import { useUIStore } from "../../app/stores/uiStore";
+import { mockUsers } from "../../shared/constants/mock-data";
 import {
   Card,
   CardContent,
@@ -35,7 +36,7 @@ export function VoteEntryPage() {
   // Chỉ lấy series ONGOING hoặc COMPLETED
   const series =
     seriesData?.content?.filter(
-      (s) => s.status === "ONGOING" || s.status === "COMPLETED",
+      (s) => s.status === "PUBLISHED",
     ) || [];
 
   // Nhãn kỳ (VD: "W22-2026")
@@ -141,7 +142,7 @@ export function VoteEntryPage() {
                       {s.title}
                     </p>
                     <p className="text-xs text-on-surface-variant">
-                      {s.mangaka.displayName}
+                      {mockUsers.find(u => u.id === s.mangakaId)?.displayName || 'Unknown'}
                     </p>
                   </div>
                   <Input

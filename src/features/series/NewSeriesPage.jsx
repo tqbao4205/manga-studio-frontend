@@ -18,6 +18,7 @@ import { useUIStore } from '../../app/stores/uiStore'
 
 const GENRES = ['ACTION', 'FANTASY', 'ROMANCE', 'COMEDY', 'DRAMA']
 const DEMOGRAPHICS = ['SHONEN', 'SHOJO', 'SEINEN', 'JOSEI']
+const FREQUENCIES = ['WEEKLY', 'BIWEEKLY', 'MONTHLY']
 const COLORS = ['#e63946', '#7c4dff', '#f472b6', '#f4a261', '#4fc3f7', '#2a9d8f', '#e76f51', '#264653']
 
 export function NewSeriesPage() {
@@ -38,14 +39,12 @@ export function NewSeriesPage() {
   const [synopsis, setSynopsis] = useState('')
   const [genre, setGenre] = useState('')
   const [demographic, setDemographic] = useState('')
+  const [publishFrequency, setPublishFrequency] = useState('')
   const [coverColor, setCoverColor] = useState(COLORS[0])
+  const [coverImageUrl, setCoverImageUrl] = useState('')
   const [thumbnailDataUrl, setThumbnailDataUrl] = useState('')
   const fileInputRef = useRef(null)
 
-  /*
-    Nếu là edit mode, load dữ liệu series hiện tại vào form.
-    useEffect chạy một lần khi component mount với seriesId.
-  */
   useEffect(() => {
     if (!isEdit || !seriesId) return
     const series = seriesList.find(s => s.id === Number(seriesId))
@@ -55,7 +54,9 @@ export function NewSeriesPage() {
     setSynopsis(series.synopsis)
     setGenre(series.genre)
     setDemographic(series.targetDemographic)
+    setPublishFrequency(series.publishFrequency || '')
     setCoverColor(series.coverColor || COLORS[0])
+    setCoverImageUrl(series.coverImageUrl || '')
   }, [isEdit, seriesId, seriesList])
 
   const canSubmit = title.trim() && genre && demographic
@@ -64,19 +65,19 @@ export function NewSeriesPage() {
     if (!canSubmit) return
 
     if (isEdit && seriesId) {
-      /* Cập nhật series hiện tại */
       updateSeries(Number(seriesId), {
         title: title.trim(),
         titleJp,
         synopsis,
         genre,
         targetDemographic: demographic,
+        publishFrequency: publishFrequency || null,
         coverColor,
+        coverImageUrl: coverImageUrl || '',
       })
       addToast({ type: 'success', title: 'Series updated', message: `"${title}" has been updated.` })
       navigate(`/series/${seriesId}`)
     } else {
-      /* Tạo series mới + Chapter 1 mặc định */
       const newId = seriesList.length > 0 ? Math.max(...seriesList.map(s => s.id)) + 1 : 1
       addSeries({
         title: title.trim(),
@@ -84,13 +85,13 @@ export function NewSeriesPage() {
         synopsis,
         genre,
         targetDemographic: demographic,
+        publishFrequency: publishFrequency || null,
         coverColor,
+        coverImageUrl: coverImageUrl || '',
         status: 'DRAFT',
-        mangaka: { id: user?.id || 1, displayName: user?.displayName || 'Unknown' },
-        tantouEditor: null,
+        mangakaId: user?.id || 1,
+        tantouEditorId: null,
         chapterCount: 0,
-        currentRank: undefined,
-        currentTier: undefined,
         createdAt: new Date().toISOString(),
       })
       const chId = getNextChapterId()
@@ -99,8 +100,9 @@ export function NewSeriesPage() {
         chapterNumber: 1,
         title: 'Pilot',
         pageCount: 20,
-        status: 'IN_PROGRESS',
-        deadline: '',
+        status: 'DRAFT',
+        deadline: null,
+        publishDate: null,
         progressPercent: 0,
         createdAt: new Date().toISOString(),
       })
@@ -159,6 +161,22 @@ export function NewSeriesPage() {
               </button>
             ))}
           </div>
+        </div>
+
+        <div>
+          <label className="text-[10px] font-semibold uppercase tracking-wider text-on-surface-variant block mb-1">Publish Frequency</label>
+          <div className="flex flex-wrap gap-2">
+            {FREQUENCIES.map((f) => (
+              <button key={f} onClick={() => setPublishFrequency(f === publishFrequency ? '' : f)} className={`text-xs px-3 py-1.5 border transition-colors ${publishFrequency === f ? 'border-on-surface text-on-surface font-semibold' : 'border-primary/20 text-on-surface-variant hover:text-on-surface'}`}>
+                {f.charAt(0) + f.slice(1).toLowerCase()}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <label className="text-[10px] font-semibold uppercase tracking-wider text-on-surface-variant block mb-1">Cover Image URL</label>
+          <input value={coverImageUrl} onChange={(e) => setCoverImageUrl(e.target.value)} placeholder="https://..." className="w-full h-9 px-3 text-sm bg-transparent border border-primary/20 outline-none focus:border-on-surface placeholder:text-on-surface-variant/30" />
         </div>
 
         {/* Upload ảnh bìa */}

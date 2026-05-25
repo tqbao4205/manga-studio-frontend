@@ -16,7 +16,7 @@ import { EmptyState } from '../../shared/components/shared/EmptyState'
 import { PageLoading } from '../../shared/components/shared/LoadingSpinner'
 import { FilterBar } from '../../shared/components/shared/FilterBar'
 import { Dialog } from '../../shared/components/ui/dialog'
-import { mockRegions, mockPages, mockSeries, mockChapters } from '../../shared/constants/mock-data'
+import { mockUsers, mockRegions, mockPages, mockSeries, mockChapters } from '../../shared/constants/mock-data'
 import { cn, getPriorityColor, getRegionTypeColor, formatDate } from '../../shared/utils'
 
 // ── Tra ngược: regionId → series/chapter info ──
@@ -57,7 +57,7 @@ function getSeriesNameForRegion(regionId) {
 }
 
 // ── Tuỳ chọn filter ──
-const statusOptions = ['ALL', 'SUBMITTED', 'IN_PROGRESS', 'REVISION_REQUIRED', 'APPROVED', 'PENDING']
+const statusOptions = ['ALL', 'DONE', 'IN_PROGRESS', 'TODO', 'REJECTED']
 const priorityOptions = ['ALL', 'URGENT', 'HIGH', 'MEDIUM', 'LOW']
 
 // ── Dialog chi tiết task ──
@@ -94,14 +94,14 @@ function TaskDetailDialog({ task, onClose }) {
             <span className="text-[10px] font-semibold uppercase tracking-wider text-on-surface-variant">Assigned to</span>
             <div className="flex items-center gap-1.5">
               <User size={12} className="text-on-surface-variant/40" />
-              <span className="text-on-surface">{task.assistant.displayName}</span>
+              <span className="text-on-surface">{mockUsers.find(u => u.id === task.assistantId)?.displayName || 'Unknown'}</span>
             </div>
           </div>
           <div className="space-y-1">
             <span className="text-[10px] font-semibold uppercase tracking-wider text-on-surface-variant">Assigned by</span>
             <div className="flex items-center gap-1.5">
               <User size={12} className="text-on-surface-variant/40" />
-              <span className="text-on-surface">{task.assignedBy.displayName}</span>
+              <span className="text-on-surface">{mockUsers.find(u => u.id === task.assignedBy)?.displayName || 'Unknown'}</span>
             </div>
           </div>
           <div className="space-y-1">
@@ -110,9 +110,9 @@ function TaskDetailDialog({ task, onClose }) {
               <CalendarDays size={12} className="text-on-surface-variant/40" />
               <span className={cn(
                 'text-on-surface',
-                task.deadline && new Date(task.deadline) < new Date() ? 'text-status-danger' : '',
+                task.dueDate && new Date(task.dueDate) < new Date() ? 'text-status-danger' : '',
               )}>
-                {task.deadline || 'No deadline'}
+                {task.dueDate || 'No deadline'}
               </span>
             </div>
           </div>
@@ -254,7 +254,7 @@ export function TasksPage() {
   const tasksList = useMemo(() => {
     const all = tasks || []
     if (user?.role !== 'ASSISTANT') return all
-    return all.filter(t => t.assistant.id === user.id)
+    return all.filter(t => t.assistantId === user.id)
   }, [tasks, user])
 
   // Lọc theo status + priority
@@ -421,9 +421,9 @@ export function TasksPage() {
                       <div className="min-w-0 flex-1">
                         <p className="text-sm font-medium text-on-surface truncate">{task.title}</p>
                         <div className="flex items-center gap-3 mt-1">
-                          <span className="text-xs text-on-surface-variant/60">{task.assistant.displayName}</span>
+                          <span className="text-xs text-on-surface-variant/60">{mockUsers.find(u => u.id === task.assistantId)?.displayName || 'Unknown'}</span>
                           <span className="text-on-surface-variant/20">•</span>
-                          <span className="text-xs text-on-surface-variant/60">Due {task.deadline || '—'}</span>
+                          <span className="text-xs text-on-surface-variant/60">Due {task.dueDate || '—'}</span>
                           {task.description && (
                             <>
                               <span className="text-on-surface-variant/20">•</span>
@@ -469,7 +469,7 @@ export function TasksPage() {
 
       {/* Dialog xác nhận Approve */}
       {reviewTarget?.action === 'approve' && (
-        <Dialog open={true} onClose={() => setReviewTarget(null)} title="Approve Task" description={`Approve "${reviewTarget.task.title}" by ${reviewTarget.task.assistant.displayName}?`} size="sm">
+        <Dialog open={true} onClose={() => setReviewTarget(null)} title="Approve Task" description={`Approve "${reviewTarget.task.title}" by ${mockUsers.find(u => u.id === reviewTarget.task.assistantId)?.displayName || 'Unknown'}?`} size="sm">
           <div className="flex justify-end gap-2 pt-2">
             <Button variant="ghost" size="sm" onClick={() => setReviewTarget(null)}>Cancel</Button>
             <Button size="sm" onClick={handleApprove}>Confirm Approve</Button>
@@ -479,7 +479,7 @@ export function TasksPage() {
 
       {/* Dialog nhập ghi chú Revision */}
       {reviewTarget?.action === 'revise' && (
-        <Dialog open={true} onClose={() => { setReviewTarget(null); setRevisionNote('') }} title="Request Revision" description={`Notes for ${reviewTarget.task.assistant.displayName}`} size="sm">
+        <Dialog open={true} onClose={() => { setReviewTarget(null); setRevisionNote('') }} title="Request Revision" description={`Notes for ${mockUsers.find(u => u.id === reviewTarget.task.assistantId)?.displayName || 'Unknown'}`} size="sm">
           <div className="space-y-3">
             <textarea
               autoFocus

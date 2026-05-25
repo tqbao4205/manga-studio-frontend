@@ -5,6 +5,7 @@ import {
 } from "../../shared/hooks/useMockData";
 import { useScheduleStore } from "../../app/stores/scheduleStore";
 import { useUIStore } from "../../app/stores/uiStore";
+import { mockUsers } from "../../shared/constants/mock-data";
 import { Card, CardContent } from "../../shared/components/ui/card";
 import { StatusBadge } from "../../shared/components/shared/StatusBadge";
 import { EmptyState } from "../../shared/components/shared/EmptyState";
@@ -86,7 +87,7 @@ function NewScheduleForm({ onClose }) {
         />
         {selectedSeries && (
           <p className="text-xs text-on-surface-variant mt-1">
-            {selectedSeries.mangaka.displayName} · {selectedSeries.chapterCount}{" "}
+            {(mockUsers.find(u => u.id === selectedSeries.mangakaId)?.displayName || 'Unknown')} · {selectedSeries.chapterCount}{" "}
             chapters · {selectedSeries.status}
           </p>
         )}

@@ -140,6 +140,7 @@ export function WorkspacePage() {
   const setZoom = useWorkspaceStore((s) => s.setZoom);
   const setActiveTab = useWorkspaceStore((s) => s.setActiveTab);
   const addPage = useWorkspaceStore((s) => s.addPage);
+  const layers = useWorkspaceStore((s) => s.layers);
   const reset = useWorkspaceStore((s) => s.reset);
 
   const user = useAuthStore((s) => s.user);

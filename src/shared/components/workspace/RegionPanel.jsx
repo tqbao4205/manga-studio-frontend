@@ -116,15 +116,7 @@ export function RegionPanel() {
                   {statusLabels[r.status] || r.status}
                 </span>
               </div>
-              {/* Thông tin task (nếu có) */}
-              {r.task && (
-                <div className="flex items-center gap-2 mt-1 ml-4">
-                  <span className="text-[10px] text-workspace-text-secondary">→ {r.task.assistantName}</span>
-                  {r.task.deadline && (
-                    <span className="text-[10px] text-workspace-text-secondary/40">{r.task.deadline}</span>
-                  )}
-                </div>
-              )}
+              {}
             </button>
 
             {/* Form chỉnh sửa (chỉ hiển thị khi region được chọn) */}

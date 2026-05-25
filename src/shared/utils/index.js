@@ -96,24 +96,22 @@ export function formatRelativeTime(date) {
  */
 export function getStatusColor(status) {
   const map = {
-    ONGOING: '#16a34a',
+    TODO: '#ea580c',
     ACTIVE: '#16a34a',
+    DONE: '#16a34a',
     APPROVED: '#16a34a',
     PUBLISHED: '#16a34a',
     COMPLETED: '#16a34a',
-    AT_RISK: '#f59e0b',
-    PENDING_TANTOU_REVIEW: '#7c3aed',
-    PENDING_APPROVAL: '#ea580c',
     PENDING_BOARD_APPROVAL: '#ea580c',
     PENDING: '#ea580c',
     IN_PROGRESS: '#2563eb',
     IN_REVIEW: '#7c3aed',
     SUBMITTED: '#7c3aed',
+    REVISION_REQUIRED: '#dc2626',
     DRAFT: '#6b7280',
-    HIATUS: '#6b7280',
     CANCELLED: '#dc2626',
     REJECTED: '#dc2626',
-    REVISION_REQUIRED: '#dc2626',
+
     SCHEDULED: '#2563eb',
     IN_PRESS: '#7c3aed',
   }
