@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Edit Profile | MangaFlow</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        @import url('https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap');
+        
+        body {
+            font-family: 'Geist', sans-serif;
+            background-color: #131315;
+            color: #e5e1e4;
+            margin: 0;
+            overflow-x: hidden;
+        }
+
+        .glass-panel {
+            background: rgba(27, 27, 29, 0.7);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(73, 68, 84, 0.3);
+        }
+
+        .focus-glow:focus-within {
+            box-shadow: 0 0 0 2px rgba(208, 188, 255, 0.2);
+            border-color: #d0bcff;
+        }
+
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #131315;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #494454;
+            border-radius: 10px;
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-secondary-fixed": "#1b1b1d",
+                        "surface-container-lowest": "#0e0e10",
+                        "error-container": "#93000a",
+                        "surface-container-low": "#1b1b1d",
+                        "on-background": "#e5e1e4",
+                        "outline": "#948f9a",
+                        "surface-container-high": "#2a2a2c",
+                        "secondary-fixed": "#e4e2e4",
+                        "on-tertiary-container": "#5c5301",
+                        "on-primary-fixed-variant": "#4d3d76",
+                        "inverse-on-surface": "#303032",
+                        "on-surface-variant": "#cbc3d7",
+                        "secondary": "#c8c6c8",
+                        "error": "#ffb4ab",
+                        "on-surface": "#e5e1e4",
+                        "tertiary-fixed": "#f1e588",
+                        "tertiary-container": "#d4c86f",
+                        "on-error": "#690005",
+                        "on-secondary-container": "#b6b4b7",
+                        "primary": "#e9ddff",
+                        "on-tertiary-fixed": "#201c00",
+                        "primary-fixed-dim": "#d0bcff",
+                        "on-tertiary": "#363100",
+                        "inverse-surface": "#e5e1e4",
+                        "secondary-container": "#474649",
+                        "outline-variant": "#494454",
+                        "primary-fixed": "#e9ddff",
+                        "surface-bright": "#39393b",
+                        "surface-tint": "#d0bcff",
+                        "surface": "#131315",
+                        "secondary-fixed-dim": "#c8c6c8",
+                        "surface-variant": "#353437",
+                        "surface-container": "#1f1f21",
+                        "on-secondary-fixed-variant": "#474649",
+                        "background": "#131315",
+                        "on-primary": "#37265e",
+                        "on-primary-fixed": "#210f48",
+                        "inverse-primary": "#665590",
+                        "tertiary": "#f1e488",
+                        "on-error-container": "#ffdad6",
+                        "tertiary-fixed-dim": "#d4c86f",
+                        "surface-dim": "#131315",
+                        "on-secondary": "#303032",
+                        "on-tertiary-fixed-variant": "#4f4800",
+                        "on-primary-container": "#594983",
+                        "surface-container-highest": "#353437",
+                        "primary-container": "#d0bcff"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "container-padding": "24px",
+                        "panel-gap": "20px",
+                        "base": "8px",
+                        "section-margin": "40px",
+                        "gutter": "16px"
+                    },
+                    "fontFamily": {
+                        "label-sm": ["Geist"],
+                        "headline-md": ["Geist"],
+                        "body-md": ["Geist"],
+                        "headline-lg-mobile": ["Geist"],
+                        "headline-lg": ["Geist"],
+                        "body-lg": ["Geist"],
+                        "label-md": ["Geist"],
+                        "display-lg": ["Geist"]
+                    },
+                    "fontSize": {
+                        "label-sm": ["12px", {"lineHeight": "16px", "letterSpacing": "0.02em", "fontWeight": "500"}],
+                        "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                        "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                        "headline-lg-mobile": ["28px", {"lineHeight": "36px", "fontWeight": "600"}],
+                        "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                        "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                        "label-md": ["14px", {"lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "500"}],
+                        "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}]
+                    }
+                },
+            },
+        }
+    </script>
+</head>
+<body class="bg-background text-on-surface custom-scrollbar">
+<!-- Top AppBar (Mobile/Tablet View) -->
+<header class="fixed top-0 w-full bg-surface/80 dark:bg-surface/80 backdrop-blur-md border-b border-outline-variant/30 flex justify-between items-center px-container-padding h-16 w-full z-50 md:hidden">
+<div class="font-headline-md text-headline-md font-bold text-primary dark:text-primary">MangaFlow</div>
+<div class="flex gap-4">
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer">help</span>
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer">settings</span>
+</div>
+</header>
+<!-- Sidebar Navigation (Desktop) -->
+<aside class="hidden md:flex flex-col py-panel-gap h-full w-64 fixed left-0 top-0 bg-surface-container dark:bg-surface-container border-r border-outline-variant/30 z-40">
+<div class="px-6 mb-10">
+<h1 class="font-headline-md text-headline-md font-bold text-primary dark:text-primary mb-1">MangaFlow</h1>
+<p class="font-label-sm text-label-sm text-on-surface-variant opacity-70 uppercase tracking-widest">Studio Artist Suite</p>
+</div>
+<nav class="flex-1 px-4 space-y-2">
+<!-- Active Tab: Profile -->
+<a class="flex items-center gap-3 px-4 py-3 text-primary font-bold border-r-2 border-primary bg-primary-container/10 transition-all rounded-l-lg group" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">person</span>
+<span class="font-label-md text-label-md">Profile</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors rounded-lg group" href="#">
+<span class="material-symbols-outlined">theater_comedy</span>
+<span class="font-label-md text-label-md">Studio</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors rounded-lg group" href="#">
+<span class="material-symbols-outlined">security</span>
+<span class="font-label-md text-label-md">Security</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors rounded-lg group" href="#">
+<span class="material-symbols-outlined">notifications</span>
+<span class="font-label-md text-label-md">Notifications</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors rounded-lg group" href="#">
+<span class="material-symbols-outlined">share</span>
+<span class="font-label-md text-label-md">Connections</span>
+</a>
+</nav>
+<div class="mt-auto px-6 pt-6 border-t border-outline-variant/20">
+<div class="flex items-center gap-3 mb-6">
+<div class="w-10 h-10 rounded-full overflow-hidden border border-primary/30">
+<img alt="User profile avatar" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida/ADBb0ugFcw_R4DZu-ZsJdBcZummHfWDkdj3sztZ2y1Db_4qrhDmQBiB9fZUGLq_IHEahHMcdG4aR6HhLQJJdEecggYKHRi1XxG5kAJ-Uv8gIpPOlFKAlmRMY0TX_3IvVdXFA5abfFsQXPwdRLz385cPHCIIMig-przeK9aOPV3bujRvLNzhdIXwn4njVSHB2wkZJEHEzkOx7rCZLwGtf7MVrmm6NpyK-UQXrls--eGcti9FQUnp7YmLj6gdwBUgj"/>
+</div>
+<div>
+<div class="font-label-md text-label-md text-on-surface">Kenji Sato</div>
+<div class="font-label-sm text-label-sm text-on-surface-variant">Studio Artist</div>
+</div>
+</div>
+<button class="w-full py-3 px-4 bg-primary text-on-primary rounded-xl font-label-md text-label-md shadow-lg shadow-primary/10 hover:brightness-110 active:scale-[0.98] transition-all">
+                Save Changes
+            </button>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="md:ml-64 min-h-screen pt-20 md:pt-10 pb-24 md:pb-10 px- container-padding max-w-6xl mx-auto">
+<header class="mb-section-margin">
+<h2 class="font-headline-lg text-headline-lg text-on-surface mb-2">Edit Profile</h2>
+<p class="font-body-md text-body-md text-on-surface-variant">Manage your studio identity and digital presence across the MangaFlow ecosystem.</p>
+</header>
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-panel-gap items-start">
+<!-- Left Column: Primary Profile Info -->
+<div class="lg:col-span-2 space-y-panel-gap">
+<!-- Bento Card: Public Profile -->
+<section class="glass-panel p-8 rounded-xl">
+<h3 class="font-headline-md text-headline-md text-primary mb-6">Public Profile</h3>
+<div class="space-y-6">
+<!-- Avatar Section -->
+<div class="flex flex-col sm:flex-row items-center gap-8 pb-6 border-b border-outline-variant/20">
+<div class="relative group">
+<div class="w-32 h-32 rounded-2xl overflow-hidden border-2 border-primary/20 shadow-2xl">
+<img alt="User profile avatar" class="w-full h-full object-cover transition-transform group-hover:scale-105" src="https://lh3.googleusercontent.com/aida/ADBb0ugFcw_R4DZu-ZsJdBcZummHfWDkdj3sztZ2y1Db_4qrhDmQBiB9fZUGLq_IHEahHMcdG4aR6HhLQJJdEecggYKHRi1XxG5kAJ-Uv8gIpPOlFKAlmRMY0TX_3IvVdXFA5abfFsQXPwdRLz385cPHCIIMig-przeK9aOPV3bujRvLNzhdIXwn4njVSHB2wkZJEHEzkOx7rCZLwGtf7MVrmm6NpyK-UQXrls--eGcti9FQUnp7YmLj6gdwBUgj"/>
+</div>
+<label class="absolute -bottom-2 -right-2 w-10 h-10 bg-primary-container text-on-primary-container rounded-lg flex items-center justify-center cursor-pointer shadow-lg hover:scale-110 transition-transform" for="avatar-upload">
+<span class="material-symbols-outlined text-[20px]">photo_camera</span>
+<input class="hidden" id="avatar-upload" type="file"/>
+</label>
+</div>
+<div class="flex-1 text-center sm:text-left">
+<h4 class="font-label-md text-label-md text-on-surface mb-1">Profile Photo</h4>
+<p class="font-label-sm text-label-sm text-on-surface-variant mb-4">Recommended: 400x400px. PNG or JPG.</p>
+<div class="flex flex-wrap justify-center sm:justify-start gap-3">
+<button class="px-4 py-2 bg-surface-container-high text-on-surface rounded-lg font-label-sm text-label-sm hover:bg-surface-bright transition-colors border border-outline-variant/30">Upload New</button>
+<button class="px-4 py-2 text-error font-label-sm text-label-sm hover:bg-error-container/10 rounded-lg transition-colors">Remove</button>
+</div>
+</div>
+</div>
+<!-- Form Fields -->
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+<div class="space-y-2">
+<label class="font-label-md text-label-md text-on-surface-variant ml-1">Display Name</label>
+<div class="flex items-center gap-3 bg-surface-container-low border border-outline-variant/30 rounded-xl px-4 py-3 focus-within:border-primary focus-within:shadow-[0_0_0_2px_rgba(208,188,255,0.2)] transition-all">
+<span class="material-symbols-outlined text-on-surface-variant text-[20px]">badge</span>
+<input class="bg-transparent border-none outline-none w-full text-on-surface font-body-md text-body-md placeholder-outline/50" type="text" value="Kenji Sato"/>
+</div>
+</div>
+<div class="space-y-2">
+<label class="font-label-md text-label-md text-on-surface-variant ml-1">Username</label>
+<div class="flex items-center gap-3 bg-surface-container-low border border-outline-variant/30 rounded-xl px-4 py-3 focus-within:border-primary focus-within:shadow-[0_0_0_2px_rgba(208,188,255,0.2)] transition-all">
+<span class="material-symbols-outlined text-on-surface-variant text-[20px]">alternate_email</span>
+<input class="bg-transparent border-none outline-none w-full text-on-surface font-body-md text-body-md placeholder-outline/50" type="text" value="mangaka_kenji"/>
+</div>
+</div>
+<div class="sm:col-span-2 space-y-2">
+<label class="font-label-md text-label-md text-on-surface-variant ml-1">Bio</label>
+<div class="bg-surface-container-low border border-outline-variant/30 rounded-xl px-4 py-3 focus-within:border-primary focus-within:shadow-[0_0_0_2px_rgba(208,188,255,0.2)] transition-all">
+<textarea class="bg-transparent border-none outline-none w-full text-on-surface font-body-md text-body-md resize-none placeholder-outline/50" rows="4">Digital illustrator specializing in cyberpunk manga aesthetics. Lead artist at Neo-Tokyo Studio. Always exploring the intersection of traditional ink techniques and modern digital tools.</textarea>
+</div>
+</div>
+<div class="sm:col-span-2 space-y-2">
+<label class="font-label-md text-label-md text-on-surface-variant ml-1">Location</label>
+<div class="flex items-center gap-3 bg-surface-container-low border border-outline-variant/30 rounded-xl px-4 py-3 focus-within:border-primary focus-within:shadow-[0_0_0_2px_rgba(208,188,255,0.2)] transition-all">
+<span class="material-symbols-outlined text-on-surface-variant text-[20px]">location_on</span>
+<input class="bg-transparent border-none outline-none w-full text-on-surface font-body-md text-body-md placeholder-outline/50" type="text" value="Tokyo, Japan"/>
+</div>
+</div>
+</div>
+</div>
+</section>
+</div>
+<!-- Right Column: Sidebar Actions & Socials -->
+<div class="space-y-panel-gap">
+<!-- Social Links Card -->
+<section class="glass-panel p-6 rounded-xl">
+<h3 class="font-headline-md text-headline-md text-primary mb-6">Social Links</h3>
+<div class="space-y-4">
+<div class="flex items-center gap-3 bg-surface-container-low border border-outline-variant/30 rounded-xl px-4 py-3 focus-within:border-primary transition-all">
+<span class="material-symbols-outlined text-on-surface-variant">brand_awareness</span>
+<input class="bg-transparent border-none outline-none w-full text-on-surface font-label-md text-label-md" placeholder="Twitter URL" type="text" value="twitter.com/kenji_draws"/>
+</div>
+<div class="flex items-center gap-3 bg-surface-container-low border border-outline-variant/30 rounded-xl px-4 py-3 focus-within:border-primary transition-all">
+<span class="material-symbols-outlined text-on-surface-variant">palette</span>
+<input class="bg-transparent border-none outline-none w-full text-on-surface font-label-md text-label-md" placeholder="ArtStation URL" type="text" value="artstation.com/kenji"/>
+</div>
+<div class="flex items-center gap-3 bg-surface-container-low border border-outline-variant/30 rounded-xl px-4 py-3 focus-within:border-primary transition-all">
+<span class="material-symbols-outlined text-on-surface-variant">forum</span>
+<input class="bg-transparent border-none outline-none w-full text-on-surface font-label-md text-label-md" placeholder="Discord ID" type="text" value="Kenji#4432"/>
+</div>
+<button class="w-full mt-2 py-3 border border-dashed border-outline-variant/50 text-on-surface-variant rounded-xl font-label-md text-label-md hover:border-primary hover:text-primary transition-all flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-[18px]">add</span>
+                            Add Platform
+                        </button>
+</div>
+</section>
+<!-- Studio Status Card -->
+<section class="bg-primary-container/10 border border-primary/20 p-6 rounded-xl relative overflow-hidden group">
+<div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+<span class="material-symbols-outlined text-[80px]" style="font-variation-settings: 'FILL' 1;">theater_comedy</span>
+</div>
+<div class="relative z-10">
+<h4 class="font-label-md text-label-md text-primary font-bold mb-1">Studio Status</h4>
+<p class="font-body-md text-body-md text-on-surface mb-4">You are currently in **Creative Mode**. Profile changes will sync across all active projects.</p>
+<div class="flex items-center gap-2 text-primary">
+<span class="w-2 h-2 bg-primary rounded-full animate-pulse"></span>
+<span class="font-label-sm text-label-sm uppercase tracking-wider">Syncing Enabled</span>
+</div>
+</div>
+</section>
+<!-- Mobile Only Sticky Actions (Visual placeholder for footer intent) -->
+<div class="flex flex-col gap-3 md:hidden">
+<button class="w-full py-4 bg-primary text-on-primary rounded-xl font-label-md text-label-md shadow-lg shadow-primary/20 active:scale-95 transition-transform">
+                        Save All Changes
+                    </button>
+<button class="w-full py-4 bg-surface-container-highest text-on-surface rounded-xl font-label-md text-label-md active:scale-95 transition-transform border border-outline-variant/30">
+                        Discard Changes
+                    </button>
+</div>
+</div>
+</div>
+</main>
+<!-- Bottom Navigation (Mobile Only) -->
+<nav class="md:hidden fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 pb-4 pt-2 bg-surface/90 backdrop-blur-md border-t border-outline-variant/30 shadow-lg rounded-t-xl">
+<a class="flex flex-col items-center justify-center text-on-surface-variant p-2 hover:text-primary" href="#">
+<span class="material-symbols-outlined">home</span>
+<span class="font-label-sm text-label-sm-mobile">Home</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant p-2 hover:text-primary" href="#">
+<span class="material-symbols-outlined">edit_square</span>
+<span class="font-label-sm text-label-sm-mobile">Projects</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant p-2 hover:text-primary" href="#">
+<span class="material-symbols-outlined">group</span>
+<span class="font-label-sm text-label-sm-mobile">Studio</span>
+</a>
+<a class="flex flex-col items-center justify-center bg-primary-container text-on-primary-container rounded-2xl p-2 active:scale-95 transition-all" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">person</span>
+<span class="font-label-sm text-label-sm-mobile">Profile</span>
+</a>
+</nav>
+<script>
+        // Simple micro-interaction for input fields
+        document.querySelectorAll('input, textarea').forEach(el => {
+            el.addEventListener('focus', () => {
+                el.parentElement.style.borderColor = '#d0bcff';
+            });
+            el.addEventListener('blur', () => {
+                el.parentElement.style.borderColor = 'rgba(73, 68, 84, 0.3)';
+            });
+        });
+
+        // Save changes ripple effect simulation
+        document.querySelectorAll('button').forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                if (this.innerText.includes('Save')) {
+                    const originalText = this.innerText;
+                    this.innerText = 'Syncing...';
+                    this.classList.add('opacity-80');
+                    setTimeout(() => {
+                        this.innerText = 'Profile Updated';
+                        this.classList.replace('bg-primary', 'bg-tertiary-container');
+                        this.classList.replace('text-on-primary', 'text-on-tertiary-container');
+                        setTimeout(() => {
+                            this.innerText = originalText;
+                            this.classList.replace('bg-tertiary-container', 'bg-primary');
+                            this.classList.replace('text-on-tertiary-container', 'text-on-primary');
+                            this.classList.remove('opacity-80');
+                        }, 2000);
+                    }, 800);
+                }
+            });
+        });
+    </script>
+</body></html>

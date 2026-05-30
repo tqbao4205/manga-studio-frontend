@@ -101,7 +101,11 @@ export function Topbar() {
               className="flex items-center gap-3 pl-3 pr-3 py-2 rounded-2xl hover:bg-surface-container-high transition-all duration-300 group"
             >
               <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center overflow-hidden ring-2 ring-primary/20 shrink-0">
-                <span className="text-xs font-bold text-primary">{user.displayName?.charAt(0) || '?'}</span>
+                {user.avatarUrl ? (
+                  <img src={user.avatarUrl} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  <span className="text-xs font-bold text-primary">{user.displayName?.charAt(0) || '?'}</span>
+                )}
               </div>
               <div className="flex flex-col items-start">
                 <span className="text-xs font-semibold text-white leading-tight">{user.displayName}</span>
