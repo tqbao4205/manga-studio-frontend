@@ -72,26 +72,24 @@ export function NotificationsPanel({ onClose }) {
   );
 
   return (
-    <div className="absolute right-0 top-full mt-2 w-80 border border-primary bg-white z-50">
-      {/* Header: tiêu đề + nút đóng */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-primary">
-        <h3 className="text-sm font-semibold text-on-surface">Notifications</h3>
+    <div className="absolute right-0 top-full mt-2 w-80 border border-outline-variant/40 bg-surface-container backdrop-blur-xl rounded-2xl shadow-2xl shadow-black/30 z-50 overflow-hidden">
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-3 border-b border-outline-variant/10">
+        <h3 className="text-sm font-semibold text-white">Notifications</h3>
         <button
           onClick={onClose}
-          className="text-on-surface-variant hover:text-on-surface"
+          className="w-6 h-6 flex items-center justify-center rounded-lg text-on-surface-variant hover:text-white hover:bg-surface-container-high transition-all"
         >
-          <X size={16} />
+          <X size={14} />
         </button>
       </div>
 
       {/* Danh sách thông báo */}
       <div className="max-h-80 overflow-y-auto">
         {userNotifications.length === 0 ? (
-          // Trạng thái rỗng
-          <div className="px-4 py-8 text-center">
-            <p className="text-sm text-on-surface-variant">
-              No notifications yet
-            </p>
+          <div className="px-4 py-10 text-center">
+            <span className="material-symbols-outlined text-3xl text-outline/40 mb-2">notifications_off</span>
+            <p className="text-sm text-on-surface-variant/60">No notifications yet</p>
           </div>
         ) : (
           userNotifications.map((n) => {
@@ -105,44 +103,42 @@ export function NotificationsPanel({ onClose }) {
                     navigate(`/workspace/${n.referenceId}`);
                 }}
                 className={cn(
-                  "w-full text-left px-4 py-3 border-b border-border-light/30 hover:bg-black/[0.02] transition-colors flex items-start gap-3",
-                  !n.isRead && "bg-black/[0.02]",
+                  "w-full text-left px-4 py-3 border-b border-outline-variant/10 hover:bg-surface-container-high transition-all flex items-start gap-3 last:border-0",
+                  !n.isRead && "bg-primary/[0.03]",
                 )}
               >
-                {/* Icon container, highlight nếu chưa đọc */}
                 <div
                   className={cn(
-                    "w-8 h-8 flex items-center justify-center flex-shrink-0 border",
+                    "mt-0.5 w-8 h-8 flex items-center justify-center shrink-0 border rounded-xl",
                     !n.isRead
-                      ? "border-primary bg-primary/5"
-                      : "border-border-light",
+                      ? "border-primary/30 bg-primary/10"
+                      : "border-outline-variant/20",
                   )}
                 >
                   <Icon
                     size={14}
                     className={
-                      !n.isRead ? "text-primary" : "text-on-surface-variant"
+                      !n.isRead ? "text-primary" : "text-on-surface-variant/60"
                     }
                   />
                 </div>
-                {/* Nội dung thông báo */}
                 <div className="flex-1 min-w-0">
                   <p
                     className={cn(
                       "text-sm leading-snug",
                       !n.isRead
-                        ? "font-medium text-on-surface"
+                        ? "font-semibold text-white"
                         : "text-on-surface-variant",
                     )}
                   >
                     {n.title}
                   </p>
                   {n.message && (
-                    <p className="text-xs text-on-surface-variant mt-0.5 line-clamp-2">
+                    <p className="text-xs text-on-surface-variant/70 mt-0.5 line-clamp-2 leading-relaxed">
                       {n.message}
                     </p>
                   )}
-                  <p className="text-[10px] text-on-surface-variant/60 mt-1">
+                  <p className="text-[10px] text-on-surface-variant/40 mt-1.5">
                     {formatRelativeTime(n.createdAt)}
                   </p>
                 </div>

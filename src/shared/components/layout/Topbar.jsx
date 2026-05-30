@@ -1,208 +1,144 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import {
-  Search,
-  Bell,
-  LogOut,
-  User as UserIcon,
-  Settings,
-  X,
-} from "lucide-react";
+import { Bell, User, LogOut } from "lucide-react";
+import { cn } from "../../utils";
 import { useAuthStore } from "../../../app/stores/authStore";
 import { useNotifications } from "../../hooks/useMockData";
-import { Avatar } from "../ui/avatar";
-import {
-  DropdownMenu,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-} from "../ui/dropdown-menu";
 import { NotificationsPanel } from "./NotificationsPanel";
 
-/**
- * ── Topbar: Thanh tiêu đề phía trên ──
- *
- * Props:
- *   - title: Tiêu đề trang hiện tại
- *
- * Các thành phần (từ trái sang phải):
- *   1. Tiêu đề trang (hoặc ô tìm kiếm thay thế)
- *   2. Nút tìm kiếm (toggle search bar)
- *   3. Nút thông báo (bell icon + badge số chưa đọc)
- *   4. Dropdown menu người dùng (avatar + tên)
- *
- * Các state:
- *   - showSearch     : Bật/tắt thanh tìm kiếm
- *   - searchQuery    : Nội dung tìm kiếm
- *   - showNotifications : Bật/tắt bảng thông báo
- *
- * Hành vi:
- *   - Nhấn Enter trong ô search → navigate /series?search=...
- *   - Thay đổi route → tự động đóng search và xoá query
- *   - Click overlay → đóng notifications panel
- *   - Dropdown người dùng: Profile, Settings, Sign Out
- */
+const breadcrumbMap = {
+  '/dashboard': 'Dashboard',
+  '/series': 'Series List',
+  '/reviews': 'Reviews',
+  '/tasks': 'Tasks',
+  '/rankings': 'Rankings',
+  '/publishing': 'Publishing',
+  '/profile': 'Profile',
+}
 
-export function Topbar({ title }) {
+export function Topbar() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, logout } = useAuthStore();
+  const user = useAuthStore((s) => s.user);
+  const logout = useAuthStore((s) => s.logout);
   const { data: notifications } = useNotifications();
   const unreadCount = (notifications || []).filter((n) => !n.isRead).length;
   const [showNotifications, setShowNotifications] = useState(false);
-  const [showSearch, setShowSearch] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-  const searchRef = useRef(null);
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [profileAnim, setProfileAnim] = useState(false);
+  const profileRef = useRef(null);
+  const notifRef = useRef(null);
 
-  // Auto focus vào ô search khi mở
+  const openProfile = useCallback(() => {
+    setShowNotifications(false);
+    setShowProfileMenu(true);
+    requestAnimationFrame(() => setProfileAnim(true));
+  }, []);
+
+  const closeProfile = useCallback(() => {
+    setProfileAnim(false);
+    setTimeout(() => setShowProfileMenu(false), 200);
+  }, []);
+
   useEffect(() => {
-    if (showSearch && searchRef.current) {
-      searchRef.current.focus();
-    }
-  }, [showSearch]);
+    if (!showProfileMenu && !showNotifications) return;
+    const handleClick = (e) => {
+      if (showProfileMenu && profileRef.current && !profileRef.current.contains(e.target)) {
+        closeProfile();
+      }
+      if (showNotifications && notifRef.current && !notifRef.current.contains(e.target)) {
+        setShowNotifications(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [showProfileMenu, showNotifications, closeProfile]);
 
-  // Đóng search khi chuyển trang
-  useEffect(() => {
-    setShowSearch(false);
-    setSearchQuery("");
-  }, [location.pathname]);
-
-  // Xử lý submit tìm kiếm
-  const handleSearch = (e) => {
-    e.preventDefault();
-    if (!searchQuery.trim()) return;
-    navigate(`/series?search=${encodeURIComponent(searchQuery.trim())}`);
-    setShowSearch(false);
-    setSearchQuery("");
-  };
+  const basePath = '/' + location.pathname.split('/')[1]
+  const pageLabel = breadcrumbMap[basePath] || 'MangaFlow'
 
   return (
-    <header className="h-16 border-b border-primary bg-white/80 backdrop-blur-xl flex items-center justify-between px-6 relative">
-      {/* Bên trái: Tiêu đề hoặc thanh tìm kiếm */}
-      <div className="flex items-center gap-4 min-w-0">
-        {showSearch ? (
-          // Form tìm kiếm
-          <form
-            onSubmit={handleSearch}
-            className="flex items-center gap-2 flex-1"
-          >
-            <Search
-              size={16}
-              className="text-on-surface-variant flex-shrink-0"
-            />
-            <input
-              ref={searchRef}
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search series..."
-              className="flex-1 text-sm text-on-surface bg-transparent border-none outline-none placeholder:text-on-surface-variant/50"
-            />
-            <button
-              type="button"
-              onClick={() => {
-                setShowSearch(false);
-                setSearchQuery("");
-              }}
-              className="text-on-surface-variant hover:text-on-surface"
-            >
-              <X size={16} />
-            </button>
-          </form>
-        ) : (
-          // Tiêu đề trang
-          <h1 className="text-lg font-semibold text-on-surface truncate">
-            {title || "Dashboard"}
-          </h1>
-        )}
+    <header className="sticky top-0 z-30 flex items-center justify-between bg-surface/80 backdrop-blur-md px-10 py-4 border-b border-outline-variant/30 rounded-bl-3xl shadow-sm shadow-black/5">
+      {/* Subtle glow matching sidebar */}
+      <div className="absolute -top-20 left-60 w-80 h-40 bg-primary/5 rounded-full blur-3xl pointer-events-none" />
+
+      {/* Breadcrumb */}
+      <div className="relative flex items-center gap-2.5">
+        <span className="w-1.5 h-1.5 rounded-full bg-primary/60" />
+        <span className="text-sm text-on-surface-variant/80 font-geist tracking-wide">Production</span>
+        <span className="material-symbols-outlined text-sm text-outline">chevron_right</span>
+        <span className="text-sm text-white font-semibold font-geist">{pageLabel}</span>
       </div>
 
-      {/* Bên phải: Các action buttons */}
-      <div className="flex items-center gap-3">
-        {/* Nút tìm kiếm */}
-        <button
-          onClick={() => setShowSearch(!showSearch)}
-          className="w-9 h-9 flex items-center justify-center text-on-surface-variant hover:text-on-surface hover:bg-black/[0.05] transition-all"
-        >
-          <Search size={18} />
-        </button>
-
-        {/* Nút thông báo + badge */}
-        <div className="relative">
+      {/* Right actions */}
+      <div className="relative flex items-center gap-3">
+        {/* Notification bell */}
+        <div className="relative" ref={notifRef}>
           <button
-            onClick={() => setShowNotifications(!showNotifications)}
-            className="relative w-9 h-9 flex items-center justify-center text-on-surface-variant hover:text-on-surface hover:bg-black/[0.05] transition-all"
+            onClick={() => { setShowProfileMenu(false); setShowNotifications(!showNotifications) }}
+            className="relative w-10 h-10 flex items-center justify-center rounded-2xl bg-surface-container hover:bg-surface-container-high text-on-surface-variant hover:text-white transition-all duration-300 group"
           >
-            <Bell size={18} />
+            <div className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 bg-surface-container-high transition-all duration-300 scale-95 group-hover:scale-100" />
+            <span className="relative z-10 material-symbols-outlined text-xl">notifications</span>
             {unreadCount > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-status-danger text-[9px] font-bold text-white flex items-center justify-center">
-                {/* Giới hạn hiển thị tối đa 9+ */}
+              <span className="absolute -top-0.5 -right-0.5 z-20 w-4 h-4 bg-status-danger text-[9px] font-bold text-white flex items-center justify-center rounded-full shadow-lg shadow-status-danger/30">
                 {unreadCount > 9 ? "9+" : unreadCount}
               </span>
             )}
           </button>
-          {/* Overlay + Panel thông báo */}
           {showNotifications && (
-            <>
-              <div
-                className="fixed inset-0 z-40"
-                onClick={() => setShowNotifications(false)}
-              />
-              <div
-                className="relative z-50"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <NotificationsPanel
-                  onClose={() => setShowNotifications(false)}
-                />
-              </div>
-            </>
+            <div onClick={(e) => e.stopPropagation()}>
+              <NotificationsPanel onClose={() => setShowNotifications(false)} />
+            </div>
           )}
         </div>
 
-        {/* Dropdown menu người dùng */}
+        {/* User Profile */}
         {user && (
-          <DropdownMenu
-            trigger={
-              <button className="flex items-center gap-2.5 ml-2 px-2 py-1.5 hover:bg-black/[0.05] transition-all">
-                <Avatar name={user.displayName} size="sm" />
-                <span className="text-sm font-medium text-on-surface hidden sm:block">
-                  {user.displayName}
+          <div className="relative" ref={profileRef}>
+            <button
+              onClick={() => showProfileMenu ? closeProfile() : openProfile()}
+              className="flex items-center gap-3 pl-3 pr-3 py-2 rounded-2xl hover:bg-surface-container-high transition-all duration-300 group"
+            >
+              <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center overflow-hidden ring-2 ring-primary/20 shrink-0">
+                <span className="text-xs font-bold text-primary">{user.displayName?.charAt(0) || '?'}</span>
+              </div>
+              <div className="flex flex-col items-start">
+                <span className="text-xs font-semibold text-white leading-tight">{user.displayName}</span>
+                <span className="text-[10px] text-on-surface-variant uppercase tracking-wider font-medium">
+                  {user.role.replace(/_/g, ' ')}
                 </span>
-              </button>
-            }
-            align="end"
-          >
-            {/* Thông tin người dùng */}
-            <div className="px-3 py-2">
-              <p className="text-sm font-medium text-on-surface">
-                {user.displayName}
-              </p>
-              <p className="text-xs text-on-surface-variant">
-                {user.role.replace(/_/g, " ")}
-              </p>
-            </div>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              icon={<UserIcon size={16} />}
-              onClick={() => navigate("/profile")}
-            >
-              Profile
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              icon={<Settings size={16} />}
-              onClick={() => navigate("/profile")}
-            >
-              Settings
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              icon={<LogOut size={16} />}
-              danger
-              onClick={logout}
-            >
-              Sign Out
-            </DropdownMenuItem>
-          </DropdownMenu>
+              </div>
+            </button>
+
+            {showProfileMenu && (
+              <div className={cn(
+                'fixed top-[72px] right-0 z-50 w-56 border border-outline-variant/40 bg-surface-container backdrop-blur-xl py-2 rounded-l-2xl shadow-2xl shadow-black/30 transition-all duration-200 ease-out origin-top-right',
+                profileAnim ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none',
+              )}>
+                <div className="px-4 py-3 border-b border-outline-variant/10">
+                  <p className="text-sm font-semibold text-white">{user.displayName}</p>
+                  <p className="text-xs text-on-surface-variant/70 mt-0.5">{user.role.replace(/_/g, ' ')}</p>
+                </div>
+                <div className="py-1.5">
+                  <button
+                    onClick={() => { closeProfile(); navigate('/profile') }}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-on-surface-variant hover:text-white hover:bg-primary/10 transition-all mx-1.5 rounded-xl"
+                  >
+                    <User size={15} className="shrink-0" />
+                    <span>View Profile</span>
+                  </button>
+                  <button
+                    onClick={() => { closeProfile(); logout() }}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-status-danger hover:bg-status-danger/10 transition-all mx-1.5 rounded-xl"
+                  >
+                    <LogOut size={15} className="shrink-0" />
+                    <span>Logout</span>
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         )}
       </div>
     </header>

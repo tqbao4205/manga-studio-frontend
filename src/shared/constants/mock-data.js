@@ -33,6 +33,7 @@ export const mockSeries = [
     publishFrequency: 'WEEKLY',
     chapterCount: 24, startDate: '2025-02-01T00:00:00Z',
     createdAt: '2025-01-15T10:00:00Z',
+    rating: 4.9, tier: 'Pro Tier',
   },
   {
     id: 2, title: 'Shadow Monarch', titleJp: '影の君主',
@@ -43,6 +44,7 @@ export const mockSeries = [
     publishFrequency: 'WEEKLY',
     chapterCount: 52, startDate: '2024-07-01T00:00:00Z',
     createdAt: '2024-06-01T10:00:00Z',
+    rating: 4.7, tier: 'Pro Tier',
   },
   {
     id: 3, title: 'Cherry Blossoms After Winter', titleJp: '冬の桜',
@@ -53,6 +55,7 @@ export const mockSeries = [
     publishFrequency: 'MONTHLY',
     chapterCount: 12, startDate: '2025-04-01T00:00:00Z',
     createdAt: '2025-03-10T10:00:00Z',
+    rating: 4.8, tier: 'Pro Tier',
   },
   {
     id: 4, title: 'Iron Chef Reborn', titleJp: '鉄の料理人',
@@ -63,6 +66,7 @@ export const mockSeries = [
     publishFrequency: 'BIWEEKLY',
     chapterCount: 8, startDate: '2025-07-01T00:00:00Z',
     createdAt: '2025-06-01T10:00:00Z',
+    rating: 4.5, tier: 'Free Tier',
   },
   {
     id: 5, title: 'Neon Reaper', titleJp: 'ネオン死神',
@@ -73,6 +77,7 @@ export const mockSeries = [
     publishFrequency: 'WEEKLY',
     chapterCount: 18, startDate: '2025-03-01T00:00:00Z',
     createdAt: '2025-02-15T10:00:00Z',
+    rating: 4.6, tier: 'Pro Tier',
   },
   {
     id: 6, title: 'The Last Summoner', titleJp: '最後の召喚士',
@@ -83,6 +88,7 @@ export const mockSeries = [
     publishFrequency: null,
     chapterCount: 0, startDate: null,
     createdAt: '2026-05-10T10:00:00Z',
+    rating: 0, tier: 'Free Tier',
   },
   {
     id: 7, title: 'Echoes of Eternity', titleJp: '永遠のこだま',
@@ -93,6 +99,7 @@ export const mockSeries = [
     publishFrequency: null,
     chapterCount: 0, startDate: null,
     createdAt: '2026-05-18T10:00:00Z',
+    rating: 0, tier: 'Free Tier',
   },
   {
     id: 8, title: 'Stardust Warriors', titleJp: '星屑戦士',
@@ -103,6 +110,7 @@ export const mockSeries = [
     publishFrequency: 'WEEKLY',
     chapterCount: 0, startDate: null,
     createdAt: '2026-05-20T10:00:00Z',
+    rating: 0, tier: 'Free Tier',
   },
   {
     id: 9, title: 'Love in Parallel', titleJp: 'パラレルラブ',
@@ -113,6 +121,7 @@ export const mockSeries = [
     publishFrequency: 'MONTHLY',
     chapterCount: 0, startDate: null,
     createdAt: '2026-05-22T10:00:00Z',
+    rating: 0, tier: 'Free Tier',
   },
 ]
 
@@ -480,4 +489,15 @@ export const mockDashboardStats = {
 
 export function getMockUser(id) {
   return mockUsers.find(u => u.id === id)
+}
+
+export function seriesPlaceholder(title, color) {
+  const initials = title.split(' ').map(w => w[0]).join('').slice(0, 3)
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="200" height="280" viewBox="0 0 200 280">
+    <rect width="200" height="280" fill="${color}"/>
+    <rect x="10" y="10" width="180" height="260" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="2"/>
+    <text x="100" y="130" text-anchor="middle" font-family="sans-serif" font-size="28" fill="rgba(255,255,255,0.9)" font-weight="bold">${initials}</text>
+    <text x="100" y="160" text-anchor="middle" font-family="sans-serif" font-size="10" fill="rgba(255,255,255,0.5)">MANGA</text>
+  </svg>`
+  return 'data:image/svg+xml,' + encodeURIComponent(svg)
 }

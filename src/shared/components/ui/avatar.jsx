@@ -42,7 +42,7 @@ const Avatar = React.forwardRef(
         ref={ref}
         className={cn(
           'relative overflow-hidden flex-shrink-0 flex items-center justify-center',
-          'bg-black/5 border border-primary',
+          'bg-surface-container-highest border border-outline-variant/30',
           sizeClasses[size],
           className,
         )}

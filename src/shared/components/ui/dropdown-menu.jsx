@@ -68,7 +68,7 @@ const DropdownMenu = React.forwardRef(
              */}
             <div
               className={cn(
-                'absolute z-50 mt-1 min-w-[12rem] border border-primary bg-white backdrop-blur-xl py-1.5',
+                'absolute z-50 mt-1 min-w-[12rem] border border-outline-variant bg-surface-container backdrop-blur-xl py-1.5 rounded-xl shadow-xl',
                 align === 'end' ? 'right-0' : 'left-0',
                 className,
               )}
@@ -103,7 +103,7 @@ const DropdownMenuItem = React.forwardRef(
          * danger === true:  style màu đỏ (xóa, thoát...)
          * danger === false: style trung tính, hover đổi màu
          */
-        danger ? 'text-status-danger hover:bg-status-danger/5' : 'text-on-surface-variant hover:bg-black/5 hover:text-on-surface',
+        danger ? 'text-status-danger hover:bg-status-danger/10' : 'text-on-surface-variant hover:bg-surface-container-high hover:text-white',
         className,
       )}
       {...props}
@@ -117,7 +117,7 @@ DropdownMenuItem.displayName = 'DropdownMenuItem'
 
 const DropdownMenuSeparator = React.forwardRef(
   ({ className, ...props }, ref) => (
-    <div ref={ref} className={cn('h-px bg-border-light my-1.5', className)} {...props} />
+    <div ref={ref} className={cn('h-px bg-outline-variant/50 my-1.5', className)} {...props} />
   ),
 )
 DropdownMenuSeparator.displayName = 'DropdownMenuSeparator'
