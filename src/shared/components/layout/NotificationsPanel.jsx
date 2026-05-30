@@ -72,10 +72,10 @@ export function NotificationsPanel({ onClose }) {
   );
 
   return (
-    <div className="absolute right-0 top-full mt-2 w-80 border border-primary bg-white z-50">
+    <div className="absolute right-0 top-full mt-2 w-80 border border-outline-variant bg-surface-container-high z-50">
       {/* Header: tiêu đề + nút đóng */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-primary">
-        <h3 className="text-sm font-semibold text-on-surface">Notifications</h3>
+      <div className="flex items-center justify-between px-4 py-3 border-b border-outline-variant">
+        <h3 className="text-sm font-semibold text-white font-geist">Notifications</h3>
         <button
           onClick={onClose}
           className="text-on-surface-variant hover:text-on-surface"
@@ -105,19 +105,19 @@ export function NotificationsPanel({ onClose }) {
                     navigate(`/workspace/${n.referenceId}`);
                 }}
                 className={cn(
-                  "w-full text-left px-4 py-3 border-b border-border-light/30 hover:bg-black/[0.02] transition-colors flex items-start gap-3",
-                  !n.isRead && "bg-black/[0.02]",
+                  "w-full text-left px-4 py-3 border-b border-outline-variant/30 hover:bg-surface-container-highest transition-colors flex items-start gap-3",
+                  !n.isRead && "bg-primary/[0.03]",
                 )}
               >
                 {/* Icon container, highlight nếu chưa đọc */}
-                <div
-                  className={cn(
-                    "w-8 h-8 flex items-center justify-center flex-shrink-0 border",
-                    !n.isRead
-                      ? "border-primary bg-primary/5"
-                      : "border-border-light",
-                  )}
-                >
+                  <div
+                    className={cn(
+                      "w-8 h-8 flex items-center justify-center flex-shrink-0 border rounded-lg",
+                      !n.isRead
+                        ? "border-primary bg-primary/10"
+                        : "border-outline-variant",
+                    )}
+                  >
                   <Icon
                     size={14}
                     className={

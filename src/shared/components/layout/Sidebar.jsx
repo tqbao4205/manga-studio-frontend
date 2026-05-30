@@ -1,147 +1,101 @@
-import { NavLink } from 'react-router-dom'
-import {
-  LayoutDashboard, BookOpen, PenTool, Calendar, TrendingUp, ListTodo, Vote,
-  ChevronLeft, ChevronRight, MessageSquare,
-} from 'lucide-react'
-
+import { NavLink, useLocation } from 'react-router-dom'
 import { cn } from '../../utils'
 import { useAuthStore } from '../../../app/stores/authStore'
-import { useUIStore } from '../../../app/stores/uiStore'
 import { APP_NAME } from '../../constants'
 
-/**
- * ── navItems: Định nghĩa các mục trong sidebar ──
- *
- * Mỗi mục gồm:
- *   - label : Tên hiển thị
- *   - icon  : Component icon từ lucide-react
- *   - path  : Đường dẫn React Router
- *   - roles : Mảng role được phép xem ('ALL' nghĩa là tất cả)
- *   - accent: Màu nhấn (primary | accent-purple)
- *
- * Các mục hiện tại:
- *   - Dashboard / Series / Rankings → tất cả roles
- *   - Reviews → TANTOU_EDITOR, EDITORIAL_BOARD
- *   - Tasks → MANGAKA, ASSISTANT
- *   - Publishing / Vote Entry → EDITORIAL_BOARD
- */
-
 const navItems = [
-  { label: 'Dashboard', icon: LayoutDashboard, path: '/dashboard', roles: ['ALL'], accent: 'primary' },
-  { label: 'Series', icon: BookOpen, path: '/series', roles: ['ALL'], accent: 'primary' },
-  { label: 'Reviews', icon: MessageSquare, path: '/reviews', roles: ['TANTOU_EDITOR', 'EDITORIAL_BOARD'], accent: 'accent-purple' },
-  { label: 'Tasks', icon: ListTodo, path: '/tasks', roles: ['MANGAKA', 'ASSISTANT'], accent: 'primary' },
-  { label: 'Publishing', icon: Calendar, path: '/publishing', roles: ['EDITORIAL_BOARD'], accent: 'accent-purple' },
-  { label: 'Vote Entry', icon: Vote, path: '/publishing/votes', roles: ['EDITORIAL_BOARD'], accent: 'accent-purple' },
-  { label: 'Rankings', icon: TrendingUp, path: '/rankings', roles: ['ALL'], accent: 'primary' },
+  { label: 'Dashboard', icon: 'dashboard', path: '/dashboard' },
+  { label: 'Manga Series', icon: 'book_2', path: '/series' },
+  { label: 'Chapters', icon: 'list_alt', path: '/chapters' },
+  { label: 'Analytics', icon: 'analytics', path: '/rankings' },
 ]
 
-// Ánh xạ accent → class cho thanh chỉ báo bên trái active
-const accentMap = {
-  primary: 'bg-primary',
-  'accent-purple': 'bg-accent-purple',
-}
-
-// Ánh xạ accent → class màu icon
-const iconColorMap = {
-  primary: 'text-primary',
-  'accent-purple': 'text-accent-purple',
-}
-
-/**
- * ── Sidebar: Thanh điều hướng bên trái ──
- *
- * Component:
- *   - Logo + tên ứng dụng ở đầu
- *   - Danh sách nav items, lọc theo role người dùng
- *   - Nút thu gọn/mở rộng ở cuối
- *
- * Trạng thái:
- *   - collapsed (thu gọn) → chỉ hiển thị icon, width = 64px
- *   - expanded (mở rộng) → hiển thị icon + label, width = 240px
- *
- * Hành vi:
- *   - Nav item đang active → thanh accent bên trái + icon màu
- *   - Hover → background nhẹ
- */
-
-export function Sidebar() {
-  const { sidebarCollapsed: collapsed, toggleSidebar } = useUIStore()
+export function Sidebar({ collapsed }) {
   const user = useAuthStore((s) => s.user)
+  const location = useLocation()
+
+  const isActive = (path) => {
+    if (path === '/series') return location.pathname.startsWith('/series')
+    return location.pathname === path
+  }
 
   return (
-    <aside
-      className={cn(
-        'h-screen fixed left-0 top-0 z-30 flex flex-col border-r border-primary bg-white transition-all duration-300',
-        collapsed ? 'w-16' : 'w-60',
-      )}
-    >
-      {/* Header: Logo + tên ứng dụng */}
-      <div className={cn(
-        'flex items-center h-16 border-b border-primary px-4',
-        collapsed ? 'justify-center' : 'gap-3',
-      )}>
-        <div className="w-8 h-8 bg-primary flex items-center justify-center flex-shrink-0">
-          <PenTool size={16} className="text-white" />
+    <aside className={cn(
+      'h-full border-r border-outline-variant bg-surface flex flex-col shrink-0 transition-all duration-300 ease-in-out overflow-hidden z-30',
+      collapsed ? 'w-0' : 'w-[280px] shadow-[2px_0_20px_rgba(0,0,0,0.4)]',
+    )}>
+      <div className="flex items-center h-16 gap-3 px-6 shrink-0">
+        <div className="size-8 text-primary shrink-0">
+          <svg fill="currentColor" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+            <path d="M8.57829 8.57829C5.52816 11.6284 3.451 15.5145 2.60947 19.7452C1.76794 23.9758 2.19984 28.361 3.85056 32.3462C5.50128 36.3314 8.29667 39.7376 11.8832 42.134C15.4698 44.5305 19.6865 45.8096 24 45.8096C28.3135 45.8096 32.5302 44.5305 36.1168 42.134C39.7033 39.7375 42.4987 36.3314 44.1494 32.3462C45.8002 28.361 46.2321 23.9758 45.3905 19.7452C44.549 15.5145 42.4718 11.6284 39.4217 8.57829L24 24L8.57829 8.57829Z"></path>
+          </svg>
         </div>
-        {!collapsed && (
-          <span className="font-display text-headline-mobile text-on-surface tracking-tight">{APP_NAME}</span>
-        )}
+        <span className="text-xl font-bold tracking-tight text-white font-geist whitespace-nowrap">
+          {APP_NAME}
+        </span>
       </div>
 
-      {/* Navigation menu */}
-      <nav className="flex-1 py-4 space-y-0.5 overflow-y-auto scrollbar-thin">
-        {navItems
-          // Lọc các mục phù hợp với role của user
-          .filter((item) => item.roles.includes('ALL') || (user && item.roles.includes(user.role)))
-          .map((item) => (
+      <nav className="flex-1 px-3 space-y-1 mt-2">
+        {navItems.map((item) => {
+          const active = isActive(item.path)
+          return (
             <NavLink
               key={item.path}
               to={item.path}
-              // Render prop nhận isActive từ NavLink
-              className={({ isActive }) => cn(
-                'flex items-center gap-3 px-4 py-2.5 text-sm transition-all duration-200 group relative',
-                isActive
-                  ? 'text-on-surface font-medium'
-                  : 'text-on-surface-variant hover:text-on-surface hover:bg-black/[0.02]',
-                collapsed && 'justify-center px-0',
+              className={cn(
+                'flex items-center gap-3 px-3 py-2.5 text-on-surface-variant hover:text-white transition-all rounded-xl hover:bg-surface-container',
+                active && 'active-nav',
               )}
             >
-              {({ isActive }) => (
-                <>
-                  {/* Thanh accent bên trái khi active */}
-                  {isActive && (
-                    <div className={cn(
-                      'absolute left-0 top-0 bottom-0 w-1',
-                      accentMap[item.accent],
-                    )} />
-                  )}
-                  {/* Icon */}
-                  <item.icon
-                    size={20}
-                    className={cn(
-                      'flex-shrink-0',
-                      isActive ? iconColorMap[item.accent] : '',
-                    )}
-                  />
-                  {/* Label (ẩn khi thu gọn) */}
-                  {!collapsed && (
-                    <span className="truncate">{item.label}</span>
-                  )}
-                </>
-              )}
+              <span
+                className="material-symbols-outlined text-xl shrink-0"
+                style={active && item.icon === 'book_2' ? { fontVariationSettings: "'FILL' 1" } : undefined}
+              >
+                {item.icon}
+              </span>
+              <span className="font-medium text-sm whitespace-nowrap">{item.label}</span>
             </NavLink>
-          ))}
+          )
+        })}
       </nav>
 
-      {/* Footer: Nút thu gọn/mở rộng sidebar */}
-      <div className="border-t border-primary p-3">
-        <button
-          onClick={toggleSidebar}
-          className="w-full flex items-center justify-center gap-2 py-2 text-on-surface-variant hover:text-on-surface hover:bg-black/[0.02] transition-all"
+      <div className="border-t border-outline-variant py-3 px-3">
+        <NavLink
+          to="/profile"
+          className={cn(
+            'flex items-center gap-3 px-3 py-2.5 text-on-surface-variant hover:text-white transition-all rounded-xl hover:bg-surface-container',
+            location.pathname === '/profile' && 'active-nav',
+          )}
         >
-          {collapsed ? <ChevronRight size={18} /> : <><ChevronLeft size={18} /><span className="text-xs">Collapse</span></>}
-        </button>
+          <span className="material-symbols-outlined text-xl shrink-0">settings</span>
+          <span className="font-medium text-sm whitespace-nowrap">Settings</span>
+        </NavLink>
+
+        {user ? (
+          <div className="flex items-center gap-3 px-3 py-2 mt-1">
+            <div className="w-8 h-8 rounded-full bg-surface-container-highest flex items-center justify-center overflow-hidden shrink-0">
+              <div className="w-full h-full flex items-center justify-center text-xs font-bold text-primary bg-surface-container-highest">
+                {user.displayName?.[0] || '?'}
+              </div>
+            </div>
+            <div className="flex flex-col">
+              <span className="text-xs font-bold text-white whitespace-nowrap">{user.displayName}</span>
+              <span className="text-[10px] text-on-surface-variant uppercase tracking-wider font-semibold whitespace-nowrap">
+                {user.role.replace(/_/g, ' ')}
+              </span>
+            </div>
+          </div>
+        ) : (
+          <div className="flex items-center gap-3 px-3 py-2 mt-1">
+            <div className="w-8 h-8 rounded-full bg-surface-container-highest flex items-center justify-center shrink-0">
+              <span className="text-xs font-bold text-primary">?</span>
+            </div>
+            <div className="flex flex-col">
+              <span className="text-xs font-bold text-white whitespace-nowrap">Guest</span>
+              <span className="text-[10px] text-on-surface-variant uppercase tracking-wider font-semibold whitespace-nowrap">Not logged in</span>
+            </div>
+          </div>
+        )}
       </div>
     </aside>
   )
