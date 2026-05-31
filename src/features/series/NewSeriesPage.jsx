@@ -1,113 +1,157 @@
-/*
-  ==========================================================
-  PAGE: NewSeriesPage (dùng chung cho Create & Edit)
-  ROUTE: /series/new (tạo mới), /series/:seriesId/edit (sửa)
-  MỤC ĐÍCH: Form tạo mới hoặc chỉnh sửa thông tin series.
-  Khi tạo mới, tự động tạo Chapter 1 (Pilot) và chuyển đến Workspace.
-  QUYỀN TRUY CẬP: Chỉ MANGAKA (owner của series đó)
-  ==========================================================
-*/
+/**
+ * ─────────────────────────────────────────────
+ *  NewSeriesPage — Form t?o / s?a series
+ *  Route: /series/new (t?o m?i)
+ *         /series/:seriesId/edit (s?a)
+ * ─────────────────────────────────────────────
+ *
+ * M?c dích:
+ *   - Form t?o m?i ho?c ch?nh s?a thông tin series
+ *   - H? tr? upload ?nh bìa (multipart/form-data)
+ *   - Ch?n genre, demographic, cover color
+ *
+ * Lu?ng d? li?u (so v?i b?n cũ dùng mock):
+ *   - B?n cũ: dùng addSeries/updateSeries t? seriesStore (mutate mock data)
+ *   - B?n m?i: g?i seriesService.create/update (multipart/form-data)
+ *             API backend x? lý upload ?nh lên Cloudinary
+ *
+ * API g?i:
+ *   - GET /api/series/{id} (khi edit mode — load d? li?u c?)
+ *   - POST /api/series (khi t?o m?i)
+ *   - PUT /api/series/{id} (khi c?p nh?t)
+ *
+ * L?u ý:
+ *   - Backend yêu c?u multipart/form-data:
+ *     - "series": JSON string c?a SeriesRequest
+ *     - "file": File ?nh bìa (optional khi update)
+ *   - Dùng FormData + Blob d? g?i JSON nh? 1 part trong multipart
+ */
 
 import { useState, useRef, useEffect } from 'react'
 import { useNavigate, useParams, useLocation } from 'react-router-dom'
 import { ArrowLeft, Upload, X } from 'lucide-react'
 import { Button } from '../../shared/components/ui/button'
-import { useSeriesStore } from '../../app/stores/seriesStore'
 import { useAuthStore } from '../../app/stores/authStore'
 import { useUIStore } from '../../app/stores/uiStore'
+import seriesService from '../../services/seriesService'
 
+// Các enum kh?p v?i backend Genre.java và TargetDemographic.java
 const GENRES = ['ACTION', 'FANTASY', 'ROMANCE', 'COMEDY', 'DRAMA']
 const DEMOGRAPHICS = ['SHONEN', 'SHOJO', 'SEINEN', 'JOSEI']
-const FREQUENCIES = ['WEEKLY', 'BIWEEKLY', 'MONTHLY']
 const COLORS = ['#e63946', '#7c4dff', '#f472b6', '#f4a261', '#4fc3f7', '#2a9d8f', '#e76f51', '#264653']
 
 export function NewSeriesPage() {
   const navigate = useNavigate()
   const { seriesId } = useParams()
   const location = useLocation()
+  // Ki?m tra n?u du?ng d?n k?t thúc b?ng /edit -> dang ? ch? d? s?a
   const isEdit = location.pathname.endsWith('/edit')
   const user = useAuthStore((s) => s.user)
-  const seriesList = useSeriesStore((s) => s.seriesList)
-  const addSeries = useSeriesStore((s) => s.addSeries)
-  const updateSeries = useSeriesStore((s) => s.updateSeries)
-  const addChapter = useSeriesStore((s) => s.addChapter)
-  const getNextChapterId = useSeriesStore((s) => s.getNextChapterId)
   const addToast = useUIStore((s) => s.addToast)
 
+  // State cho form fields
   const [title, setTitle] = useState('')
   const [titleJp, setTitleJp] = useState('')
   const [synopsis, setSynopsis] = useState('')
   const [genre, setGenre] = useState('')
   const [demographic, setDemographic] = useState('')
-  const [publishFrequency, setPublishFrequency] = useState('')
   const [coverColor, setCoverColor] = useState(COLORS[0])
   const [coverImageUrl, setCoverImageUrl] = useState('')
-  const [thumbnailDataUrl, setThumbnailDataUrl] = useState('')
+  const [thumbnailDataUrl, setThumbnailDataUrl] = useState('')  // Preview ?nh tru?c khi upload
+  const [submitting, setSubmitting] = useState(false)
   const fileInputRef = useRef(null)
 
+  // N?u là edit mode, load d? li?u series t? API
   useEffect(() => {
     if (!isEdit || !seriesId) return
-    const series = seriesList.find(s => s.id === Number(seriesId))
-    if (!series) return
-    setTitle(series.title)
-    setTitleJp(series.titleJp || '')
-    setSynopsis(series.synopsis)
-    setGenre(series.genre)
-    setDemographic(series.targetDemographic)
-    setPublishFrequency(series.publishFrequency || '')
-    setCoverColor(series.coverColor || COLORS[0])
-    setCoverImageUrl(series.coverImageUrl || '')
-  }, [isEdit, seriesId, seriesList])
+    // Không c?n search trong mock n?a — g?i API th?t
+    seriesService.getById(Number(seriesId)).then((series) => {
+      setTitle(series.title)
+      setTitleJp(series.titleJp || '')
+      setSynopsis(series.synopsis)
+      setGenre(series.genre)
+      setDemographic(series.targetDemographic)
+      setCoverColor(series.coverColor || COLORS[0])
+      setCoverImageUrl(series.coverImageUrl || '')
+    }).catch(() => {})
+  }, [isEdit, seriesId])
 
-  const canSubmit = title.trim() && genre && demographic
+  // Ch? cho submit khi có title + genre + demographic + không dang submit
+  const canSubmit = title.trim() && genre && demographic && !submitting
 
-  const handleSubmit = () => {
+  /**
+   * buildFormData: Tao FormData multipart d? g?i lên backend
+   *
+   * Backend yêu c?u:
+   *   @RequestPart("series") SeriesRequest request
+   *   @RequestParam("file") MultipartFile file
+   *
+   * D? g?i JSON qua multipart:
+   *   - Tao Blob t? JSON string
+   *   - append vào FormData v?i tên "series"
+   *   - File append v?i tên "file"
+   */
+  const buildFormData = () => {
+    const formData = new FormData()
+
+    // B??c 1: Tao JSON string c?a SeriesRequest
+    const seriesJson = JSON.stringify({
+      title: title.trim(),
+      titleJp: titleJp || null,
+      synopsis: synopsis || null,
+      genre,
+      targetDemographic: demographic,
+      coverColor,
+      coverImageUrl: coverImageUrl || null,
+    })
+
+    // B??c 2: Append JSON nh? 1 part multipart (c?n Blob + filename)
+    // Backend dùng @RequestPart d? parse JSON này
+    formData.append('series', new Blob([seriesJson], { type: 'application/json' }), 'series.json')
+
+    // B??c 3: Append file ?nh (n?u có)
+    // Backend dùng @RequestParam("file") MultipartFile d? nh?n
+    const file = fileInputRef.current?.files?.[0]
+    if (file) {
+      formData.append('file', file)
+    }
+
+    return formData
+  }
+
+  /**
+   * handleSubmit: X? lý submit form
+   *
+   * N?u edit:
+   *   - G?i PUT /api/series/{id} v?i FormData
+   *   - Backend null-safe update (field null = gi? nguyên)
+   *
+   * N?u create:
+   *   - G?i POST /api/series v?i FormData
+   *   - Backend t? d?ng set status = DRAFT, gán mangaka = user hi?n t?i
+   *   - Upload ?nh lên Cloudinary r?i save URL vào DB
+   */
+  const handleSubmit = async () => {
     if (!canSubmit) return
-
-    if (isEdit && seriesId) {
-      updateSeries(Number(seriesId), {
-        title: title.trim(),
-        titleJp,
-        synopsis,
-        genre,
-        targetDemographic: demographic,
-        publishFrequency: publishFrequency || null,
-        coverColor,
-        coverImageUrl: coverImageUrl || '',
-      })
-      addToast({ type: 'success', title: 'Series updated', message: `"${title}" has been updated.` })
-      navigate(`/series/${seriesId}`)
-    } else {
-      const newId = seriesList.length > 0 ? Math.max(...seriesList.map(s => s.id)) + 1 : 1
-      addSeries({
-        title: title.trim(),
-        titleJp,
-        synopsis,
-        genre,
-        targetDemographic: demographic,
-        publishFrequency: publishFrequency || null,
-        coverColor,
-        coverImageUrl: coverImageUrl || '',
-        status: 'DRAFT',
-        mangakaId: user?.id || 1,
-        tantouEditorId: null,
-        chapterCount: 0,
-        createdAt: new Date().toISOString(),
-      })
-      const chId = getNextChapterId()
-      addChapter(newId, {
-        seriesId: newId,
-        chapterNumber: 1,
-        title: 'Pilot',
-        pageCount: 20,
-        status: 'DRAFT',
-        deadline: null,
-        publishDate: null,
-        progressPercent: 0,
-        createdAt: new Date().toISOString(),
-      })
-      addToast({ type: 'success', title: 'Series created', message: `"${title}" has been created. Start working on Chapter 1 in the workspace.` })
-      navigate(`/workspace/${chId}`)
+    setSubmitting(true)
+    try {
+      if (isEdit && seriesId) {
+        const formData = buildFormData()
+        await seriesService.update(Number(seriesId), formData)
+        addToast({ type: 'success', title: 'Series updated', message: `"${title}" has been updated.` })
+        navigate(`/series/${seriesId}`)
+      } else {
+        const formData = buildFormData()
+        // API tr? v? SeriesResponse v?a t?o (có id + coverImageUrl t? Cloudinary)
+        const created = await seriesService.create(formData)
+        addToast({ type: 'success', title: 'Series created', message: `"${title}" has been created.` })
+        // Chuy?n d?n trang chi ti?t series v?a t?o
+        navigate(`/series/${created.id}`)
+      }
+    } catch {
+      addToast({ type: 'error', title: 'Error', message: 'Failed to save series.' })
+    } finally {
+      setSubmitting(false)
     }
   }
 
@@ -120,7 +164,7 @@ export function NewSeriesPage() {
         </Button>
         <div>
           <h1 className="text-2xl font-bold text-on-surface">{isEdit ? 'Edit Series' : 'New Series'}</h1>
-          <p className="text-sm text-on-surface-variant mt-1">{isEdit ? 'Update your manga series' : 'Create a new manga series with Chapter 1'}</p>
+          <p className="text-sm text-on-surface-variant mt-1">{isEdit ? 'Update your manga series' : 'Create a new manga series'}</p>
         </div>
       </div>
 
@@ -133,7 +177,7 @@ export function NewSeriesPage() {
 
         <div>
           <label className="text-[10px] font-semibold uppercase tracking-wider text-on-surface-variant block mb-1">Japanese Title</label>
-          <input value={titleJp} onChange={(e) => setTitleJp(e.target.value)} placeholder="e.g. 魔月の刃" className="w-full h-9 px-3 text-sm bg-transparent border border-primary/20 outline-none focus:border-on-surface placeholder:text-on-surface-variant/30" />
+          <input value={titleJp} onChange={(e) => setTitleJp(e.target.value)} placeholder="e.g. ???" className="w-full h-9 px-3 text-sm bg-transparent border border-primary/20 outline-none focus:border-on-surface placeholder:text-on-surface-variant/30" />
         </div>
 
         <div>
@@ -164,27 +208,17 @@ export function NewSeriesPage() {
         </div>
 
         <div>
-          <label className="text-[10px] font-semibold uppercase tracking-wider text-on-surface-variant block mb-1">Publish Frequency</label>
-          <div className="flex flex-wrap gap-2">
-            {FREQUENCIES.map((f) => (
-              <button key={f} onClick={() => setPublishFrequency(f === publishFrequency ? '' : f)} className={`text-xs px-3 py-1.5 border transition-colors ${publishFrequency === f ? 'border-on-surface text-on-surface font-semibold' : 'border-primary/20 text-on-surface-variant hover:text-on-surface'}`}>
-                {f.charAt(0) + f.slice(1).toLowerCase()}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div>
           <label className="text-[10px] font-semibold uppercase tracking-wider text-on-surface-variant block mb-1">Cover Image URL</label>
           <input value={coverImageUrl} onChange={(e) => setCoverImageUrl(e.target.value)} placeholder="https://..." className="w-full h-9 px-3 text-sm bg-transparent border border-primary/20 outline-none focus:border-on-surface placeholder:text-on-surface-variant/30" />
         </div>
 
-        {/* Upload ảnh bìa */}
+        {/* Upload ?nh bìa (file input ?n) */}
         <div>
           <label className="text-[10px] font-semibold uppercase tracking-wider text-on-surface-variant block mb-1">Cover Image</label>
           <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => {
             const file = e.target.files?.[0]
             if (!file) return
+            // D?c file thành data URL d? preview
             const reader = new FileReader()
             reader.onload = () => setThumbnailDataUrl(reader.result)
             reader.readAsDataURL(file)
@@ -204,7 +238,7 @@ export function NewSeriesPage() {
           )}
         </div>
 
-        {/* Chọn màu cover (nếu chưa upload ảnh) */}
+        {/* Ch?n màu cover (ch? khi ch?a upload ?nh) */}
         {!thumbnailDataUrl && (
           <div>
             <label className="text-[10px] font-semibold uppercase tracking-wider text-on-surface-variant block mb-1">Cover Color</label>
@@ -221,7 +255,7 @@ export function NewSeriesPage() {
       <div className="flex items-center justify-end gap-3">
         <Button variant="outline" onClick={() => navigate(isEdit && seriesId ? `/series/${seriesId}` : '/series')}>Cancel</Button>
         <Button variant="primary" disabled={!canSubmit} onClick={handleSubmit}>
-          {isEdit ? 'Save Changes' : 'Create Series'}
+          {submitting ? 'Saving...' : isEdit ? 'Save Changes' : 'Create Series'}
         </Button>
       </div>
     </div>

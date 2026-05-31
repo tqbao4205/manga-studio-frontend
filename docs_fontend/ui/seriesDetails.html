@@ -1,0 +1,473 @@
+<!DOCTYPE html><html class="dark" lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/geist@1.3.0/dist/fonts/geist-sans/style.css" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-container-highest": "#353437",
+                        "on-secondary-container": "#b6b4b7",
+                        "inverse-primary": "#6d3bd7",
+                        "primary": "#d0bcff",
+                        "on-error": "#690005",
+                        "surface-bright": "#39393b",
+                        "inverse-on-surface": "#303032",
+                        "on-secondary-fixed": "#1b1b1d",
+                        "on-secondary": "#303032",
+                        "on-tertiary-fixed": "#2c1700",
+                        "on-surface-variant": "#cbc3d7",
+                        "error": "#ffb4ab",
+                        "on-primary-fixed-variant": "#5516be",
+                        "on-primary-fixed": "#23005c",
+                        "tertiary": "#ffb869",
+                        "inverse-surface": "#e5e1e4",
+                        "on-error-container": "#ffdad6",
+                        "error-container": "#93000a",
+                        "surface-tint": "#d0bcff",
+                        "on-background": "#e5e1e4",
+                        "surface": "#131315",
+                        "surface-container-lowest": "#0e0e10",
+                        "on-primary": "#3c0091",
+                        "secondary-fixed": "#e4e2e4",
+                        "primary-fixed": "#e9ddff",
+                        "primary-fixed-dim": "#d0bcff",
+                        "surface-variant": "#353437",
+                        "outline-variant": "#494454",
+                        "on-surface": "#e5e1e4",
+                        "surface-container": "#201f21",
+                        "secondary": "#c8c6c8",
+                        "surface-container-low": "#1b1b1d",
+                        "surface-container-high": "#2a2a2c",
+                        "tertiary-fixed": "#ffdcbb",
+                        "primary-container": "#a078ff",
+                        "on-secondary-fixed-variant": "#474649",
+                        "secondary-container": "#474649",
+                        "background": "#131315",
+                        "on-tertiary": "#482900",
+                        "secondary-fixed-dim": "#c8c6c8",
+                        "surface-dim": "#131315",
+                        "on-primary-container": "#340080",
+                        "tertiary-fixed-dim": "#ffb869",
+                        "on-tertiary-fixed-variant": "#673d00",
+                        "tertiary-container": "#ca801e",
+                        "on-tertiary-container": "#3f2300",
+                        "outline": "#958ea0"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "gutter": "16px",
+                        "container-padding": "24px",
+                        "panel-gap": "20px",
+                        "base": "8px"
+                    },
+                    "fontFamily": {
+                        "label-sm": ["Geist"],
+                        "headline-md": ["Geist"],
+                        "display-lg": ["Geist"],
+                        "body-lg": ["Geist"],
+                        "headline-lg-mobile": ["Geist"],
+                        "headline-lg": ["Geist"],
+                        "label-md": ["Geist"],
+                        "body-md": ["Geist"]
+                    },
+                    "fontSize": {
+                        "label-sm": ["12px", {"lineHeight": "16px", "letterSpacing": "0.02em", "fontWeight": "500"}],
+                        "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                        "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                        "headline-lg-mobile": ["28px", {"lineHeight": "36px", "fontWeight": "600"}],
+                        "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                        "label-md": ["14px", {"lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "500"}],
+                        "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body { font-family: 'Geist', sans-serif; }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #353437; border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #494454; }
+    </style>
+</head>
+<body class="bg-background text-on-surface selection:bg-primary-container selection:text-on-primary-container">
+<div class="flex min-h-screen overflow-hidden">
+<!-- SideNavBar (Authority: JSON) -->
+<aside class="w-[240px] h-screen flex flex-col sticky top-0 left-0 bg-surface-container-low dark:bg-surface-container-lowest shadow-[0px_4px_20px_rgba(139,92,246,0.05)] z-50">
+<div class="flex flex-col gap-base p-container-padding h-full">
+<div class="mb-8">
+<h1 class="font-headline-md text-headline-md font-bold text-primary dark:text-primary">MangaFlow</h1>
+<p class="font-label-sm text-label-sm text-on-surface-variant opacity-70">Creative Precision</p>
+</div>
+<nav class="flex-1 flex flex-col gap-2">
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors duration-200 text-on-surface-variant hover:bg-surface-container-highest dark:hover:bg-surface-container-high" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span class="font-label-md text-label-md">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors duration-200 text-primary font-bold border-r-2 border-primary bg-surface-container-highest/30" href="#">
+<span class="material-symbols-outlined" data-icon="description">description</span>
+<span class="font-label-md text-label-md">Manuscripts</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors duration-200 text-on-surface-variant hover:bg-surface-container-highest dark:hover:bg-surface-container-high" href="#">
+<span class="material-symbols-outlined" data-icon="ink_pen">ink_pen</span>
+<span class="font-label-md text-label-md">Inking</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors duration-200 text-on-surface-variant hover:bg-surface-container-highest dark:hover:bg-surface-container-high" href="#">
+<span class="material-symbols-outlined" data-icon="auto_stories">auto_stories</span>
+<span class="font-label-md text-label-md">Storyboard</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors duration-200 text-on-surface-variant hover:bg-surface-container-highest dark:hover:bg-surface-container-high" href="#">
+<span class="material-symbols-outlined" data-icon="group">group</span>
+<span class="font-label-md text-label-md">Team</span>
+</a>
+</nav>
+<div class="mt-auto pt-6 border-t border-outline-variant/30 flex flex-col gap-2">
+<button class="bg-primary-container text-on-primary-container px-4 py-3 rounded-xl font-bold flex items-center justify-center gap-2 mb-4 hover:brightness-110 active:scale-95 transition-all">
+<span class="material-symbols-outlined" data-icon="add">add</span>
+                        New Chapter
+                    </button>
+<a class="flex items-center gap-3 px-4 py-2 rounded-lg text-on-surface-variant hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span class="font-label-md text-label-md">Settings</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-2 rounded-lg text-on-surface-variant hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="help_outline">help_outline</span>
+<span class="font-label-md text-label-md">Support</span>
+</a>
+</div>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="flex-1 overflow-y-auto custom-scrollbar flex flex-col">
+<!-- TopNavBar (Authority: JSON) -->
+<header class="w-full sticky top-0 z-50 bg-surface dark:bg-background border-b border-outline-variant">
+<div class="flex justify-between items-center h-16 px-gutter w-full">
+<div class="flex items-center gap-8">
+<div class="relative group w-72">
+<span class="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-outline text-[20px]" data-icon="search">search</span>
+<input class="w-full bg-surface-container-low border-none rounded-full pl-10 py-1.5 font-label-md text-label-md text-on-surface focus:ring-2 focus:ring-primary/20 placeholder:text-outline transition-all" placeholder="Search manuscripts..." type="text">
+</div>
+</div>
+<div class="flex items-center gap-4">
+<button class="p-2 text-on-surface-variant hover:text-primary transition-colors relative">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+<span class="absolute top-2 right-2 w-2 h-2 bg-primary rounded-full"></span>
+</button>
+<button class="p-2 text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined" data-icon="history">history</span>
+</button>
+<div class="w-[1px] h-6 bg-outline-variant mx-2"></div>
+<div class="flex items-center gap-3 pl-2 group cursor-pointer">
+<div class="text-right">
+<p class="font-label-md text-label-md text-on-surface leading-none">Kenji Sato</p>
+<p class="font-label-sm text-label-sm text-on-surface-variant opacity-70">Lead Artist</p>
+</div>
+<img alt="Lead Artist Profile" class="w-10 h-10 rounded-full border border-outline-variant" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAq7Se3BrrzUctu5FGBSy5rPWJseClpM6wPMkMbbjH1QhOG7QfDqof-3ASGSD2YtGHBuqGycxLk-YbrGzdlw0zB5m5YvlHhONicbG3T4kk9SSOiFSNPqtOMVW42Njih44PdanIVDu9ZRkc8FhK1MMhz_afMsMmGlkEmB_TNFMGFYQUCh4AmmdhBW_VuwrVO02U0FveTbheL2KDKU0kAJB-4SEt3w5sEh08CbFGd-foTJFk6_qz_cPnlAwZnhSHYBgGFU-3ODhynxRph">
+</div>
+</div>
+</div>
+</header>
+<!-- Series Hero Section -->
+<section class="relative w-full h-[400px] overflow-hidden shrink-0">
+<img alt="Neon Pulse Cover Image" class="w-full h-full object-cover brightness-[0.4] contrast-[1.1]" src="https://lh3.googleusercontent.com/aida/ADBb0uhnveXadHRY1n3rySap2HyBJ5f8-uKZnWkPiUaNNyxN_CCwTiYo3mbHUrnBMJPrUwEODyGJ9pZ6JlI7oCI4jDxLfjg922iRZdopXv8S0S82iMfWhlaO_TEdT3SLPM-1ievKIG3sQFWr4kavMWyTIWDoMX-SokFyBfnwNd11LULEdbJH2aUd2sk3_ahxTO4x69PWetUl-6rxEgK63G7fbeCFtuSR6_Lr0VxSNqDUvk2QIzHZ02dUhGzcZxAb">
+<div class="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-transparent"></div>
+<div class="absolute bottom-0 left-0 w-full p-container-padding flex flex-col md:flex-row justify-between items-end gap-6">
+<div class="flex-1">
+<div class="flex flex-wrap gap-2 mb-4">
+<span class="bg-primary/20 text-primary border border-primary/30 px-3 py-1 rounded-full font-label-sm text-label-sm backdrop-blur-md">Sci-fi</span>
+<span class="bg-primary/20 text-primary border border-primary/30 px-3 py-1 rounded-full font-label-sm text-label-sm backdrop-blur-md">Seinen</span>
+<span class="bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-3 py-1 rounded-full font-label-sm text-label-sm backdrop-blur-md">Active</span>
+</div>
+<h2 class="font-display-lg text-display-lg text-on-surface leading-tight">Neon Pulse <span class="font-label-md text-label-md ml-4 text-on-surface-variant font-normal">ネオンパルス</span></h2>
+<div class="flex items-center gap-6 mt-4">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-tertiary" data-icon="star" data-weight="fill" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="font-label-md text-label-md text-on-surface">Pro Tier</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary" data-icon="leaderboard">leaderboard</span>
+<span class="font-label-md text-label-md text-on-surface">#10 Global Ranking</span>
+</div>
+</div>
+</div>
+<button class="flex items-center gap-2 bg-surface/60 hover:bg-surface transition-colors backdrop-blur-xl border border-outline-variant px-6 py-3 rounded-xl font-label-md text-label-md text-on-surface">
+<span class="material-symbols-outlined" data-icon="edit">edit</span>
+                        Edit Series
+                    </button>
+</div>
+</section>
+<!-- Content Container -->
+<div class="p-container-padding flex flex-col gap-panel-gap">
+<!-- Statistics Row -->
+<div class="grid grid-cols-1 md:grid-cols-4 gap-panel-gap">
+<div class="bg-surface-container rounded-xl p-6 shadow-[0px_4px_20px_rgba(139,92,246,0.05)] border border-outline-variant/30 hover:border-primary/30 transition-all group">
+<p class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider mb-2">Current Rank</p>
+<div class="flex items-end justify-between">
+<h3 class="font-headline-lg text-headline-lg text-on-surface">#10</h3>
+<span class="text-emerald-400 font-label-sm text-label-sm flex items-center mb-1"><span class="material-symbols-outlined text-[16px]" data-icon="arrow_upward">arrow_upward</span> 2</span>
+</div>
+</div>
+<div class="bg-surface-container rounded-xl p-6 shadow-[0px_4px_20px_rgba(139,92,246,0.05)] border border-outline-variant/30 hover:border-primary/30 transition-all group">
+<p class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider mb-2">Total Chapters</p>
+<h3 class="font-headline-lg text-headline-lg text-on-surface">24</h3>
+</div>
+<div class="bg-surface-container rounded-xl p-6 shadow-[0px_4px_20px_rgba(139,92,246,0.05)] border border-outline-variant/30 hover:border-primary/30 transition-all group">
+<p class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider mb-2">Manuscript Progress</p>
+<div class="flex items-center justify-between gap-4">
+<h3 class="font-headline-lg text-headline-lg text-on-surface">78%</h3>
+<div class="flex-1 bg-surface-container-highest rounded-full h-2 max-w-[100px]">
+<div class="bg-primary h-full rounded-full" style="width: 78%"></div>
+</div>
+</div>
+</div>
+<div class="bg-surface-container rounded-xl p-6 shadow-[0px_4px_20px_rgba(139,92,246,0.05)] border border-outline-variant/30 hover:border-primary/30 transition-all group">
+<p class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider mb-2">Active Tasks</p>
+<h3 class="font-headline-lg text-headline-lg text-on-surface">3</h3>
+</div>
+</div>
+<!-- Main Content Grid -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-panel-gap mb-12">
+<!-- Left Column: Chapter List -->
+<div class="lg:col-span-8 flex flex-col gap-base">
+<div class="bg-surface-container rounded-xl shadow-[0px_4px_20px_rgba(139,92,246,0.05)] overflow-hidden border border-outline-variant/30">
+<div class="p-6 border-b border-outline-variant/30 flex justify-between items-center bg-surface-container-high/50">
+<h3 class="font-headline-md text-headline-md text-on-surface">Chapter List</h3>
+<div class="flex gap-2">
+<button class="p-2 rounded-lg bg-surface-container-low hover:bg-primary/10 hover:text-primary transition-all">
+<span class="material-symbols-outlined" data-icon="filter_list">filter_list</span>
+</button>
+<button class="p-2 rounded-lg bg-surface-container-low hover:bg-primary/10 hover:text-primary transition-all">
+<span class="material-symbols-outlined" data-icon="sort">sort</span>
+</button>
+</div>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full">
+<thead>
+<tr class="text-left font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider border-b border-outline-variant/20">
+<th class="px-6 py-4 font-medium">Chapter</th>
+<th class="px-6 py-4 font-medium">Title</th>
+<th class="px-6 py-4 font-medium">Progress</th>
+<th class="px-6 py-4 font-medium">Status</th>
+<th class="px-6 py-4 font-medium">Deadline</th>
+<th class="px-6 py-4 font-medium"></th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant/10">
+<!-- Row 1 -->
+<tr class="hover:bg-surface-container-highest/20 transition-colors group">
+<td class="px-6 py-4 font-label-md text-label-md text-on-surface">Ch. 24</td>
+<td class="px-6 py-4 font-label-md text-label-md text-on-surface">The Synthetic Soul</td>
+<td class="px-6 py-4">
+<div class="w-24 bg-surface-container-highest rounded-full h-1.5">
+<div class="bg-primary h-full rounded-full" style="width: 85%"></div>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="bg-primary/10 text-primary px-3 py-1 rounded-full font-label-sm text-label-sm border border-primary/20">Inking</span>
+</td>
+<td class="px-6 py-4 font-label-sm text-label-sm text-on-surface-variant">Today</td>
+<td class="px-6 py-4 text-right">
+<button class="bg-primary-container text-on-primary-container px-4 py-2 rounded-lg font-label-sm text-label-sm font-bold opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap active:scale-95">Open Workspace</button>
+</td>
+</tr>
+<!-- Row 2 -->
+<tr class="hover:bg-surface-container-highest/20 transition-colors group">
+<td class="px-6 py-4 font-label-md text-label-md text-on-surface">Ch. 23</td>
+<td class="px-6 py-4 font-label-md text-label-md text-on-surface">Memory Fragments</td>
+<td class="px-6 py-4">
+<div class="w-24 bg-surface-container-highest rounded-full h-1.5">
+<div class="bg-emerald-500 h-full rounded-full" style="width: 100%"></div>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="bg-emerald-500/10 text-emerald-400 px-3 py-1 rounded-full font-label-sm text-label-sm border border-emerald-500/20">Done</span>
+</td>
+<td class="px-6 py-4 font-label-sm text-label-sm text-on-surface-variant">Oct 12</td>
+<td class="px-6 py-4 text-right">
+<button class="bg-surface-container-highest text-on-surface px-4 py-2 rounded-lg font-label-sm text-label-sm font-bold opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">View Files</button>
+</td>
+</tr>
+<!-- Row 3 -->
+<tr class="hover:bg-surface-container-highest/20 transition-colors group">
+<td class="px-6 py-4 font-label-md text-label-md text-on-surface">Ch. 25</td>
+<td class="px-6 py-4 font-label-md text-label-md text-on-surface">Neo-Tokyo Siege</td>
+<td class="px-6 py-4">
+<div class="w-24 bg-surface-container-highest rounded-full h-1.5">
+<div class="bg-primary-container h-full rounded-full" style="width: 20%"></div>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="bg-surface-container-highest text-on-surface-variant px-3 py-1 rounded-full font-label-sm text-label-sm border border-outline-variant/30">Storyboard</span>
+</td>
+<td class="px-6 py-4 font-label-sm text-label-sm text-on-surface-variant">Oct 25</td>
+<td class="px-6 py-4 text-right">
+<button class="bg-primary-container text-on-primary-container px-4 py-2 rounded-lg font-label-sm text-label-sm font-bold opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap active:scale-95">Open Workspace</button>
+</td>
+</tr>
+<!-- Row 4 -->
+<tr class="hover:bg-surface-container-highest/20 transition-colors group">
+<td class="px-6 py-4 font-label-md text-label-md text-on-surface">Ch. 22</td>
+<td class="px-6 py-4 font-label-md text-label-md text-on-surface">Electric Rain</td>
+<td class="px-6 py-4">
+<div class="w-24 bg-surface-container-highest rounded-full h-1.5">
+<div class="bg-emerald-500 h-full rounded-full" style="width: 100%"></div>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="bg-emerald-500/10 text-emerald-400 px-3 py-1 rounded-full font-label-sm text-label-sm border border-emerald-500/20">Done</span>
+</td>
+<td class="px-6 py-4 font-label-sm text-label-sm text-on-surface-variant">Oct 05</td>
+<td class="px-6 py-4 text-right">
+<button class="bg-surface-container-highest text-on-surface px-4 py-2 rounded-lg font-label-sm text-label-sm font-bold opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">View Files</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="p-4 border-t border-outline-variant/20 flex justify-center bg-surface-container-low/30">
+<button class="text-primary font-label-md text-label-md hover:underline">View All 24 Chapters</button>
+</div>
+</div>
+</div>
+<!-- Right Column: Information & Activity -->
+<div class="lg:col-span-4 flex flex-col gap-panel-gap">
+<!-- Series Information -->
+<div class="bg-surface-container rounded-xl p-6 shadow-[0px_4px_20px_rgba(139,92,246,0.05)] border border-outline-variant/30">
+<h4 class="font-headline-md text-headline-md text-on-surface mb-6">Series Information</h4>
+<p class="font-body-md text-body-md text-on-surface-variant mb-6 leading-relaxed">
+                                In a world where memories can be digitized and sold, an unlicensed "Memory Architect" discovers a fragment of their own past buried in a client's high-security core.
+                            </p>
+<div class="space-y-4">
+<div class="flex justify-between border-b border-outline-variant/10 pb-2">
+<span class="font-label-md text-label-md text-on-surface-variant">Author</span>
+<span class="font-label-md text-label-md text-on-surface">Kenji Sato</span>
+</div>
+<div class="flex justify-between border-b border-outline-variant/10 pb-2">
+<span class="font-label-md text-label-md text-on-surface-variant">Editor</span>
+<span class="font-label-md text-label-md text-on-surface">M. Tanaka</span>
+</div>
+<div class="flex justify-between border-b border-outline-variant/10 pb-2">
+<span class="font-label-md text-label-md text-on-surface-variant">Frequency</span>
+<span class="font-label-md text-label-md text-on-surface">Weekly</span>
+</div>
+<div class="flex justify-between">
+<span class="font-label-md text-label-md text-on-surface-variant">Start Date</span>
+<span class="font-label-md text-label-md text-on-surface">Oct 2023</span>
+</div>
+</div>
+</div>
+<!-- Upcoming Deadlines -->
+<div class="bg-surface-container rounded-xl p-6 shadow-[0px_4px_20px_rgba(139,92,246,0.05)] border border-outline-variant/30">
+<h4 class="font-headline-md text-headline-md text-on-surface mb-6 flex items-center gap-2">
+                                Upcoming Deadlines
+                                <span class="bg-error-container text-on-error-container text-[10px] px-2 py-0.5 rounded-full">3 Alert</span>
+</h4>
+<div class="space-y-4">
+<div class="flex items-start gap-4 p-3 rounded-lg bg-error-container/5 border border-error-container/20">
+<div class="bg-error text-on-error w-10 h-10 rounded-lg flex flex-col items-center justify-center shrink-0">
+<span class="text-[10px] leading-none uppercase">Oct</span>
+<span class="font-bold leading-none">18</span>
+</div>
+<div>
+<p class="font-label-md text-label-md text-on-surface">Final Ink: Ch. 24</p>
+<p class="font-label-sm text-label-sm text-error">Critical • 11:59 PM</p>
+</div>
+</div>
+<div class="flex items-start gap-4 p-3 rounded-lg hover:bg-surface-container-highest transition-colors">
+<div class="bg-surface-container-highest text-on-surface-variant w-10 h-10 rounded-lg flex flex-col items-center justify-center shrink-0 border border-outline-variant/30">
+<span class="text-[10px] leading-none uppercase">Oct</span>
+<span class="font-bold leading-none">22</span>
+</div>
+<div>
+<p class="font-label-md text-label-md text-on-surface">Storyboard Rev: Ch. 25</p>
+<p class="font-label-sm text-label-sm text-on-surface-variant">Review phase</p>
+</div>
+</div>
+<div class="flex items-start gap-4 p-3 rounded-lg hover:bg-surface-container-highest transition-colors">
+<div class="bg-surface-container-highest text-on-surface-variant w-10 h-10 rounded-lg flex flex-col items-center justify-center shrink-0 border border-outline-variant/30">
+<span class="text-[10px] leading-none uppercase">Oct</span>
+<span class="font-bold leading-none">29</span>
+</div>
+<div>
+<p class="font-label-md text-label-md text-on-surface">Script Approval: Ch. 26</p>
+<p class="font-label-sm text-label-sm text-on-surface-variant">Drafting</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Recent Activity -->
+<div class="bg-surface-container rounded-xl p-6 shadow-[0px_4px_20px_rgba(139,92,246,0.05)] border border-outline-variant/30">
+<h4 class="font-headline-md text-headline-md text-on-surface mb-6">Recent Activity</h4>
+<div class="space-y-6 relative before:absolute before:left-2 before:top-2 before:bottom-2 before:w-[1px] before:bg-outline-variant/30">
+<div class="relative pl-8">
+<div class="absolute left-0 top-1 w-4 h-4 bg-primary rounded-full border-4 border-surface"></div>
+<p class="font-label-md text-label-md text-on-surface">Manuscript Updated</p>
+<p class="font-body-md text-body-md text-on-surface-variant text-[13px]">Kenji Sato uploaded new inks for Chapter 24.</p>
+<p class="font-label-sm text-label-sm text-outline mt-1">2 hours ago</p>
+</div>
+<div class="relative pl-8">
+<div class="absolute left-0 top-1 w-4 h-4 bg-emerald-500 rounded-full border-4 border-surface"></div>
+<p class="font-label-md text-label-md text-on-surface">Chapter Approved</p>
+<p class="font-body-md text-body-md text-on-surface-variant text-[13px]">Editor M. Tanaka marked Chapter 23 as final.</p>
+<p class="font-label-sm text-label-sm text-outline mt-1">1 day ago</p>
+</div>
+<div class="relative pl-8">
+<div class="absolute left-0 top-1 w-4 h-4 bg-primary-container rounded-full border-4 border-surface"></div>
+<p class="font-label-md text-label-md text-on-surface">Comment Added</p>
+<p class="font-body-md text-body-md text-on-surface-variant text-[13px]">Tanaka requested revision on panel 4, page 12.</p>
+<p class="font-label-sm text-label-sm text-outline mt-1">2 days ago</p>
+</div>
+</div>
+<button class="w-full mt-6 py-2 text-primary font-label-md text-label-md hover:underline">View Full Audit Log</button>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+<!-- Floating Action Button (Only on Mobile-ish states) -->
+<button class="fixed bottom-gutter right-gutter bg-primary text-on-primary w-14 h-14 rounded-2xl shadow-xl flex items-center justify-center hover:scale-105 active:scale-95 transition-all md:hidden z-[100]">
+<span class="material-symbols-outlined" data-icon="add">add</span>
+</button>
+<script>
+        // Micro-interactions and effects
+        document.querySelectorAll('button, a').forEach(el => {
+            el.addEventListener('mousedown', () => {
+                el.classList.add('scale-95');
+            });
+            el.addEventListener('mouseup', () => {
+                el.classList.remove('scale-95');
+            });
+            el.addEventListener('mouseleave', () => {
+                el.classList.remove('scale-95');
+            });
+        });
+
+        // Subtle parallax effect for hero image
+        const main = document.querySelector('main');
+        const heroImg = document.querySelector('section.relative img');
+        main.addEventListener('scroll', () => {
+            const scroll = main.scrollTop;
+            if (heroImg) {
+                heroImg.style.transform = `translateY(${scroll * 0.4}px)`;
+            }
+        });
+    </script>
+</body></html>

@@ -1,0 +1,344 @@
+<!DOCTYPE html><html class="dark" lang="en" style="width: 1280px; height: 1431px; overflow: hidden; position: relative;"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Create Chapter | MangaFlow Studio</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/geist@1.3.0/dist/fonts/geist.css" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-primary-fixed": "#23005c",
+                    "surface-container-lowest": "#0e0e10",
+                    "primary-fixed-dim": "#d0bcff",
+                    "on-secondary-fixed": "#1b1b1d",
+                    "error-container": "#93000a",
+                    "primary-container": "#a078ff",
+                    "on-tertiary": "#482900",
+                    "background": "#131315",
+                    "surface-container-high": "#2a2a2c",
+                    "primary": "#d0bcff",
+                    "surface": "#131315",
+                    "on-tertiary-fixed": "#2c1700",
+                    "error": "#ffb4ab",
+                    "surface-variant": "#353437",
+                    "outline": "#958ea0",
+                    "on-background": "#e5e1e4",
+                    "on-secondary-container": "#b6b4b7",
+                    "tertiary-fixed": "#ffdcbb",
+                    "on-primary-container": "#340080",
+                    "tertiary": "#ffb869",
+                    "surface-tint": "#d0bcff",
+                    "surface-container-highest": "#353437",
+                    "secondary-container": "#474649",
+                    "on-surface-variant": "#cbc3d7",
+                    "inverse-primary": "#6d3bd7",
+                    "outline-variant": "#494454",
+                    "on-primary-fixed-variant": "#5516be",
+                    "surface-dim": "#131315",
+                    "on-tertiary-container": "#3f2300",
+                    "on-secondary": "#303032",
+                    "inverse-surface": "#e5e1e4",
+                    "secondary-fixed-dim": "#c8c6c8",
+                    "on-surface": "#e5e1e4",
+                    "on-tertiary-fixed-variant": "#673d00",
+                    "surface-container-low": "#1b1b1d",
+                    "secondary": "#c8c6c8",
+                    "inverse-on-surface": "#303032",
+                    "on-error": "#690005",
+                    "surface-bright": "#39393b",
+                    "primary-fixed": "#e9ddff",
+                    "on-primary": "#3c0091",
+                    "surface-container": "#201f21",
+                    "tertiary-fixed-dim": "#ffb869",
+                    "secondary-fixed": "#e4e2e4",
+                    "on-error-container": "#ffdad6",
+                    "tertiary-container": "#ca801e",
+                    "on-secondary-fixed-variant": "#474649"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "base": "8px",
+                    "panel-gap": "20px",
+                    "gutter": "16px",
+                    "container-padding": "24px"
+            },
+            "fontFamily": {
+                    "headline-lg": ["Geist"],
+                    "body-md": ["Geist"],
+                    "body-lg": ["Geist"],
+                    "label-sm": ["Geist"],
+                    "display-lg": ["Geist"],
+                    "label-md": ["Geist"],
+                    "headline-md": ["Geist"],
+                    "headline-lg-mobile": ["Geist"]
+            },
+            "fontSize": {
+                    "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                    "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                    "label-sm": ["12px", {"lineHeight": "16px", "letterSpacing": "0.02em", "fontWeight": "500"}],
+                    "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "label-md": ["14px", {"lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "500"}],
+                    "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                    "headline-lg-mobile": ["28px", {"lineHeight": "36px", "fontWeight": "600"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        body {
+            font-family: 'Geist', sans-serif;
+            background-color: #0F0F11;
+        }
+        /* Custom scrollbar for dark theme */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #131315; }
+        ::-webkit-scrollbar-thumb { background: #353437; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #494454; }
+
+        .form-card {
+            background-color: #1E1E20;
+            border: 1px solid #3F3F46;
+            box-shadow: 0px 4px 20px rgba(139, 92, 246, 0.05);
+            transition: all 0.3s ease;
+        }
+        .form-card:hover {
+            box-shadow: 0px 8px 30px rgba(139, 92, 246, 0.08);
+            border-color: #494454;
+        }
+        input, select, textarea {
+            background-color: #151518 !important;
+            border-top: none !important;
+            border-left: none !important;
+            border-right: none !important;
+            border-bottom: 1px solid #3F3F46 !important;
+            color: #e5e1e4 !important;
+            transition: all 0.2s ease;
+        }
+        input:focus, select:focus, textarea:focus {
+            border-bottom-color: #d0bcff !important;
+            box-shadow: 0 4px 12px -2px rgba(139, 92, 246, 0.2) !important;
+            outline: none !important;
+        }
+    </style>
+</head>
+<body class="text-on-surface selection:bg-primary-container selection:text-on-primary-container" style="background-image: radial-gradient(circle at 99.6094% 71.1925%, rgba(139, 92, 246, 0.03) 0%, transparent 50%);">
+<!-- SideNavBar Shell -->
+<aside class="fixed left-0 top-0 h-screen w-[240px] z-50 bg-surface border-r border-outline-variant shadow-sm hidden md:flex flex-col py-base space-y-2">
+<div class="px-6 py-4 flex flex-col space-y-1">
+<h1 class="font-headline-md text-headline-md font-bold text-primary tracking-tight">MangaFlow</h1>
+<span class="font-label-md text-label-md text-on-surface-variant">Creative Studio</span>
+</div>
+<nav class="flex-1 px-3 space-y-1">
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant font-medium hover:bg-surface-container-high hover:text-primary transition-all duration-200" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="font-label-md text-label-md">Dashboard</span>
+</a>
+<!-- Active: Manuscripts -->
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-primary font-bold border-r-2 border-primary bg-surface-container-high transition-all duration-200" href="#">
+<span class="material-symbols-outlined">auto_stories</span>
+<span class="font-label-md text-label-md">Manuscripts</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant font-medium hover:bg-surface-container-high hover:text-primary transition-all duration-200" href="#">
+<span class="material-symbols-outlined">brush</span>
+<span class="font-label-md text-label-md">Inking</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant font-medium hover:bg-surface-container-high hover:text-primary transition-all duration-200" href="#">
+<span class="material-symbols-outlined">view_quilt</span>
+<span class="font-label-md text-label-md">Storyboard</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant font-medium hover:bg-surface-container-high hover:text-primary transition-all duration-200" href="#">
+<span class="material-symbols-outlined">group</span>
+<span class="font-label-md text-label-md">Team</span>
+</a>
+</nav>
+<div class="mt-auto px-3 pb-6 border-t border-outline-variant pt-4 space-y-1">
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant font-medium hover:bg-surface-container-high hover:text-primary transition-all duration-200" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="font-label-md text-label-md">Settings</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant font-medium hover:bg-surface-container-high hover:text-primary transition-all duration-200" href="#">
+<span class="material-symbols-outlined">help_outline</span>
+<span class="font-label-md text-label-md">Support</span>
+</a>
+</div>
+</aside>
+<!-- TopNavBar Shell -->
+<header class="fixed top-0 right-0 w-full md:w-[calc(100%-240px)] h-16 z-40 bg-surface/80 backdrop-blur-md border-b border-outline-variant flex items-center justify-between px-gutter">
+<div class="flex items-center gap-4 flex-1">
+<div class="relative w-full max-w-md hidden md:block">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant">search</span>
+<input class="w-full pl-10 pr-4 py-2 !rounded-full !border-none !bg-surface-container-high text-body-md" placeholder="Search projects or chapters..." type="text">
+</div>
+</div>
+<div class="flex items-center gap-4">
+<button class="p-2 text-on-surface-variant hover:text-primary transition-transform hover:scale-105">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="p-2 text-on-surface-variant hover:text-primary transition-transform hover:scale-105">
+<span class="material-symbols-outlined">history</span>
+</button>
+<button class="p-2 text-on-surface-variant hover:text-primary transition-transform hover:scale-105">
+<span class="material-symbols-outlined">dark_mode</span>
+</button>
+<div class="h-8 w-8 rounded-full overflow-hidden border border-outline-variant">
+<img alt="Lead Artist Avatar" class="h-full w-full object-cover" data-alt="A professional studio portrait of a modern manga artist with a creative aesthetic, soft cinematic rim lighting, deep shadows, and a focused atmosphere against a dark minimalist studio background." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCUbdLawJkDsXl9yAlCf6lVC44c7946BDtICv938vc7yTuJiVeEtLuIVj1-aOoQ5gUCDgEp9yccZOegDGDiq8xSjYng0vHIHePg7f-KqQe4KZLm7KTQQkCMkHBfvKZaLRyeGo6Mdqqp4h1KuiIhKPVfAtLEomMkNRT-qEC6EdhlVMEnqHd6IEwVFpEA9Xm7IGwqJzW5OXHuCgBmc86HJPXlX9z9TefYaApr9HnU4v9PQdu-ulzf2_44nbCp5Ytqp8-xIUT4jwP29RKK">
+</div>
+</div>
+</header>
+<!-- Main Content -->
+<main class="md:ml-[240px] pt-24 pb-32 min-h-screen px-container-padding max-w-5xl mx-auto">
+<!-- Header Section -->
+<div class="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-4">
+<div>
+<a class="inline-flex items-center text-primary font-label-md text-label-md mb-2 hover:underline group" href="#">
+<span class="material-symbols-outlined text-[18px] mr-1 group-hover:-translate-x-1 transition-transform">arrow_back</span>
+                    Back to Series Detail
+                </a>
+<h2 class="font-headline-lg text-headline-lg text-on-surface">Create Chapter</h2>
+<p class="font-body-md text-body-md text-on-surface-variant mt-1">Set up a new chapter and initiate the production workflow.</p>
+</div>
+</div>
+<!-- Form Grid -->
+<div class="grid grid-cols-1 gap-panel-gap">
+<!-- 1. Chapter Information -->
+<section class="form-card rounded-xl p-6">
+<div class="flex items-center gap-3 mb-6 border-b border-outline-variant pb-3">
+<span class="material-symbols-outlined text-primary">info</span>
+<h3 class="font-headline-md text-headline-md">Chapter Information</h3>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+<div class="flex flex-col gap-2">
+<label class="font-label-md text-label-md text-on-surface-variant">Series Selector <span class="text-error">*</span></label>
+<select class="p-2 rounded-none">
+<option value="">Select a series</option>
+<option value="1">Void Echoes</option>
+<option value="2">Cyber City Neon</option>
+<option value="3">The Last Ronin</option>
+</select>
+<span class="text-error text-label-sm hidden">This field is required</span>
+</div>
+<div class="flex flex-col gap-2">
+<label class="font-label-md text-label-md text-on-surface-variant">Chapter Number <span class="text-error">*</span></label>
+<input class="p-2" placeholder="e.g. 142" type="number">
+</div>
+<div class="md:col-span-2 flex flex-col gap-2">
+<label class="font-label-md text-label-md text-on-surface-variant">Chapter Title <span class="text-error">*</span></label>
+<input class="p-2" placeholder="e.g. The Awakening of Ancient Spirits" type="text">
+</div>
+<div class="md:col-span-2 flex flex-col gap-2">
+<label class="font-label-md text-label-md text-on-surface-variant">Chapter Summary</label>
+<textarea class="p-2 resize-none" placeholder="Briefly describe the key events in this chapter..." rows="4"></textarea>
+</div>
+</div>
+</section>
+<!-- 2. Production Planning -->
+<section class="form-card rounded-xl p-6">
+<div class="flex items-center gap-3 mb-6 border-b border-outline-variant pb-3">
+<span class="material-symbols-outlined text-primary">calendar_today</span>
+<h3 class="font-headline-md text-headline-md">Production Planning</h3>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+<div class="flex flex-col gap-2">
+<label class="font-label-md text-label-md text-on-surface-variant">Estimated Page Count</label>
+<input class="p-2" placeholder="e.g. 24" type="number">
+</div>
+
+<div class="flex flex-col gap-2">
+<label class="font-label-md text-label-md text-on-surface-variant">Deadline Date</label>
+<div class="relative">
+<input class="p-2 w-full appearance-none" type="date">
+</div>
+</div>
+<div class="flex flex-col gap-2">
+
+<div class="relative">
+
+</div>
+</div>
+</div>
+</section>
+<!-- 3. Team Assignment -->
+
+<!-- 4. Workflow Preview -->
+
+</div>
+<!-- Sticky Footer Actions -->
+<div class="fixed bottom-0 right-0 w-full md:w-[calc(100%-240px)] bg-surface-container-lowest/80 backdrop-blur-xl border-t border-outline-variant p-6 z-40">
+<div class="max-w-5xl mx-auto flex flex-col md:flex-row justify-end items-center gap-4">
+<button class="w-full md:w-auto px-6 py-2.5 text-on-surface-variant font-label-md text-label-md hover:text-primary transition-colors order-3 md:order-1">
+                    Cancel
+                </button>
+<button class="w-full md:w-auto px-8 py-2.5 bg-transparent border border-outline-variant text-primary font-label-md text-label-md rounded-lg hover:border-primary transition-all duration-200 order-2 md:order-2">
+                    Save Draft
+                </button>
+<button class="w-full md:w-auto px-10 py-2.5 bg-primary text-on-primary-container font-label-md text-label-md font-bold rounded-lg hover:brightness-110 active:scale-[0.98] transition-all duration-200 order-1 md:order-3 shadow-lg shadow-primary/20">
+                    Create Chapter
+                </button>
+</div>
+</div>
+</main>
+<script>
+        // Simple micro-interaction for form validation visual feedback
+        const createBtn = document.querySelector('button.bg-primary');
+        const inputs = document.querySelectorAll('input[required], select[required]');
+
+        createBtn.addEventListener('click', () => {
+            let hasError = false;
+            inputs.forEach(input => {
+                if (!input.value) {
+                    input.classList.add('!border-error');
+                    const errorMsg = input.parentElement.querySelector('.text-error');
+                    if (errorMsg) errorMsg.classList.remove('hidden');
+                    hasError = true;
+                } else {
+                    input.classList.remove('!border-error');
+                    const errorMsg = input.parentElement.querySelector('.text-error');
+                    if (errorMsg) errorMsg.classList.add('hidden');
+                }
+            });
+
+            if (hasError) {
+                // Shake effect on the card with errors
+                const firstError = document.querySelector('.!border-error');
+                if (firstError) {
+                    firstError.closest('section').animate([
+                        { transform: 'translateX(0px)' },
+                        { transform: 'translateX(-5px)' },
+                        { transform: 'translateX(5px)' },
+                        { transform: 'translateX(0px)' }
+                    ], { duration: 250 });
+                    firstError.focus();
+                }
+            } else {
+                alert('Chapter data validated! Initiating MangaFlow workflow...');
+            }
+        });
+
+        // Dynamic background ambient effect
+        document.addEventListener('mousemove', (e) => {
+            const x = e.clientX / window.innerWidth;
+            const y = e.clientY / window.innerHeight;
+            document.body.style.backgroundImage = `radial-gradient(circle at ${x * 100}% ${y * 100}%, rgba(139, 92, 246, 0.03) 0%, transparent 50%)`;
+        });
+    </script>
+
+
+
+
+</body></html>
