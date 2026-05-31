@@ -270,6 +270,52 @@ const seriesService = {
   getPagesByChapter: async (chapterId) => {
     return api.get(`/v1/chapters/${chapterId}/pages`);
   },
+
+  // ════════════════════════════════════════════════════════════════
+  //  16. UPLOAD PAGES BATCH — Upload nhiều page cùng lúc
+  // ════════════════════════════════════════════════════════════════
+  /**
+   * Endpoint backend: POST /api/v1/chapters/{chapterId}/pages/batch
+   * Body: multipart/form-data với field "files" (List<MultipartFile>)
+   * Backend tự động gán pageNumber từ max pageNumber hiện tại + 1
+   *
+   * @param {number} chapterId - ID của chapter
+   * @param {FormData} formData - FormData chứa field "files" (multiple images)
+   * @returns {Promise<Array>} Mảng PageResponse — danh sách pages đã tạo
+   */
+  uploadPagesBatch: async (chapterId, formData) => {
+    return api.post(`/v1/chapters/${chapterId}/pages/batch`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
+
+  // ════════════════════════════════════════════════════════════════
+  //  17. DELETE PAGE — Xoá 1 page
+  // ════════════════════════════════════════════════════════════════
+  /**
+   * Endpoint backend: DELETE /api/v1/pages/{id}
+   *
+   * @param {number} pageId - ID của page cần xoá
+   * @returns {Promise<void>}
+   */
+  deletePage: async (pageId) => {
+    return api.delete(`/v1/pages/${pageId}`);
+  },
+
+  // ════════════════════════════════════════════════════════════════
+  //  18. REORDER PAGES — Sắp xếp lại pages (kéo thả)
+  // ════════════════════════════════════════════════════════════════
+  /**
+   * Endpoint backend: PUT /api/v1/chapters/{chapterId}/pages/reorder
+   * Body: { pageIds: [3, 1, 2] } — danh sách ID theo thứ tự mới
+   *
+   * @param {number} chapterId - ID của chapter
+   * @param {number[]} pageIds - Mảng page IDs theo thứ tự mới
+   * @returns {Promise<Array>} List<PageResponse> đã sắp xếp
+   */
+  reorderPages: async (chapterId, pageIds) => {
+    return api.put(`/v1/chapters/${chapterId}/pages/reorder`, { pageIds });
+  },
 };
 
 export default seriesService;

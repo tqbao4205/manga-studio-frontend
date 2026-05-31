@@ -1,94 +1,172 @@
-/**
- * ─────────────────────────────────────────────
- *  ChapterDetailPage — Trang chi ti?t chapter
- *  Route: /series/:seriesId/chapters/:chapterId
- * ─────────────────────────────────────────────
- *
- * M?c dích:
- *   - Xem thông tin chi ti?t c?a m?t chapter
- *   - Hi?n th? thông tin nhanh: chapter number, pages, deadline, progress
- *   - Danh sách pages (có phân trang)
- *   - Liên k?t d?n Workspace (v? trang) ho?c Review (duy?t chapter)
- *
- * Lu?ng d? li?u (so v?i b?n cũ dùng mock):
- *   - B?n cũ: dùng useChapterDetail(id) + usePagesByChapter(id) t? useMockData
- *   - B?n m?i: useEffect g?i d?ng th?i 3 API:
- *       - seriesService.getById(seriesId)   -> thông tin series (cho breadcrumb)
- *       - seriesService.getChapterById(id)  -> chi ti?t chapter
- *       - seriesService.getPagesByChapter(id) -> danh sách pages
- *
- * API g?i:
- *   - GET /api/series/{id}
- *   - GET /api/chapters/{id}
- *   - GET /api/v1/chapters/{chapterId}/pages
- *
- * Quy?n truy c?p:
- *   - MANGAKA: Edit chapter, Open Workspace
- *   - TANTOU_EDITOR / EDITORIAL_BOARD: Open in Review
- */
-
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useAuthStore } from "../../app/stores/authStore";
+import { useUIStore } from "../../app/stores/uiStore";
 import seriesService from "../../services/seriesService";
-import { Button } from "../../shared/components/ui/button";
-import { Card, CardContent } from "../../shared/components/ui/card";
-import { StatusBadge } from "../../shared/components/shared/StatusBadge";
 import { EmptyState } from "../../shared/components/shared/EmptyState";
-import { Pagination } from "../../shared/components/shared/Pagination";
+import { Loader } from "lucide-react";
 import {
-  ChevronLeft,
-  BookOpen,
-  Image,
-  Calendar,
-  Hash,
-  BarChart3,
-  Loader,
-  ExternalLink,
-  MessageSquare,
-  Edit,
+  ChevronLeft, ChevronRight, BookOpen, FileText, CheckSquare,
+  MessageSquare, Clock, Image, Edit,
+  LayoutGrid, List, Plus, Upload, X, File, Trash2, GripVertical,
 } from "lucide-react";
+import {
+  DndContext, closestCenter, PointerSensor, useSensor, useSensors,
+} from '@dnd-kit/core'
+import {
+  SortableContext, useSortable, rectSortingStrategy,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
+
+const pageStatusConfig = {
+  UPLOADED:       { label: 'Uploaded', dot: 'bg-outline-variant' },
+  REGIONS_DEFINED: { label: 'Sketch',  dot: 'bg-tertiary' },
+  IN_PRODUCTION:  { label: 'Inking',   dot: 'bg-primary' },
+  COMPLETED:      { label: 'Complete', dot: 'bg-green-400 shadow-[0_0_8px_rgba(74,222,128,0.5)]' },
+}
+
+
 
 export function ChapterDetailPage() {
-  // Lay tham so tu URL: /series/:seriesId/chapters/:chapterId
   const { seriesId, chapterId } = useParams();
   const navigate = useNavigate();
-  const [pageNum, setPageNum] = useState(0);   // Trang pages hien tai
-  const perPage = 10;                            // So pages moi trang
 
   const user = useAuthStore((s) => s.user);
   const isMangaka = user?.role === "MANGAKA";
-  const isEditor =
-    user?.role === "TANTOU_EDITOR" || user?.role === "EDITORIAL_BOARD";
+  const isEditor = user?.role === "TANTOU_EDITOR" || user?.role === "EDITORIAL_BOARD";
 
-  // State local (không dùng store vì dây là trang con, không c?n state toàn c?c)
+  const addToast = useUIStore((s) => s.addToast);
+
   const [series, setSeries] = useState(null);
   const [chapter, setChapter] = useState(null);
   const [pages, setPages] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Goi dong thoi 3 API khi component mount
+  const fileInputRef = useRef(null)
+  const [selectedFiles, setSelectedFiles] = useState([])
+  const [showUploadModal, setShowUploadModal] = useState(false)
+  const [uploading, setUploading] = useState(false)
+
   useEffect(() => {
     if (!seriesId || !chapterId) return;
     setLoading(true);
-
-    // Promise.all de goi ca 3 API cùng lúc (nhanh hon goi tu?n t?)
     Promise.all([
-      seriesService.getById(Number(seriesId)),           // Lay thông tin series
-      seriesService.getChapterById(Number(chapterId)),  // Lay chi ti?t chapter
-      seriesService.getPagesByChapter(Number(chapterId)), // Lay danh sách pages
+      seriesService.getById(Number(seriesId)),
+      seriesService.getChapterById(Number(chapterId)),
+      seriesService.getPagesByChapter(Number(chapterId)),
     ])
       .then(([seriesData, chapterData, pagesData]) => {
         setSeries(seriesData);
         setChapter(chapterData);
-        // Pages tu API là array (List<PageResponse>)
         setPages(Array.isArray(pagesData) ? pagesData : []);
       })
-      .catch(() => {})  // L?i s? du?c EmptyState xu? lý
+      .catch(() => {})
       .finally(() => setLoading(false));
   }, [seriesId, chapterId]);
 
-  // Trang thái dang load
+  const stats = useMemo(() => {
+    if (!chapter || pages.length === 0) {
+      return { completedPages: '0/0', ongoingTasks: 0, pendingReviews: 0, daysToDeadline: null }
+    }
+    const completed = pages.filter(p => p.status === 'COMPLETED').length
+    const ongoing = pages.filter(p => p.status === 'IN_PRODUCTION').length
+    const pending = pages.filter(p => p.status === 'REGIONS_DEFINED').length
+    const total = pages.length
+    let days = null
+    if (chapter.deadline) {
+      days = Math.ceil((new Date(chapter.deadline) - new Date()) / (1000 * 60 * 60 * 24))
+    }
+    return { completedPages: `${completed}/${total}`, ongoingTasks: ongoing, pendingReviews: pending, daysToDeadline: days }
+  }, [chapter, pages])
+
+  const formatDate = (dateStr) => {
+    if (!dateStr) return null;
+    return new Date(dateStr).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
+  }
+
+  const timeAgo = (dateStr) => {
+    if (!dateStr) return null
+    const diff = new Date() - new Date(dateStr)
+    const mins = Math.floor(diff / 60000)
+    if (mins < 60) return `${mins}m ago`
+    const hours = Math.floor(mins / 60)
+    if (hours < 24) return `${hours}h ago`
+    return `${Math.floor(hours / 24)}d ago`
+  }
+
+  const handleAddPageClick = () => {
+    fileInputRef.current?.click()
+  }
+
+  const handleFileSelect = (e) => {
+    const files = Array.from(e.target.files || [])
+    if (files.length === 0) return
+    setSelectedFiles(files)
+    setShowUploadModal(true)
+    e.target.value = ''
+  }
+
+  const handleUploadConfirm = async () => {
+    if (selectedFiles.length === 0) return
+    setUploading(true)
+    const formData = new FormData()
+    selectedFiles.forEach((file) => formData.append('files', file))
+    try {
+      const created = await seriesService.uploadPagesBatch(Number(chapterId), formData)
+      addToast({ type: 'success', title: 'Uploaded', message: `${created.length} pages uploaded.` })
+      const fresh = await seriesService.getPagesByChapter(Number(chapterId))
+      setPages(Array.isArray(fresh) ? fresh : [])
+      closeUploadModal()
+    } catch {
+      addToast({ type: 'error', title: 'Upload failed', message: 'Could not upload pages.' })
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  const closeUploadModal = () => {
+    setShowUploadModal(false)
+    setSelectedFiles([])
+  }
+
+  const handleDeletePage = async (page) => {
+    if (!window.confirm(`Delete Page ${page.pageNumber}? This action cannot be undone.`)) return
+    try {
+      await seriesService.deletePage(page.id)
+      addToast({ type: 'success', title: 'Deleted', message: `Page ${page.pageNumber} has been deleted.` })
+      setPages((prev) => prev.filter((p) => p.id !== page.id))
+    } catch {
+      addToast({ type: 'error', title: 'Error', message: 'Failed to delete page.' })
+    }
+  }
+
+  const formatFileSize = (bytes) => {
+    if (bytes < 1024) return `${bytes} B`
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+  }
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+  )
+
+  const handleDragEnd = (event) => {
+    const { active, over } = event
+    if (!over || active.id === over.id) return
+
+    const oldIdx = pages.findIndex((p) => p.id === active.id)
+    const newIdx = pages.findIndex((p) => p.id === over.id)
+    if (oldIdx === -1 || newIdx === -1) return
+
+    const reordered = [...pages]
+    reordered.splice(oldIdx, 1)
+    reordered.splice(newIdx, 0, pages[oldIdx])
+    setPages(reordered)
+
+    seriesService.reorderPages(Number(chapterId), reordered.map((p) => p.id))
+      .catch(() => addToast({ type: 'error', title: 'Reorder failed', message: 'Could not reorder pages.' }))
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-[40vh]">
@@ -97,7 +175,6 @@ export function ChapterDetailPage() {
     );
   }
 
-  // Không tìm th?y series ho?c chapter
   if (!series || !chapter) {
     return (
       <EmptyState
@@ -105,151 +182,342 @@ export function ChapterDetailPage() {
         title="Chapter not found"
         description="The chapter you are looking for does not exist."
         action={
-          <Button
-            variant="ghost"
+          <button
             onClick={() => navigate(`/series/${seriesId}`)}
+            className="px-4 py-2 text-sm text-on-surface-variant hover:text-on-surface transition-colors"
           >
             Back to Series
-          </Button>
+          </button>
         }
       />
     );
   }
 
-  // Tính toán phân trang
-  const totalPages = Math.max(1, Math.ceil(pages.length / perPage));
-  const paginatedPages = pages.slice(pageNum * perPage, (pageNum + 1) * perPage);
-  const reviewHref = `/review/${chapterId}`;
-
-  // Format ngày tháng t? ISO string (VD: "2026-05-30T10:00:00" -> "5/30/2026")
-  const formatDate = (dateStr) => {
-    if (!dateStr) return null;
-    return new Date(dateStr).toLocaleDateString();
-  };
-
   return (
-    <div className="space-y-6">
-      {/* Breadcrumb: Nut back ve trang chi ti?t series */}
-      <div className="flex items-center gap-3">
-        <button
-          onClick={() => navigate(`/series/${seriesId}`)}
-          className="flex items-center gap-1 text-xs text-on-surface-variant/60 hover:text-on-surface transition-colors"
-        >
-          <ChevronLeft size={14} />
-          {series.title}
-        </button>
-      </div>
+    <div className="px-container-padding pt-container-padding space-y-8 max-w-[1400px] mx-auto w-full pb-28">
 
-      {/* Header: tên chapter + status + action buttons */}
-      <div className="flex items-start justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-on-surface">
-            Ch.{chapter.chapterNumber}: {chapter.title}
-          </h1>
-          <p className="text-sm text-on-surface-variant/70 mt-1">
-            {series.title}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          {/* Badge tr?ng thái chapter (backend ChapterStatus enum) */}
-          <StatusBadge status={chapter.status} size="sm" />
-          {isMangaka && (
-            <>
-              <Link to={`/series/${seriesId}/chapters/${chapterId}/edit`}>
-                <Button variant="outline" size="sm">
-                  <Edit size={14} /> Edit
-                </Button>
-              </Link>
-              <Link to={`/workspace/${chapterId}`}>
-                <Button variant="primary" size="sm">
-                  <ExternalLink size={14} /> Open Workspace
-                </Button>
-              </Link>
-            </>
-          )}
-          {isEditor && (
-            <Link to={reviewHref}>
-              <Button variant="primary" size="sm">
-                <MessageSquare size={14} /> Open in Review
-              </Button>
-            </Link>
-          )}
-        </div>
-      </div>
+      {/* ═══ Breadcrumb & Header ═══ */}
+      <div className="space-y-4">
+        <nav className="flex items-center gap-2 text-xs text-on-surface-variant">
+          <span className="hover:text-primary cursor-pointer" onClick={() => navigate('/series')}>Series</span>
+          <ChevronRight size={14} />
+          <span className="hover:text-primary cursor-pointer" onClick={() => navigate(`/series/${seriesId}`)}>{series.title}</span>
+          <ChevronRight size={14} />
+          <span className="text-primary">Ch. {chapter.chapterNumber}: {chapter.title}</span>
+        </nav>
 
-      {/* 4 card thông tin nhanh: Chapter number, Pages, Deadline, Progress */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="flex items-center gap-3 p-4">
-            <Hash size={16} className="text-on-surface-variant/40" />
-            <div>
-              <p className="text-[10px] text-on-surface-variant/60 uppercase tracking-wider">Chapter</p>
-              <p className="text-sm font-medium text-on-surface">{chapter.chapterNumber}</p>
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+          <div className="space-y-2">
+            <div className="flex items-center gap-4">
+              <h1 className="text-3xl font-bold text-on-surface tracking-tight">{chapter.title}</h1>
+              <span className={cn(
+                'px-3 py-0.5 rounded text-xs font-medium tracking-wider uppercase',
+                chapter.status === 'PUBLISHED' || chapter.status === 'APPROVED'
+                  ? 'bg-emerald-500/20 text-emerald-400'
+                  : chapter.status === 'DRAFT' || chapter.status === 'PLANNED'
+                    ? 'bg-surface-container-highest text-on-surface-variant'
+                    : chapter.status === 'IN_REVIEW' || chapter.status === 'SUBMITTED' || chapter.status === 'PENDING_BOARD_APPROVAL'
+                      ? 'bg-purple-500/20 text-purple-400'
+                      : chapter.status === 'REVISION_REQUIRED' || chapter.status === 'REJECTED'
+                        ? 'bg-red-500/20 text-red-400'
+                        : 'bg-primary/20 text-primary',
+              )}>
+                {chapter.status?.replace(/_/g, ' ')}
+              </span>
             </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="flex items-center gap-3 p-4">
-            <Image size={16} className="text-on-surface-variant/40" />
-            <div>
-              <p className="text-[10px] text-on-surface-variant/60 uppercase tracking-wider">Pages</p>
-              <p className="text-sm font-medium text-on-surface">{chapter.pageCount}</p>
+            <div className="flex items-center gap-3">
+              <span className="text-sm text-on-surface-variant">Ch. {chapter.chapterNumber}</span>
+              <div className="w-48 h-1.5 bg-surface-container-highest rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-primary shadow-[0_0_8px_rgba(139,92,246,0.4)] rounded-full transition-all"
+                  style={{ width: `${Math.min(chapter.progressPercent || 0, 100)}%` }}
+                />
+              </div>
+              <span className="text-xs font-medium text-primary">{chapter.progressPercent || 0}%</span>
             </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="flex items-center gap-3 p-4">
-            <Calendar size={16} className="text-on-surface-variant/40" />
-            <div>
-              <p className="text-[10px] text-on-surface-variant/60 uppercase tracking-wider">
-                {chapter.deadline ? "Deadline" : chapter.publishDate ? "Published" : "Created"}
-              </p>
-              {/*
-                deadline/publishDate/createdAt là LocalDateTime t? backend
-                C?n format d? hi?n th? ngày bình th??ng (không ph?i ISO string)
-              */}
-              <p className="text-sm font-medium text-on-surface">
-                {formatDate(chapter.deadline) || formatDate(chapter.publishDate) || formatDate(chapter.createdAt)}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="flex items-center gap-3 p-4">
-            <BarChart3 size={16} className="text-on-surface-variant/40" />
-            <div>
-              <p className="text-[10px] text-on-surface-variant/60 uppercase tracking-wider">Progress</p>
-              <p className="text-sm font-medium text-on-surface">{chapter.progressPercent}%</p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+          </div>
 
-      {/* Danh sách pages (ch? hi?n n?u có pages) */}
-      {pages.length > 0 && (
-        <div>
-          <h2 className="text-base font-semibold text-on-surface mb-3">Pages ({pages.length})</h2>
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-            {paginatedPages.map((page) => (
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => navigate(-1)}
+              className="px-6 py-2 border border-outline-variant rounded-xl text-sm text-on-surface hover:bg-surface-container-highest transition-colors flex items-center gap-2"
+            >
+              <ChevronLeft size={18} />
+              Back
+            </button>
+            {isMangaka && (
               <Link
-                key={page.id}
-                to={`/workspace/${chapterId}`}
-                className="group block"
+                to={`/series/${seriesId}/chapters/${chapterId}/edit`}
+                className="px-6 py-2 bg-primary text-white rounded-xl text-sm font-medium hover:brightness-110 transition-all flex items-center gap-2"
               >
-                <div className="aspect-[7/10] border border-border-light/40 flex flex-col items-center justify-center bg-black/[0.015] group-hover:border-primary/30 transition-colors">
-                  <Image size={24} className="text-on-surface-variant/20 group-hover:text-primary/30 transition-colors" />
-                  <span className="text-xs text-on-surface-variant/40 mt-1">Page {page.pageNumber}</span>
-                </div>
-                <p className="text-[10px] text-on-surface-variant/60 mt-1">{page.width}×{page.height}</p>
+                <Edit size={18} />
+                Edit Chapter
               </Link>
-            ))}
-          </div>
-          {/* Phân trang cho pages */}
-          <div className="mt-4">
-            <Pagination page={pageNum} totalPages={totalPages} onPageChange={setPageNum} />
+            )}
           </div>
         </div>
-      )}
+      </div>
+
+      {/* ═══ Main Layout Grid ═══ */}
+      <div className="grid grid-cols-12 gap-panel-gap">
+
+        {/* ─── Left Column (9 cols) ─── */}
+        <div className="col-span-12 lg:col-span-9 space-y-panel-gap">
+
+          {/* Stats Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="p-5 bg-surface-container rounded-xl border border-outline-variant/30 hover:border-primary/50 transition-colors group">
+              <p className="text-xs text-on-surface-variant mb-1">Completed Pages</p>
+              <div className="flex items-end justify-between">
+                <h3 className="text-xl font-semibold text-on-surface">{stats.completedPages}</h3>
+                <FileText size={20} className="text-on-surface-variant/40 group-hover:text-primary transition-colors" />
+              </div>
+            </div>
+            <div className="p-5 bg-surface-container rounded-xl border border-outline-variant/30 hover:border-primary/50 transition-colors group">
+              <p className="text-xs text-on-surface-variant mb-1">Ongoing Tasks</p>
+              <div className="flex items-end justify-between">
+                <h3 className="text-xl font-semibold text-on-surface">{stats.ongoingTasks}</h3>
+                <CheckSquare size={20} className="text-on-surface-variant/40 group-hover:text-primary transition-colors" />
+              </div>
+            </div>
+            <div className="p-5 bg-surface-container rounded-xl border border-outline-variant/30 hover:border-primary/50 transition-colors group">
+              <p className="text-xs text-on-surface-variant mb-1">Pending Reviews</p>
+              <div className="flex items-end justify-between">
+                <h3 className="text-xl font-semibold text-on-surface">{stats.pendingReviews}</h3>
+                <MessageSquare size={20} className="text-on-surface-variant/40 group-hover:text-primary transition-colors" />
+              </div>
+            </div>
+            <div className="p-5 bg-surface-container rounded-xl border border-outline-variant/30 hover:border-primary/50 transition-colors group">
+              <p className="text-xs text-on-surface-variant mb-1">Days to Deadline</p>
+              <div className="flex items-end justify-between">
+                <h3 className={cn(
+                  'text-xl font-semibold',
+                  stats.daysToDeadline !== null && stats.daysToDeadline <= 3 ? 'text-error' : 'text-on-surface',
+                )}>
+                  {stats.daysToDeadline !== null ? stats.daysToDeadline : '—'}
+                </h3>
+                <Clock size={20} className={cn(
+                  stats.daysToDeadline !== null && stats.daysToDeadline <= 3 ? 'text-error/40 group-hover:text-error' : 'text-on-surface-variant/40 group-hover:text-primary',
+                  'transition-colors',
+                )} />
+              </div>
+            </div>
+          </div>
+
+          {/* Manuscript Pages */}
+          <section className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-semibold text-on-surface">Manuscript Pages</h2>
+              <div className="flex items-center gap-2">
+                <button className="p-2 hover:bg-surface-container rounded-lg text-on-surface-variant"><LayoutGrid size={18} /></button>
+                <button className="p-2 hover:bg-surface-container rounded-lg text-on-surface-variant"><List size={18} /></button>
+              </div>
+            </div>
+
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              accept="image/*"
+              className="hidden"
+              onChange={handleFileSelect}
+            />
+            <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd} sensors={sensors}>
+              <SortableContext items={pages.map((p) => p.id)} strategy={rectSortingStrategy}>
+                <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-6">
+                  {pages.map((page) => (
+                    <SortablePageCard
+                      key={page.id}
+                      page={page}
+                      chapterId={chapterId}
+                      isMangaka={isMangaka}
+                      onDelete={handleDeletePage}
+                    />
+                  ))}
+
+                  {isMangaka && (
+                    <div
+                      onClick={handleAddPageClick}
+                      className="bg-surface-container-low border-2 border-dashed border-outline-variant rounded-xl flex flex-col items-center justify-center p-6 hover:border-primary/50 cursor-pointer transition-colors group"
+                    >
+                      <Plus size={40} className="text-outline-variant mb-2 group-hover:text-primary" />
+                      <span className="text-sm text-on-surface-variant">Add Page</span>
+                    </div>
+                  )}
+                </div>
+              </SortableContext>
+            </DndContext>
+          </section>
+
+          {/* Upload Modal */}
+          {showUploadModal && (
+            <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-start justify-center pt-[10vh]">
+              <div className="bg-surface-container border border-outline-variant rounded-xl p-6 w-full max-w-lg mx-4 shadow-2xl">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-on-surface">Upload Pages</h3>
+                  <button onClick={closeUploadModal} className="p-1 text-on-surface-variant hover:text-on-surface">
+                    <X size={20} />
+                  </button>
+                </div>
+
+                <div className="space-y-2 max-h-60 overflow-y-auto mb-4">
+                  {selectedFiles.map((file, i) => (
+                    <div key={i} className="flex items-center gap-3 bg-surface-container-low p-3 rounded-lg">
+                      <File size={18} className="text-primary shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-on-surface truncate">{file.name}</p>
+                        <p className="text-xs text-on-surface-variant">{formatFileSize(file.size)}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="flex justify-end gap-3">
+                  <button
+                    onClick={closeUploadModal}
+                    disabled={uploading}
+                    className="px-4 py-2 text-sm text-on-surface-variant hover:text-on-surface transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleUploadConfirm}
+                    disabled={uploading}
+                    className="px-6 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:brightness-110 transition-all flex items-center gap-2 disabled:opacity-40"
+                  >
+                    {uploading ? <Loader size={16} className="animate-spin" /> : <Upload size={16} />}
+                    {uploading ? `Uploading ${selectedFiles.length} pages...` : `Upload ${selectedFiles.length} Pages`}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* ─── Right Column (3 cols) ─── */}
+        <div className="col-span-12 lg:col-span-3 space-y-panel-gap">
+
+          {/* Chapter Info Panel */}
+          <div className="bg-[#1E1E20]/70 backdrop-blur-xl border border-outline-variant/30 rounded-xl p-6 space-y-6">
+            <h3 className="text-xs font-medium text-primary uppercase tracking-widest border-b border-outline-variant/30 pb-3">
+              Chapter Info
+            </h3>
+            <div className="space-y-4">
+              <div>
+                <p className="text-xs text-on-surface-variant">Series Title</p>
+                <p className="text-sm text-on-surface font-semibold">{series.title}</p>
+              </div>
+              <div className="flex justify-between items-start gap-4">
+                <div>
+                  <p className="text-xs text-on-surface-variant">Deadline</p>
+                  <p className={cn(
+                    'text-sm',
+                    stats.daysToDeadline !== null && stats.daysToDeadline <= 3 ? 'text-error' : 'text-on-surface',
+                  )}>
+                    {formatDate(chapter.deadline) || '—'}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs text-on-surface-variant">Publish Date</p>
+                  <p className="text-sm text-on-surface">{formatDate(chapter.publishDate) || '—'}</p>
+                </div>
+              </div>
+              <div className="flex justify-between items-start gap-4">
+                <div>
+                  <p className="text-xs text-on-surface-variant">Total Pages</p>
+                  <p className="text-sm text-on-surface">{pages.length || chapter.pageCount || 0} Pages</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs text-on-surface-variant">Last Updated</p>
+                  <p className="text-sm text-on-surface-variant">{timeAgo(chapter.updatedAt) || '—'}</p>
+                </div>
+              </div>
+            </div>
+            <button className="w-full border border-primary/30 text-primary py-2.5 rounded-xl text-sm font-medium hover:bg-primary/5 transition-colors">
+              Manage Permissions
+            </button>
+          </div>
+
+        </div>
+      </div>
     </div>
   );
+}
+
+// ── Helper: cn for conditional classes ──
+function cn(...classes) {
+  return classes.filter(Boolean).join(' ')
+}
+
+// ── SortablePageCard: page card có thể kéo thả ──
+function SortablePageCard({ page, chapterId, isMangaka, onDelete }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: page.id })
+  const navigate = useNavigate()
+  const cfg = pageStatusConfig[page.status] || { label: page.status, dot: 'bg-outline-variant' }
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  }
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      onClick={() => navigate(`/workspace/${chapterId}`)}
+      className={`group bg-surface-container-low border border-outline-variant/50 rounded-xl overflow-hidden hover:shadow-[0_8px_30px_rgb(139,92,246,0.1)] transition-all cursor-pointer ${isDragging ? 'opacity-40 z-50' : ''}`}
+    >
+      <div className="aspect-[3/4] relative bg-surface-container-highest overflow-hidden">
+        {/* Drag handle */}
+        {isMangaka && (
+          <div
+            {...attributes}
+            {...listeners}
+            onClick={(e) => e.stopPropagation()}
+            className="absolute top-2 left-2 z-20 opacity-0 group-hover:opacity-100 bg-surface/80 backdrop-blur text-on-surface-variant hover:text-primary p-1 rounded-lg transition-all cursor-grab active:cursor-grabbing"
+          >
+            <GripVertical size={14} />
+          </div>
+        )}
+
+        {/* Delete button */}
+        {isMangaka && (
+          <button
+            onClick={(e) => { e.stopPropagation(); onDelete(page) }}
+            className="absolute top-10 left-2 opacity-0 group-hover:opacity-100 bg-red-500/80 text-white p-1.5 rounded-lg transition-all hover:bg-red-500 z-10"
+          >
+            <Trash2 size={14} />
+          </button>
+        )}
+
+        {/* Thumbnail */}
+        {page.thumbnailUrl ? (
+          <img src={page.thumbnailUrl} alt={`Page ${page.pageNumber}`} className="w-full h-full object-cover grayscale opacity-80 group-hover:opacity-100 transition-opacity" />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center">
+            <Image size={32} className="text-on-surface-variant/20" />
+          </div>
+        )}
+
+        {/* Gradient overlay + Open Workspace */}
+        <div className="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-4 pointer-events-none">
+          <span className="w-full bg-primary text-white py-2 rounded-lg text-xs font-medium text-center pointer-events-none">
+            Open Workspace
+          </span>
+        </div>
+
+        {/* Page number badge */}
+        <div className="absolute top-2 right-2">
+          <span className="bg-surface/80 backdrop-blur px-2 py-1 rounded text-[10px] font-bold text-on-surface border border-outline-variant">
+            P. {String(page.pageNumber).padStart(2, '0')}
+          </span>
+        </div>
+      </div>
+
+      <div className="p-3 flex items-center justify-between">
+        <span className="text-xs text-on-surface-variant">{cfg.label}</span>
+        <span className={`w-2 h-2 rounded-full ${cfg.dot}`} />
+      </div>
+    </div>
+  )
 }
