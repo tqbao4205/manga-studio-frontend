@@ -17,16 +17,20 @@
  *   - PATCH /api/series/{id}/status (khi EB d?i status series)
  */
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
   ArrowLeft, Plus, Check, X, RotateCcw, Send, Edit,
   Star, Trophy, ArrowUp, Filter, SortAsc,
+  Users, UserPlus, UserMinus, Search, Mail, Loader,
 } from 'lucide-react'
 import { useSeriesStore } from '../../app/stores/seriesStore'
 import { useAuthStore } from '../../app/stores/authStore'
 import { useUIStore } from '../../app/stores/uiStore'
 import seriesService from '../../services/seriesService'
+import chapterService from '../../services/chapterService'
+import assistantService from '../../services/assistantService'
+import { Dialog } from '../../shared/components/ui/dialog'
 import { EmptyState } from '../../shared/components/shared/EmptyState'
 import { PageLoading } from '../../shared/components/shared/LoadingSpinner'
 import { cn } from '../../shared/utils'
@@ -81,6 +85,76 @@ export function SeriesDetailPage() {
   const isEb = user?.role === 'EDITORIAL_BOARD'
   const isOwner = isMangaka && series?.mangaka?.id === user?.id
 
+  // ── Assistant state ──
+  const [seriesAssistants, setSeriesAssistants] = useState([])
+  const [showInviteDialog, setShowInviteDialog] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [searchResults, setSearchResults] = useState([])
+  const [searching, setSearching] = useState(false)
+  const [invitingId, setInvitingId] = useState(null)
+  const searchTimeoutRef = useRef(null)
+
+  useEffect(() => {
+    if (!id) return
+    assistantService.getBySeries(id).then(setSeriesAssistants).catch(() => {})
+  }, [id])
+
+  // ── Debounced search assistant ──
+  const handleSearchChange = useCallback((value) => {
+    setSearchQuery(value)
+    if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current)
+    if (!value.trim()) {
+      setSearchResults([])
+      setSearching(false)
+      return
+    }
+    setSearching(true)
+    searchTimeoutRef.current = setTimeout(async () => {
+      try {
+        const res = await assistantService.getAssistants(value)
+        setSearchResults(res)
+      } catch {
+        setSearchResults([])
+      } finally {
+        setSearching(false)
+      }
+    }, 300)
+  }, [])
+
+  useEffect(() => {
+    return () => {
+      if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current)
+    }
+  }, [])
+
+  // ── Invite assistant ──
+  const handleInvite = async (assistantId, displayName) => {
+    setInvitingId(assistantId)
+    try {
+      await assistantService.invite(id, assistantId)
+      addToast({ type: 'success', title: 'Invitation sent', message: `Invitation sent to ${displayName}.` })
+      setShowInviteDialog(false)
+      setSearchQuery('')
+      setSearchResults([])
+    } catch (err) {
+      addToast({ type: 'error', title: 'Failed', message: err.response?.data?.message || err.message })
+    } finally {
+      setInvitingId(null)
+    }
+  }
+
+  // ── Remove assistant ──
+  const handleRemove = async (assistantId, displayName) => {
+    if (!window.confirm(`Remove ${displayName} from this series?`)) return
+    try {
+      await assistantService.remove(id, assistantId)
+      addToast({ type: 'success', title: 'Removed', message: `${displayName} has been removed.` })
+      setSeriesAssistants((prev) => prev.filter((a) => (a.assistant?.id || a.assistantId) !== assistantId))
+    } catch (err) {
+      addToast({ type: 'error', title: 'Failed', message: err.response?.data?.message || err.message })
+    }
+  }
+
   // Tính toán deadlines s?p t?i t? chapters
   const upcomingDeadlines = useMemo(() => {
     if (!chapters || chapters.length === 0) return []
@@ -106,7 +180,7 @@ export function SeriesDetailPage() {
   // ── Chapter status update handler ──
   const handleChapterStatusUpdate = async (chapterId, newStatus) => {
     try {
-      await seriesService.updateChapter(chapterId, { status: newStatus })
+      await chapterService.update(chapterId, { status: newStatus })
       fetchChapters(id)
       const labelMap = {
         PENDING_BOARD_APPROVAL: 'submitted to Editorial Board',
@@ -594,6 +668,156 @@ export function SeriesDetailPage() {
                 </div>
               </div>
             </div>
+
+            {/* Assistants */}
+            <div className="bg-surface-container rounded-xl p-6 shadow-[0px_4px_20px_rgba(139,92,246,0.05)] border border-outline-variant/30">
+              <div className="flex items-center justify-between mb-6">
+                <h4 className="text-xl font-semibold text-on-surface flex items-center gap-2">
+                  <Users size={18} className="text-primary" />
+                  Assistants
+                </h4>
+                {isOwner && (
+                  <button
+                    type="button"
+                    onClick={() => setShowInviteDialog(true)}
+                    className="flex items-center gap-1.5 text-xs font-medium text-primary hover:text-primary/80 transition-colors"
+                  >
+                    <UserPlus size={14} />
+                    Invite
+                  </button>
+                )}
+              </div>
+
+              {seriesAssistants.length === 0 ? (
+                <div className="flex flex-col items-center py-6 text-on-surface-variant/50">
+                  <Users size={28} className="mb-2 opacity-40" />
+                  <p className="text-sm">No assistants assigned.</p>
+                  {isOwner && (
+                    <p className="text-xs mt-1">Invite an assistant to help with chapter tasks.</p>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {seriesAssistants.map((a) => {
+                    const name = a.assistant?.displayName || a.displayName || 'Unknown'
+                    const avatar = name[0]
+                    const aid = a.assistant?.id || a.assistantId
+                    return (
+                      <div
+                        key={aid}
+                        className="flex items-center justify-between bg-surface-container-low rounded-lg px-4 py-2.5 border border-outline-variant/20"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary">
+                            {avatar}
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-on-surface">{name}</p>
+                            <p className="text-xs text-emerald-400 font-medium">ACTIVE</p>
+                          </div>
+                        </div>
+                        {isOwner && (
+                          <button
+                            type="button"
+                            onClick={() => handleRemove(aid, name)}
+                            className="p-1.5 text-on-surface-variant/40 hover:text-error transition-colors"
+                            title="Remove assistant"
+                          >
+                            <UserMinus size={16} />
+                          </button>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* ── Invite Assistant Dialog ── */}
+            <Dialog
+              open={showInviteDialog}
+              onClose={() => { setShowInviteDialog(false); setSearchQuery(''); setSearchResults([]) }}
+              title="Invite Assistant"
+              description="Search for an assistant to invite to this series."
+              size="md"
+            >
+              <div className="space-y-4">
+                <div className="relative">
+                  <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant/50" />
+                  <input
+                    autoFocus
+                    value={searchQuery}
+                    onChange={(e) => handleSearchChange(e.target.value)}
+                    placeholder="Type name to search..."
+                    className="w-full bg-surface-container-low border border-outline-variant/30 rounded-lg pl-10 pr-4 py-2.5 text-sm text-on-surface placeholder:text-on-surface-variant/30 focus:outline-none focus:border-primary transition-colors"
+                  />
+                  {searching && (
+                    <Loader size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-primary animate-spin" />
+                  )}
+                </div>
+
+                <div className="max-h-60 overflow-y-auto space-y-1">
+                  {!searchQuery.trim() ? (
+                    <p className="text-center py-8 text-sm text-on-surface-variant/40">Type to search for assistants.</p>
+                  ) : searching ? (
+                    <div className="flex items-center justify-center py-8">
+                      <Loader size={20} className="text-primary animate-spin" />
+                    </div>
+                  ) : searchResults.length === 0 ? (
+                    <p className="text-center py-8 text-sm text-on-surface-variant/40">No assistants found.</p>
+                  ) : (
+                    searchResults.map((s) => {
+                      const name = s.displayName || s.username || 'Unknown'
+                      const initial = name[0]
+                      const isAlreadyInvited = seriesAssistants.some(
+                        (a) => (a.assistant?.id || a.assistantId) === s.id
+                      )
+                      return (
+                        <div
+                          key={s.id}
+                          className="flex items-center justify-between px-3 py-2.5 rounded-lg hover:bg-surface-container-high/50 transition-colors"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary">
+                              {initial}
+                            </div>
+                            <div>
+                              <p className="text-sm font-medium text-on-surface">{name}</p>
+                              {s.email && (
+                                <p className="text-xs text-on-surface-variant/50 flex items-center gap-1">
+                                  <Mail size={10} />
+                                  {s.email}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                          {isAlreadyInvited ? (
+                            <span className="flex items-center gap-1 text-xs text-on-surface-variant/40">
+                              <Check size={12} />
+                              Added
+                            </span>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => handleInvite(s.id, name)}
+                              disabled={invitingId === s.id}
+                              className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-primary border border-primary/30 rounded-lg hover:bg-primary/5 disabled:opacity-40 transition-all"
+                            >
+                              {invitingId === s.id ? (
+                                <Loader size={12} className="animate-spin" />
+                              ) : (
+                                <UserPlus size={12} />
+                              )}
+                              Invite
+                            </button>
+                          )}
+                        </div>
+                      )
+                    })
+                  )}
+                </div>
+              </div>
+            </Dialog>
 
             {/* Upcoming Deadlines */}
             <div className="bg-surface-container rounded-xl p-6 shadow-[0px_4px_20px_rgba(139,92,246,0.05)] border border-outline-variant/30">

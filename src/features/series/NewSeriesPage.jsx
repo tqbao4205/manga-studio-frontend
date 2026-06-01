@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { useNavigate, useParams, useLocation } from 'react-router-dom'
-import { ArrowLeft, Upload, X, Info, Image, Users, User } from 'lucide-react'
+import { ArrowLeft, Upload, X, Info, Image } from 'lucide-react'
 import { useAuthStore } from '../../app/stores/authStore'
 import { useUIStore } from '../../app/stores/uiStore'
 import seriesService from '../../services/seriesService'
@@ -32,7 +32,8 @@ export function NewSeriesPage() {
 
   useEffect(() => {
     if (!isEdit || !seriesId) return
-    seriesService.getById(Number(seriesId)).then((series) => {
+    const id = Number(seriesId)
+    seriesService.getById(id).then((series) => {
       setTitle(series.title)
       setTitleJp(series.titleJp || '')
       setSynopsis(series.synopsis)
@@ -317,32 +318,7 @@ export function NewSeriesPage() {
           </div>
         )}
 
-        {/* Section: Team Assignment */}
-        <div className="bg-surface-container border border-outline-variant/30 rounded-xl p-8 shadow-sm">
-          <div className="flex items-center space-x-3 mb-8">
-            <Users size={20} className="text-primary" />
-            <h2 className="text-xl font-semibold text-on-surface">Team Assignment</h2>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-medium text-on-surface-variant mb-2">Assign Mangaka</label>
-              <div className="relative">
-                <select
-                  disabled
-                  className="w-full bg-surface-container-low border-0 border-b border-outline-variant text-on-surface py-3 transition-all appearance-none opacity-70"
-                >
-                  <option>{seriesInfo?.mangaka?.displayName || user?.displayName || 'Auto-assigned'}</option>
-                </select>
-                <User size={16} className="absolute right-2 top-3 text-on-surface-variant pointer-events-none" />
-              </div>
-              <p className="text-xs text-on-surface-variant mt-2">Mangaka is assigned automatically during series creation.</p>
-            </div>
-          </div>
-        </div>
 
-        {/* Section: Publishing Info */}
-        <div className="bg-surface-container border border-outline-variant/30 rounded-xl p-8 shadow-sm">
-        </div>
 
         {/* Footer */}
         <div className="flex flex-col md:flex-row items-center justify-between pt-8 gap-6">

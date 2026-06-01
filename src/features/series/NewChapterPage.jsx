@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, Info, Calendar } from 'lucide-react'
 import { RichEditor } from '../../shared/components/editor/RichEditor'
 import { useUIStore } from '../../app/stores/uiStore'
-import seriesService from '../../services/seriesService'
+import chapterService from '../../services/chapterService'
 
 export function NewChapterPage() {
   const navigate = useNavigate()
@@ -22,7 +22,7 @@ export function NewChapterPage() {
 
   useEffect(() => {
     if (!isChapterEdit) return
-    seriesService.getChapterById(Number(chapterId)).then((ch) => {
+    chapterService.getById(Number(chapterId)).then((ch) => {
       setChapterNumber(String(ch.chapterNumber))
       setTitle(ch.title || '')
       setPageCount(String(ch.pageCount || 20))
@@ -40,7 +40,7 @@ export function NewChapterPage() {
 
     try {
       if (isChapterEdit) {
-        await seriesService.updateChapter(Number(chapterId), {
+        await chapterService.update(Number(chapterId), {
           chapterNumber: chNumber,
           title: title.trim() || `Chapter ${chNumber}`,
           deadline: deadline || null,
@@ -48,7 +48,7 @@ export function NewChapterPage() {
         addToast({ type: 'success', title: 'Saved', message: `Ch.${chNumber} has been updated.` })
         if (navigateAway) navigate(`/series/${seriesId}/chapters/${chapterId}`)
       } else {
-        await seriesService.createChapter(id, {
+        await chapterService.create(id, {
           chapterNumber: chNumber,
           title: title.trim() || `Chapter ${chNumber}`,
           deadline: deadline || null,

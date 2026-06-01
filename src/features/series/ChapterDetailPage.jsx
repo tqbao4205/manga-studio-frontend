@@ -3,6 +3,8 @@ import { useState, useEffect, useMemo, useRef } from "react";
 import { useAuthStore } from "../../app/stores/authStore";
 import { useUIStore } from "../../app/stores/uiStore";
 import seriesService from "../../services/seriesService";
+import chapterService from "../../services/chapterService";
+import pageService from "../../services/pageService";
 import { EmptyState } from "../../shared/components/shared/EmptyState";
 import { Loader } from "lucide-react";
 import {
@@ -52,8 +54,8 @@ export function ChapterDetailPage() {
     setLoading(true);
     Promise.all([
       seriesService.getById(Number(seriesId)),
-      seriesService.getChapterById(Number(chapterId)),
-      seriesService.getPagesByChapter(Number(chapterId)),
+      chapterService.getById(Number(chapterId)),
+      pageService.getByChapter(Number(chapterId)),
     ])
       .then(([seriesData, chapterData, pagesData]) => {
         setSeries(seriesData);
@@ -112,9 +114,9 @@ export function ChapterDetailPage() {
     const formData = new FormData()
     selectedFiles.forEach((file) => formData.append('files', file))
     try {
-      const created = await seriesService.uploadPagesBatch(Number(chapterId), formData)
+      const created = await pageService.uploadBatch(Number(chapterId), formData)
       addToast({ type: 'success', title: 'Uploaded', message: `${created.length} pages uploaded.` })
-      const fresh = await seriesService.getPagesByChapter(Number(chapterId))
+      const fresh = await pageService.getByChapter(Number(chapterId))
       setPages(Array.isArray(fresh) ? fresh : [])
       closeUploadModal()
     } catch {
@@ -132,7 +134,7 @@ export function ChapterDetailPage() {
   const handleDeletePage = async (page) => {
     if (!window.confirm(`Delete Page ${page.pageNumber}? This action cannot be undone.`)) return
     try {
-      await seriesService.deletePage(page.id)
+      await pageService.delete(page.id)
       addToast({ type: 'success', title: 'Deleted', message: `Page ${page.pageNumber} has been deleted.` })
       setPages((prev) => prev.filter((p) => p.id !== page.id))
     } catch {
@@ -163,7 +165,7 @@ export function ChapterDetailPage() {
     reordered.splice(newIdx, 0, pages[oldIdx])
     setPages(reordered)
 
-    seriesService.reorderPages(Number(chapterId), reordered.map((p) => p.id))
+    pageService.reorder(Number(chapterId), reordered.map((p) => p.id))
       .catch(() => addToast({ type: 'error', title: 'Reorder failed', message: 'Could not reorder pages.' }))
   }
 

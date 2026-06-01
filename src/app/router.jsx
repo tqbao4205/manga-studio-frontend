@@ -33,6 +33,7 @@ import { ReviewsPage } from "../features/reviews/ReviewsPage";
 import { PublishingPage } from "../features/publishing/PublishingPage";
 import { VoteEntryPage } from "../features/publishing/VoteEntryPage";
 import { ProfilePage } from "../features/profile/ProfilePage";
+import { InvitationsPage } from "../features/invitations/InvitationsPage";
 import { NotFoundPage } from "../features/not-found/NotFoundPage";
 import { ProtectedRoute, RoleGuard } from "./guards";
 
@@ -143,6 +144,16 @@ export default function App() {
               </RoleGuard>
             }
           />
+          {/* Invitations — lời mời vào series cho ASSISTANT */}
+          <Route
+            path="/invitations"
+            element={
+              <RoleGuard allowedRoles={["ASSISTANT"]}>
+                <InvitationsPage />
+              </RoleGuard>
+            }
+          />
+
           {/* Reviews — phê duyệt chapter cho biên tập viên */}
           <Route
             path="/reviews"

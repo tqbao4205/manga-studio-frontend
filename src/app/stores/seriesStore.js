@@ -34,6 +34,7 @@
 
 import { create } from 'zustand'
 import seriesService from '../../services/seriesService'
+import chapterService from '../../services/chapterService'
 
 /**
  * useSeriesStore: Zustand store quản lý state Series
@@ -147,7 +148,7 @@ export const useSeriesStore = create((set) => ({
 
     try {
       // Bước 2: Gọi API chapters
-      const data = await seriesService.getChaptersBySeries(seriesId)
+      const data = await chapterService.getBySeries(seriesId)
 
       // Bước 3: Xử lý response
       //   Backend trả về List<ChapterResponse> (Array)

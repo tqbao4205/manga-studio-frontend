@@ -33,7 +33,7 @@ import {
 import { useSeriesStore } from "../../app/stores/seriesStore";
 import { useRankingStore } from "../../app/stores/rankingStore";
 import { useScheduleStore } from "../../app/stores/scheduleStore";
-import { mockUsers } from "../../shared/constants/mock-data";
+import { mockUsers, mockChapters, mockPages, mockRegions } from "../../shared/constants/mock-data";
 import {
   Card,
   CardContent,
@@ -446,7 +446,7 @@ function AssistantDashboard() {
   const user = useAuthStore((s) => s.user);
   const { data: tasksData, isLoading: tasksLoading } = useTasks();
   const seriesList = useSeriesStore((s) => s.seriesList);
-  const { mockChapters, mockPages, mockRegions } = require('../../shared/constants/mock-data');
+
 
   if (tasksLoading) return <PageLoading />;
 
