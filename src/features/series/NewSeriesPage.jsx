@@ -85,6 +85,7 @@ export function NewSeriesPage() {
     const file = e.target.files?.[0]
     if (!file) return
     setNewCoverFile(file)
+    setCoverImageUrl('')
     const reader = new FileReader()
     reader.onload = () => setNewCoverPreview(reader.result)
     reader.readAsDataURL(file)

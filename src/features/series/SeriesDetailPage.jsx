@@ -265,7 +265,7 @@ export function SeriesDetailPage() {
         {/* Cover image với fallback gradient */}
         {series.coverImageUrl ? (
           <img
-            src={series.coverImageUrl}
+            src={`${series.coverImageUrl}?t=${Date.now()}`}
             alt={`${series.title} cover`}
             className="w-full h-full object-cover brightness-[0.4] contrast-[1.1]"
           />
