@@ -93,6 +93,7 @@ export function SeriesListPage() {
   const [page, setPage] = useState(0)
   const [goToPage, setGoToPage] = useState('')
   const pageSize = 6
+  const isFiltered = search !== '' || genre !== 'ALL' || status !== 'ALL'
 
   // ── useEffect: Gọi API mỗi khi filter thay đổi ──
   // Mỗi lần user thay đổi search/genre/status/sort/page → gọi fetchAll với params mới
@@ -203,11 +204,28 @@ export function SeriesListPage() {
 
       {/* ═══ Empty State ═══ */}
       {!isLoading && !error && seriesList.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 text-center">
-          <span className="material-symbols-outlined text-6xl text-outline mb-4">auto_stories</span>
-          <h3 className="text-xl font-bold text-white mb-2">No series found</h3>
-          <p className="text-on-surface-variant">Try changing your search or filter criteria.</p>
-        </div>
+        isFiltered ? (
+          <div className="flex flex-col items-center justify-center py-20 text-center">
+            <span className="material-symbols-outlined text-6xl text-outline mb-4">auto_stories</span>
+            <h3 className="text-xl font-bold text-white mb-2">No series found</h3>
+            <p className="text-on-surface-variant">Try changing your search or filter criteria.</p>
+          </div>
+        ) : (
+          <div className="flex flex-col items-center justify-center py-20 text-center">
+            <span className="material-symbols-outlined text-6xl text-outline mb-4">auto_stories</span>
+            <h3 className="text-xl font-bold text-white mb-2">No series yet</h3>
+            <p className="text-on-surface-variant mb-8">Get started by creating your first manga series.</p>
+            {user?.role === 'MANGAKA' && (
+              <button
+                onClick={() => navigate('/series/new')}
+                className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-xl font-bold hover:bg-primary/90 transition-all"
+              >
+                <span className="material-symbols-outlined">add_circle</span>
+                Create New Series
+              </button>
+            )}
+          </div>
+        )
       ) : null}
 
       {/* ═══ Series Grid ═══ */}
