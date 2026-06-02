@@ -28,6 +28,7 @@ const statusConfig = {
 export function InvitationsPage() {
   const navigate = useNavigate()
   const user = useAuthStore((s) => s.user)
+  const invitationTrigger = useAuthStore((s) => s.invitationTrigger) // 👈 watch trigger để refetch realtime
   const addToast = useUIStore((s) => s.addToast)
 
   const [invitations, setInvitations] = useState([])
@@ -48,7 +49,7 @@ export function InvitationsPage() {
 
   useEffect(() => {
     fetchInvitations()
-  }, [])
+  }, [invitationTrigger]) // 👈 chạy lại mỗi khi WebSocket báo có lời mời mới
 
   const handleRespond = async (invitationId, status) => {
     setActionId(invitationId)
