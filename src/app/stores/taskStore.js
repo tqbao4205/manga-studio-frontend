@@ -14,6 +14,19 @@ export const useTaskStore = create((set) => ({
       return { tasks: [...state.tasks, t] }
     }),
 
+  submitNewTask: (payload) =>
+    set((state) => {
+      const task = {
+        id: nextId++,
+        status: 'TODO',
+        createdAt: new Date().toISOString(),
+        assignedAt: new Date().toISOString(),
+        ...payload,
+      }
+      mockTasks.push(task)
+      return { tasks: [...state.tasks, task] }
+    }),
+
   updateTaskStatus: (taskId, status) =>
     set((state) => {
       const found = state.tasks.find(t => t.id === taskId)

@@ -6,6 +6,7 @@ import {
   mockActivities, mockNotifications, mockSchedules, mockUsers,
   mockBoardVotes,
 } from '../constants/mock-data'
+import { useTaskStore } from '../../app/stores/taskStore'
 
 function delay(data, ms = 200) {
   return new Promise((resolve) => setTimeout(() => resolve(data), ms))
@@ -58,7 +59,8 @@ export function useLayersByPage(pageId) {
 }
 
 export function useTasks() {
-  return useAsyncData(() => delay(mockTasks), [])
+  const tasks = useTaskStore((s) => s.tasks)
+  return { data: tasks, isLoading: false }
 }
 
 export function useTaskSubmissions(taskId) {

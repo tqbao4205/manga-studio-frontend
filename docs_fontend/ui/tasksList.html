@@ -1,0 +1,532 @@
+<!DOCTYPE html><html class="dark" lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Tasks | MangaFlow Creative Engine</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<style>
+        @import url('https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap');
+        
+        body {
+            font-family: 'Geist', sans-serif;
+            background-color: #131315;
+            color: #e5e1e4;
+            overflow: hidden;
+        }
+
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #353437;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #494454;
+        }
+
+        .kanban-column {
+            min-width: 320px;
+            max-width: 320px;
+        }
+
+        .task-card {
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .task-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0px 4px 20px rgba(139, 92, 246, 0.1);
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-error": "#690005",
+                        "on-surface-variant": "#cbc3d7",
+                        "on-secondary": "#303032",
+                        "on-secondary-container": "#b6b4b7",
+                        "tertiary-fixed-dim": "#ffb869",
+                        "on-primary-container": "#340080",
+                        "primary-fixed-dim": "#d0bcff",
+                        "on-secondary-fixed-variant": "#474649",
+                        "background": "#131315",
+                        "surface": "#131315",
+                        "secondary-fixed-dim": "#c8c6c8",
+                        "tertiary-fixed": "#ffdcbb",
+                        "surface-dim": "#131315",
+                        "surface-container": "#201f21",
+                        "on-tertiary-fixed": "#2c1700",
+                        "secondary-container": "#474649",
+                        "on-surface": "#e5e1e4",
+                        "inverse-surface": "#e5e1e4",
+                        "on-tertiary-container": "#3f2300",
+                        "error": "#ffb4ab",
+                        "on-primary-fixed": "#23005c",
+                        "tertiary-container": "#ca801e",
+                        "surface-container-high": "#2a2a2c",
+                        "surface-container-highest": "#353437",
+                        "primary-fixed": "#e9ddff",
+                        "outline": "#958ea0",
+                        "on-secondary-fixed": "#1b1b1d",
+                        "secondary": "#c8c6c8",
+                        "on-tertiary": "#482900",
+                        "surface-tint": "#d0bcff",
+                        "secondary-fixed": "#e4e2e4",
+                        "tertiary": "#ffb869",
+                        "surface-variant": "#353437",
+                        "error-container": "#93000a",
+                        "primary": "#d0bcff",
+                        "inverse-on-surface": "#303032",
+                        "surface-container-lowest": "#0e0e10",
+                        "on-error-container": "#ffdad6",
+                        "on-primary-fixed-variant": "#5516be",
+                        "on-primary": "#3c0091",
+                        "on-background": "#e5e1e4",
+                        "inverse-primary": "#6d3bd7",
+                        "primary-container": "#a078ff",
+                        "outline-variant": "#494454",
+                        "surface-bright": "#39393b",
+                        "surface-container-low": "#1b1b1d",
+                        "on-tertiary-fixed-variant": "#673d00"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "panel-gap": "20px",
+                        "base": "8px",
+                        "container-padding": "24px",
+                        "gutter": "16px"
+                    },
+                    "fontFamily": {
+                        "body-md": ["Geist"],
+                        "label-sm": ["Geist"],
+                        "headline-lg": ["Geist"],
+                        "body-lg": ["Geist"],
+                        "label-md": ["Geist"],
+                        "headline-lg-mobile": ["Geist"],
+                        "display-lg": ["Geist"],
+                        "headline-md": ["Geist"]
+                    },
+                    "fontSize": {
+                        "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                        "label-sm": ["12px", {"lineHeight": "16px", "letterSpacing": "0.02em", "fontWeight": "500"}],
+                        "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                        "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                        "label-md": ["14px", {"lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "500"}],
+                        "headline-lg-mobile": ["28px", {"lineHeight": "36px", "fontWeight": "600"}],
+                        "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}]
+                    }
+                },
+            },
+        }
+    </script>
+</head>
+<body class="bg-background text-on-background h-screen flex overflow-hidden">
+<!-- SideNavBar -->
+<aside class="fixed left-0 top-0 h-full w-[240px] bg-surface-container-lowest flex flex-col py-base shadow-sm z-50">
+<div class="px-6 mb-8 flex items-center gap-3">
+<div class="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+<span class="material-symbols-outlined text-on-primary text-xl">auto_stories</span>
+</div>
+<div>
+<h1 class="font-headline-md text-headline-md text-primary font-bold leading-none">MangaFlow</h1>
+<p class="text-[10px] text-on-surface-variant tracking-wider uppercase">Creative Precision</p>
+</div>
+</div>
+<nav class="flex-1 px-3 space-y-1">
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-primary transition-colors duration-200 font-body-md text-body-md" href="#">
+<span class="material-symbols-outlined">dashboard</span> Dashboard
+            </a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-primary transition-colors duration-200 font-body-md text-body-md" href="#">
+<span class="material-symbols-outlined">description</span> Manuscripts
+            </a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-primary transition-colors duration-200 font-body-md text-body-md" href="#">
+<span class="material-symbols-outlined">auto_stories</span> Storyboard
+            </a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-primary transition-colors duration-200 font-body-md text-body-md" href="#">
+<span class="material-symbols-outlined">library_books</span> Series
+            </a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-primary transition-colors duration-200 font-body-md text-body-md" href="#">
+<span class="material-symbols-outlined">group</span> Team
+            </a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-primary font-bold bg-surface-container-high font-body-md text-body-md" href="#">
+<span class="material-symbols-outlined">assignment</span> Tasks
+            </a>
+</nav>
+<div class="mt-auto px-3 space-y-1 border-t border-outline-variant/30 pt-4">
+<button class="w-full mb-4 bg-primary text-on-primary py-3 rounded-xl font-label-md text-label-md flex items-center justify-center gap-2 hover:brightness-110 transition-all">
+<span class="material-symbols-outlined text-sm">add</span> New Project
+            </button>
+<a class="flex items-center gap-3 px-3 py-2 rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-primary transition-colors font-body-md text-body-md" href="#">
+<span class="material-symbols-outlined">settings</span> Settings
+            </a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-xl text-on-surface-variant hover:bg-surface-container-high hover:text-primary transition-colors font-body-md text-body-md" href="#">
+<span class="material-symbols-outlined">help</span> Support
+            </a>
+</div>
+</aside>
+<!-- Main Content -->
+<main class="ml-[240px] flex-1 flex flex-col h-full overflow-hidden relative">
+<!-- TopNavBar -->
+<header class="h-16 flex items-center justify-between px-container-padding bg-surface border-b border-outline-variant z-40">
+<div class="flex items-center gap-4">
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-lg">search</span>
+<input class="bg-surface-container-low border-none focus:ring-1 focus:ring-primary rounded-lg pl-10 pr-4 py-2 w-64 text-label-md" placeholder="Search tasks, assets..." type="text">
+</div>
+<div class="h-6 w-[1px] bg-outline-variant"></div>
+<div class="flex items-center gap-1 bg-surface-container-low p-1 rounded-lg">
+<button class="px-3 py-1 text-label-md font-bold bg-surface-container-highest text-primary rounded-md shadow-sm">Kanban</button>
+<button class="px-3 py-1 text-label-md text-on-surface-variant hover:text-on-surface transition-colors">List</button>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<button class="relative p-2 text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined">notifications</span>
+<span class="absolute top-2 right-2 w-2 h-2 bg-primary rounded-full border-2 border-surface"></span>
+</button>
+<div class="w-8 h-8 rounded-full overflow-hidden border border-outline-variant">
+<img alt="User Profile" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida/ADBb0uggMKtqxiogBBzmZ2DEJBc-DAgDz_4f3sPn1iWMK9eGzXKu-ierQPkkwzBpU_UCJt8cVzA4g3hkhCjalMegomZv-Hq2kri4lozxNna1lrHArFRlRWTbrW3Qcp1IUSxKAE7HmAbgLIauP4TgQX5sbVzsLUq955_tjLIgQ3JAFZChHYuGcHzjjzuEkCE437wl0EOVJ8dsJffvPyf-4xDxjFQXKV-3ByrKZu2jjZu4_lSwMwR6Pp68WwGC2a61">
+</div>
+</div>
+</header>
+<!-- Tool Bar -->
+<div class="px-container-padding py-6 bg-background">
+<div class="flex items-end justify-between mb-6">
+<div><div class="flex items-center gap-2 mb-1">
+                    <span class="material-symbols-outlined text-primary text-sm">filter_alt</span>
+                    <span class="text-[10px] text-primary font-bold uppercase tracking-widest">Filtered by Series</span>
+                </div>
+<h2 class="font-headline-lg text-headline-lg text-on-surface">Tasks</h2>
+<p class="text-on-surface-variant font-label-md text-label-md">Manage creative workflow for active series.</p>
+</div>
+<button class="bg-primary text-on-primary px-6 py-2.5 rounded-xl font-label-md text-label-md flex items-center gap-2 hover:brightness-110 transition-all">
+<span class="material-symbols-outlined">add_task</span>
+                    Create Task
+                </button>
+</div>
+<div class="flex items-center gap-3 overflow-x-auto pb-2">
+<button class="flex items-center gap-2 px-4 py-2 bg-surface-container-low border border-outline-variant/30 rounded-lg text-label-md text-on-surface-variant hover:bg-surface-container transition-colors">
+                    Status <span class="material-symbols-outlined text-sm">keyboard_arrow_down</span>
+</button>
+<button class="flex items-center gap-2 px-4 py-2 bg-surface-container-low border border-outline-variant/30 rounded-lg text-label-md text-on-surface-variant hover:bg-surface-container transition-colors">
+                    Priority <span class="material-symbols-outlined text-sm">keyboard_arrow_down</span>
+</button>
+<button class="flex items-center gap-2 px-4 py-2 bg-surface-container-low border border-outline-variant/30 rounded-lg text-label-md text-on-surface-variant hover:bg-surface-container transition-colors">
+                    Assignee <span class="material-symbols-outlined text-sm">keyboard_arrow_down</span>
+</button>
+<button class="flex items-center gap-2 px-4 py-2 bg-primary/10 border border-primary/40 rounded-lg text-label-md text-primary hover:bg-primary/20 transition-colors font-bold">
+                    Project: Phantom Paradox <span class="material-symbols-outlined text-sm">keyboard_arrow_down</span>
+</button><button class="text-[11px] text-on-surface-variant hover:text-primary underline flex items-center gap-1 transition-colors ml-1 px-2">
+                    Clear Filter
+                </button>
+<div class="flex-1"></div>
+<button class="p-2 text-on-surface-variant hover:text-on-surface transition-colors">
+<span class="material-symbols-outlined">filter_list</span>
+</button>
+</div>
+</div>
+<!-- Kanban Board Area -->
+<div class="flex-1 px-container-padding pb-6 overflow-x-auto">
+<div class="flex gap-panel-gap h-full">
+<!-- Column: TODO -->
+<div class="kanban-column flex flex-col h-full">
+<div class="flex items-center justify-between mb-4 px-2">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-on-surface-variant"></span>
+<h3 class="font-label-md text-label-md text-on-surface uppercase tracking-widest">TODO</h3>
+<span class="bg-surface-container-highest px-2 py-0.5 rounded text-[10px] text-on-surface-variant">3</span>
+</div>
+<button class="text-on-surface-variant hover:text-on-surface"><span class="material-symbols-outlined text-sm">more_horiz</span></button>
+</div>
+<div class="flex-1 space-y-4 overflow-y-auto pr-1">
+<!-- Task Card 1 -->
+<div class="task-card bg-surface-container-low border border-outline-variant/20 rounded-xl p-4 relative overflow-hidden group cursor-pointer">
+<div class="absolute left-0 top-0 bottom-0 w-1 bg-on-surface-variant"></div>
+<div class="flex justify-between items-start mb-2">
+<span class="text-[10px] font-bold text-on-surface-variant uppercase tracking-tight">Phantom Paradox</span>
+<span class="bg-error/10 text-error text-[10px] px-2 py-0.5 rounded-full font-bold">HIGH</span>
+</div>
+<h4 class="font-label-md text-label-md text-on-surface mb-1">Sketch Roughs - Ch. 25</h4>
+<p class="text-[12px] text-on-surface-variant mb-3 flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">auto_stories</span> Page 12-15
+                            </p>
+<div class="w-full h-24 rounded-lg bg-surface-container-highest mb-3 overflow-hidden border border-outline-variant/30">
+<div class="w-full h-full opacity-60 grayscale hover:grayscale-0 transition-all duration-300 bg-center bg-cover" data-alt="A detailed pencil sketch of a manga scene showing dynamic action lines and character layouts on a textured paper background, emphasizing the raw creative stage of manga production within a professional dark-themed UI." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCxzVD2f8pvPPO8m_f1U0Vo714Uqb3eOPyU6W25oy-ki6BPhHMpuOb2RcpgMiROU0NIiILZZWX15O2WHus25pWRlZ_ZZOwShIN1ZWAztWLn8K0yGLOA7mwSZfWM8c2PB5J5dagbn_oCkz_GoTl0iqbBJ422e--x1hyNmV_Y4VSKAdkHHt3Knc5d3acIwn2ZurXxlmIPUIyUks2WvLCYbJjMWJ4UNkHHafHwysfv7ScQXtUz5p_4xUaWa2045Em3XpWw96flyoFVACQM')">
+</div>
+</div>
+<div class="flex items-center justify-between">
+<div class="flex -space-x-2">
+<div class="w-6 h-6 rounded-full border-2 border-surface-container-low overflow-hidden">
+<img alt="Assignee" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida/ADBb0uggMKtqxiogBBzmZ2DEJBc-DAgDz_4f3sPn1iWMK9eGzXKu-ierQPkkwzBpU_UCJt8cVzA4g3hkhCjalMegomZv-Hq2kri4lozxNna1lrHArFRlRWTbrW3Qcp1IUSxKAE7HmAbgLIauP4TgQX5sbVzsLUq955_tjLIgQ3JAFZChHYuGcHzjjzuEkCE437wl0EOVJ8dsJffvPyf-4xDxjFQXKV-3ByrKZu2jjZu4_lSwMwR6Pp68WwGC2a61">
+</div>
+</div>
+<span class="text-[11px] text-on-surface-variant flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">calendar_today</span> Oct 24
+                                </span>
+</div>
+</div>
+</div>
+</div>
+<!-- Column: IN_PROGRESS -->
+<div class="kanban-column flex flex-col h-full">
+<div class="flex items-center justify-between mb-4 px-2">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-primary"></span>
+<h3 class="font-label-md text-label-md text-primary uppercase tracking-widest">IN PROGRESS</h3>
+<span class="bg-primary/20 px-2 py-0.5 rounded text-[10px] text-primary">2</span>
+</div>
+<button class="text-on-surface-variant hover:text-on-surface"><span class="material-symbols-outlined text-sm">more_horiz</span></button>
+</div>
+<div class="flex-1 space-y-4 overflow-y-auto pr-1">
+<!-- Active Task -->
+<div class="task-card bg-surface-container ring-1 ring-primary/40 rounded-xl p-4 relative overflow-hidden group cursor-pointer border border-primary/20 shadow-lg">
+<div class="absolute left-0 top-0 bottom-0 w-1 bg-primary"></div>
+<div class="flex justify-between items-start mb-2">
+<span class="text-[10px] font-bold text-primary uppercase tracking-tight">Phantom Paradox</span>
+<span class="bg-primary/10 text-primary text-[10px] px-2 py-0.5 rounded-full font-bold">MEDIUM</span>
+</div>
+<h4 class="font-label-md text-label-md text-on-surface mb-1">Refine Lineart - Ch. 24</h4>
+<p class="text-[12px] text-on-surface-variant mb-3 flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">person</span> Akira K.
+                            </p>
+<div class="w-full h-24 rounded-lg bg-surface-container-highest mb-3 overflow-hidden border border-outline-variant/30">
+<div class="w-full h-full bg-center bg-cover" data-alt="Close-up of professional manga lineart showing sharp ink strokes on a digital canvas. The artwork features a futuristic character profile with high-contrast blacks and crisp whites, set against a dark studio interface theme." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDsjZrj7MADMXIZ-t8Nmmv8nO6a9IlbR_OttpUANfaef3f_akd-zZvkpsN86uTpGg0qtwFU1w2TeViapTV3Xp9EYhBgiW1sdnbslijr-rdKNsvvG7n7YWeeBCG_n_0tPIGFBC0qBHqT8vFEG957wnWpVK22-TbtLO8EZCaAHHLFX6TpJFSbQsSKEh0Hxr9sMfqXfnfFIoyZl0jkkJLiPaZLDX656bXUTVAooIPwN-w3CdEeW_Z4zrIcXoXU51JRX26MunOjfFmM292y')">
+</div>
+</div>
+<div class="flex items-center justify-between">
+<span class="bg-surface-container-highest text-on-surface-variant text-[10px] px-2 py-1 rounded">Character</span>
+<span class="text-[11px] text-primary font-bold flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">calendar_today</span> Tomorrow
+                                </span>
+</div>
+</div>
+
+</div>
+</div>
+<!-- Column: DONE -->
+<div class="kanban-column flex flex-col h-full">
+<div class="flex items-center justify-between mb-4 px-2">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-tertiary"></span>
+<h3 class="font-label-md text-label-md text-tertiary uppercase tracking-widest">DONE</h3>
+<span class="bg-tertiary/20 px-2 py-0.5 rounded text-[10px] text-tertiary">12</span>
+</div>
+<button class="text-on-surface-variant hover:text-on-surface"><span class="material-symbols-outlined text-sm">more_horiz</span></button>
+</div>
+<div class="flex-1 space-y-4 overflow-y-auto pr-1">
+<div class="task-card bg-surface-container-low/40 border border-outline-variant/10 rounded-xl p-4 relative overflow-hidden group cursor-pointer">
+<div class="absolute left-0 top-0 bottom-0 w-1 bg-tertiary"></div>
+<div class="flex justify-between items-start mb-2 opacity-50">
+<span class="text-[10px] font-bold text-on-surface-variant uppercase tracking-tight">Phantom Paradox</span>
+<span class="material-symbols-outlined text-tertiary text-sm">check_circle</span>
+</div>
+<h4 class="font-label-md text-label-md text-on-surface-variant mb-1 line-through">Cover Color Grade</h4>
+<div class="w-full h-16 rounded-lg bg-surface-container-highest mb-3 overflow-hidden border border-outline-variant/10 grayscale">
+<div class="w-full h-full bg-center bg-cover" data-alt="A vibrant digital illustration showcasing intense purple and blue neon colors, featuring abstract manga-style energy blasts. The image is seen through a grayscale filter within a task management app to indicate a completed project." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuAQC-Ac8GA14AO9s_TiRkc2SgJyp2cjKRFfpCSM-gkvWqvoDe9z_bME2pxuXoAwGUXpDFmlDYfceL1plDdsv-Wq3-X-rWda2Q0fZZgEH2T2gJr5aoKlglmMvLfWnUoxS7hdmk5Ygf_LEsD_cBybMxS9_dMsLapfTqbQFNRKzWjz3o5NNLbVHu0RQT-Tpa9WyKtgkaCYzrsJeX1BQyruPvWRTmX2ZyqWqQGbZ2iAsnzauEzpGC7doz5eZ0JwsNE4tO3ADjCrwCDI2u_u')"></div>
+</div>
+</div>
+</div>
+</div>
+<!-- Column: REJECTED -->
+<div class="kanban-column flex flex-col h-full">
+<div class="flex items-center justify-between mb-4 px-2">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-error"></span>
+<h3 class="font-label-md text-label-md text-error uppercase tracking-widest">REJECTED</h3>
+<span class="bg-error/20 px-2 py-0.5 rounded text-[10px] text-error">1</span>
+</div>
+<button class="text-on-surface-variant hover:text-on-surface"><span class="material-symbols-outlined text-sm">more_horiz</span></button>
+</div>
+<div class="flex-1 space-y-4 overflow-y-auto pr-1"></div>
+</div>
+</div>
+</div>
+<!-- Task Detail Drawer (Right Side) -->
+<div class="absolute top-0 right-0 h-full w-[450px] bg-surface-container shadow-2xl border-l border-outline-variant transform translate-x-0 transition-transform duration-300 z-50 flex flex-col translate-x-full" id="detailDrawer">
+<!-- Drawer Header -->
+<div class="p-6 border-b border-outline-variant flex items-center justify-between">
+<div class="flex items-center gap-3">
+<button class="text-on-surface-variant hover:text-on-surface" onclick="document.getElementById('detailDrawer').classList.add('translate-x-full')">
+<span class="material-symbols-outlined">close</span>
+</button>
+<span class="text-label-md font-bold text-primary uppercase">Task Details</span>
+</div>
+<div class="flex items-center gap-2">
+<button class="p-2 hover:bg-surface-container-highest rounded-lg text-on-surface-variant transition-colors">
+<span class="material-symbols-outlined">share</span>
+</button>
+<button class="p-2 hover:bg-surface-container-highest rounded-lg text-on-surface-variant transition-colors">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+</div>
+</div>
+<!-- Drawer Content -->
+<div class="flex-1 overflow-y-auto p-6 space-y-8">
+<!-- Main Info -->
+<section>
+<div class="flex items-center gap-2 mb-2">
+<span class="bg-primary/20 text-primary text-[10px] px-2 py-1 rounded font-bold">IN PROGRESS</span>
+<span class="bg-surface-container-highest text-on-surface-variant text-[10px] px-2 py-1 rounded font-bold">MEDIUM PRIORITY</span>
+</div>
+<h2 class="text-headline-md font-headline-md text-on-surface mb-4">Refine Lineart - Ch. 24</h2>
+<p class="text-body-md font-body-md text-on-surface-variant">Clean up rough sketches for the battle sequence in Chapter 24. Focus on the facial expressions of the protagonist and ensure dynamic motion lines are crisp for high-speed impact shots.</p>
+</section>
+<!-- Linked Assets -->
+<section>
+<h3 class="text-label-md font-bold text-on-surface-variant uppercase mb-3 flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">link</span> Linked Data
+                    </h3>
+<div class="bg-surface-container-low rounded-xl p-4 border border-outline-variant/30 grid grid-cols-2 gap-4">
+<div class="space-y-1">
+<span class="text-[10px] text-on-surface-variant uppercase">Series</span>
+<p class="text-label-md text-on-surface font-bold">Phantom Paradox</p>
+</div>
+<div class="space-y-1">
+<span class="text-[10px] text-on-surface-variant uppercase">Target</span>
+<p class="text-label-md text-on-surface font-bold">Chapter 24, Page 08</p>
+</div>
+<div class="col-span-2 mt-2">
+<div class="relative w-full aspect-video rounded-lg overflow-hidden group">
+<img alt="Manga Preview" class="w-full h-full object-cover" data-alt="High-resolution professional manga page layout showing a dynamic battle sequence. Red outlines highlights a specific character region on the page to indicate the active task area. The background is a sophisticated dark grey, consistent with a digital studio environment." src="https://lh3.googleusercontent.com/aida-public/AB6AXuA7GaYWWIpu_YyUjA6gotQdQVj4XvHdgUVeH8EMLX9N6KCPJHxVaE7FjkofbbopTB_6rXdJOB8iBshICSf0sSfHsteYBTBH6c_YguXiDmXotyuq-O9fT1PW6EU0au49Vk4Wp-237nRDteBCCAVgZu-SZaCaENJFu6yWcAg6hcck7nWUAl2b3DCiLiaMGjuCI8mc8szcCWzS0aw59cQudBYPwk0A88b8_F2fY4k2-jI8HvzcLnLQDj3PQugTggeNGr2aaC42aIMuRqXG">
+<div class="absolute inset-0 border-4 border-primary/40 rounded-lg pointer-events-none">
+<div class="absolute top-2 left-2 bg-primary text-on-primary text-[10px] px-2 py-0.5 rounded font-bold shadow-lg">Region: Focus A</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Assignments -->
+<section class="grid grid-cols-2 gap-6">
+<div>
+<h3 class="text-label-md font-bold text-on-surface-variant uppercase mb-3">Assigned To</h3>
+<div class="flex items-center gap-3 bg-surface-container-low p-2 rounded-xl border border-outline-variant/20">
+<img alt="Akira" class="w-8 h-8 rounded-full" src="https://lh3.googleusercontent.com/aida/ADBb0uggMKtqxiogBBzmZ2DEJBc-DAgDz_4f3sPn1iWMK9eGzXKu-ierQPkkwzBpU_UCJt8cVzA4g3hkhCjalMegomZv-Hq2kri4lozxNna1lrHArFRlRWTbrW3Qcp1IUSxKAE7HmAbgLIauP4TgQX5sbVzsLUq955_tjLIgQ3JAFZChHYuGcHzjjzuEkCE437wl0EOVJ8dsJffvPyf-4xDxjFQXKV-3ByrKZu2jjZu4_lSwMwR6Pp68WwGC2a61">
+<div>
+<p class="text-label-md text-on-surface font-bold">Akira K.</p>
+<p class="text-[10px] text-on-surface-variant">Lead Assistant</p>
+</div>
+</div>
+</div>
+<div>
+<h3 class="text-label-md font-bold text-on-surface-variant uppercase mb-3">Assigned By</h3>
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-secondary-container flex items-center justify-center text-on-secondary-container font-bold text-[10px]">KS</div>
+<div>
+<p class="text-label-md text-on-surface font-bold">Kenji Sato</p>
+<p class="text-[10px] text-on-surface-variant">Chief Editor</p>
+</div>
+</div>
+</div>
+</section>
+<!-- Submissions -->
+<section>
+<div class="flex items-center justify-between mb-4">
+<h3 class="text-label-md font-bold text-on-surface-variant uppercase flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">history</span> Submissions
+                        </h3>
+<span class="text-[10px] text-on-surface-variant">2 Versions</span>
+</div>
+<div class="space-y-3">
+<div class="bg-surface-container-low p-3 rounded-xl border border-outline-variant/30 flex items-center justify-between">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded bg-surface-container-highest overflow-hidden border border-outline-variant/20">
+<div class="w-full h-full bg-cover bg-center" data-alt="Small thumbnail preview of a manga character sketch, showing progress in line refinement. The artwork is clean and professional, displayed within a small square interface component." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuA5Ehfxd-1Pmm8Q0XmhZs_5Ecguj8xZgOOYql6Ye3CaM5wW0_cGnS-y6oa1IA6Qtfk3WmwEjl0scMfW_vY0spDiQjvHtsPYT3XZ0sGeL3VaLZhv7BVL2PPH61_LoxLVnZZhIi-kPmHGc5pTaj2qTT1onYJPW5okrFxqFUDLnBQOSLEiBP-7UP16-p6iKkdFb4zgZ8Sa5Gl5dnEtNadI-EwWDCWSelS3745uYEaeLZyNS_vTu-kD6eAAYzbozA76dsHu2301i5AlwZTO')"></div>
+</div>
+<div>
+<p class="text-label-md text-on-surface font-bold">v2_final_lines.clip</p>
+<p class="text-[10px] text-on-surface-variant">2 hours ago • 24.5 MB</p>
+</div>
+</div>
+<span class="bg-tertiary/20 text-tertiary text-[10px] px-2 py-1 rounded font-bold uppercase">Approved</span>
+</div>
+<div class="bg-surface-container-low p-3 rounded-xl border border-outline-variant/30 flex items-center justify-between">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded bg-surface-container-highest overflow-hidden border border-outline-variant/20 opacity-50">
+<div class="w-full h-full bg-cover bg-center" data-alt="Initial sketch thumbnail of a manga panel, showing rougher lines and earlier progress." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCliqkZ__2Se_R5L_KBAzlq8CWnA6EmPNVj1uk8cNzf_Pe3WpfNXAi8lrNddWR96MKrb-7F8qn7_S4ioSzw9cYxV5ROD_7GSCnWHUmmZIhm5bHsUitB-d91JuI9mpzAcpNmHofcd6wmGI7FZFulE1jU4NImCOtcYg51stuKbngCetKF1oCQYDMdcrtxJ_6vur6ciDh_8Pz1-ShmmCnVGQpZyjRLbMX5qKDk2pshUoiuJ2Iw1rgZdB6kCX3Hz5nEUbaYEA_2dQAbej5n')"></div>
+</div>
+<div>
+<p class="text-label-md text-on-surface-variant font-bold">v1_rough_clean.clip</p>
+<p class="text-[10px] text-on-surface-variant">Yesterday • 22.1 MB</p>
+</div>
+</div>
+<span class="text-on-surface-variant text-[10px] px-2 py-1 rounded font-bold uppercase">Revision</span>
+</div>
+</div>
+<button class="w-full mt-4 py-3 bg-surface-container-highest text-primary border border-primary/30 rounded-xl font-bold text-label-md hover:bg-primary/10 transition-colors flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-sm">visibility</span> Review Submission
+                    </button>
+</section>
+<!-- Comments -->
+<section class="pb-6">
+<h3 class="text-label-md font-bold text-on-surface-variant uppercase mb-4 flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">forum</span> Feedback
+                    </h3>
+<div class="space-y-4">
+<div class="flex gap-3">
+<div class="w-8 h-8 rounded-full bg-secondary-container flex items-center justify-center text-on-secondary-container font-bold text-[10px]">KS</div>
+<div class="flex-1 bg-surface-container-low p-3 rounded-2xl rounded-tl-none border border-outline-variant/10">
+<div class="flex items-center justify-between mb-1">
+<span class="text-[11px] font-bold text-primary">Kenji Sato</span>
+<span class="text-[10px] text-on-surface-variant">Yesterday</span>
+</div>
+<p class="text-[13px] text-on-surface">The line weight on the sword stroke is a bit too thick. Can we thin it down to show more speed?</p>
+</div>
+</div>
+<div class="flex gap-3 flex-row-reverse">
+<img alt="Akira" class="w-8 h-8 rounded-full" src="https://lh3.googleusercontent.com/aida/ADBb0uggMKtqxiogBBzmZ2DEJBc-DAgDz_4f3sPn1iWMK9eGzXKu-ierQPkkwzBpU_UCJt8cVzA4g3hkhCjalMegomZv-Hq2kri4lozxNna1lrHArFRlRWTbrW3Qcp1IUSxKAE7HmAbgLIauP4TgQX5sbVzsLUq955_tjLIgQ3JAFZChHYuGcHzjjzuEkCE437wl0EOVJ8dsJffvPyf-4xDxjFQXKV-3ByrKZu2jjZu4_lSwMwR6Pp68WwGC2a61">
+<div class="flex-1 bg-primary/5 p-3 rounded-2xl rounded-tr-none border border-primary/20">
+<div class="flex items-center justify-between mb-1">
+<span class="text-[11px] font-bold text-primary">Akira K.</span>
+<span class="text-[10px] text-on-surface-variant">2 hours ago</span>
+</div>
+<p class="text-[13px] text-on-surface">Understood! Fixed in v2. Also enhanced the reflection highlights.</p>
+</div>
+</div>
+</div>
+<div class="mt-6 relative">
+<textarea class="w-full bg-surface-container-lowest border border-outline-variant/30 rounded-xl p-3 pr-12 text-body-md focus:ring-1 focus:ring-primary min-h-[80px]" placeholder="Type feedback..."></textarea>
+<button class="absolute bottom-3 right-3 text-primary p-2 hover:bg-primary/10 rounded-lg transition-colors">
+<span class="material-symbols-outlined">send</span>
+</button>
+</div>
+</section>
+</div>
+</div>
+</main>
+<script>
+        // Micro-interactions and simple state handling
+        document.querySelectorAll('.task-card').forEach(card => {
+            card.addEventListener('click', () => {
+                const drawer = document.getElementById('detailDrawer');
+                drawer.classList.remove('translate-x-full');
+            });
+        });
+
+        // Close drawer if clicking outside on mobile or header (simulated)
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                document.getElementById('detailDrawer').classList.add('translate-x-full');
+            }
+        });
+    </script>
+
+
+</body></html>

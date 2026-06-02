@@ -50,23 +50,31 @@ import {
   BookOpen,
 } from "lucide-react";
 import {
-  DndContext, closestCenter, PointerSensor, useSensor, useSensors,
-} from '@dnd-kit/core'
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
 import {
-  SortableContext, useSortable, verticalListSortingStrategy,
-} from '@dnd-kit/sortable'
-import { CSS } from '@dnd-kit/utilities'
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { useChapterDetail } from "../../shared/hooks/useMockData";
 import { useWorkspaceStore } from "../../app/stores/workspaceStore";
 import { useSeriesStore } from "../../app/stores/seriesStore";
 import { useAuthStore } from "../../app/stores/authStore";
 import { useUIStore } from "../../app/stores/uiStore";
+import { useTaskStore } from "../../app/stores/taskStore";
 import { WorkspaceCanvas } from "../../shared/components/workspace/WorkspaceCanvas";
 import { RegionPanel } from "../../shared/components/workspace/RegionPanel";
 import { LayerPanel } from "../../shared/components/workspace/LayerPanel";
 import { TaskPanel } from "../../shared/components/workspace/TaskPanel";
 import { CommentPanel } from "../../shared/components/workspace/CommentPanel";
 import { NewPageDialog } from "../../shared/components/workspace/NewPageDialog";
+import { CreateTaskModal } from "../../shared/components/workspace/CreateTaskModal";
 import { PageLoading } from "../../shared/components/shared/LoadingSpinner";
 import { StatusBadge } from "../../shared/components/shared/StatusBadge";
 import { cn } from "../../shared/utils";
@@ -114,7 +122,12 @@ const toolDefs = [
     label: "Select (V)",
     roles: ["MANGAKA"],
   },
-  { id: "hand", icon: Hand, label: "Hand (H)", roles: ["MANGAKA", "ASSISTANT"] },
+  {
+    id: "hand",
+    icon: Hand,
+    label: "Hand (H)",
+    roles: ["MANGAKA", "ASSISTANT"],
+  },
   { id: "draw", icon: Square, label: "Region (R)", roles: ["MANGAKA"] },
   { id: "pen", icon: Pen, label: "Pen (P)", roles: ["MANGAKA"] },
   { id: "text-annotation", icon: Type, label: "Text (T)", roles: ["MANGAKA"] },
@@ -135,6 +148,8 @@ export function WorkspacePage() {
   const location = useLocation();
   const id = Number(chapterId);
   const isReviewMode = location.pathname.startsWith("/review/");
+  const taskCreationFlow = Boolean(location.state?.taskCreationFlow);
+  const taskFlowReturnTo = location.state?.returnTo || "/tasks";
 
   const currentPageId = useWorkspaceStore((s) => s.currentPageId);
   const pages = useWorkspaceStore((s) => s.pages);
@@ -150,10 +165,12 @@ export function WorkspacePage() {
   const addPage = useWorkspaceStore((s) => s.addPage);
   const reorderPages = useWorkspaceStore((s) => s.reorderPages);
   const layers = useWorkspaceStore((s) => s.layers);
+  const selectedRegionId = useWorkspaceStore((s) => s.selectedRegionId);
   const reset = useWorkspaceStore((s) => s.reset);
 
   const user = useAuthStore((s) => s.user);
   const addToast = useUIStore((s) => s.addToast);
+  const submitNewTask = useTaskStore((s) => s.submitNewTask);
   const updateChapterStatus = useSeriesStore((s) => s.updateChapterStatus);
   const chapters = useSeriesStore((s) => s.chapters);
 
@@ -162,7 +179,8 @@ export function WorkspacePage() {
   const [showRightPanel, setShowRightPanel] = useState(true);
   const [showPagePicker, setShowPagePicker] = useState(false);
   const [layerExpanded, setLayerExpanded] = useState(true);
-  const [leftPanelTab, setLeftPanelTab] = useState('pages');
+  const [leftPanelTab, setLeftPanelTab] = useState("pages");
+  const [createTaskOpen, setCreateTaskOpen] = useState(false);
 
   const { data: chapter, isLoading } = useChapterDetail(id);
   const isTantou = user?.role === "TANTOU_EDITOR";
@@ -191,6 +209,12 @@ export function WorkspacePage() {
       setActiveTab("comments");
     }
   }, [isReviewMode]);
+
+  useEffect(() => {
+    if (taskCreationFlow && !isReviewMode) {
+      setActiveTab("regions");
+    }
+  }, [taskCreationFlow, isReviewMode, setActiveTab]);
 
   /* Navigation giữa các pages (prev/next) */
   const sortedPages = [...pages].sort((a, b) => a.pageNumber - b.pageNumber);
@@ -248,19 +272,19 @@ export function WorkspacePage() {
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
-  )
+  );
 
   const handleDragEnd = (event) => {
-    const { active, over } = event
-    if (!over || active.id === over.id) return
-    const oldIdx = pages.findIndex((p) => p.id === active.id)
-    const newIdx = pages.findIndex((p) => p.id === over.id)
-    if (oldIdx === -1 || newIdx === -1) return
-    const reordered = [...pages]
-    reordered.splice(oldIdx, 1)
-    reordered.splice(newIdx, 0, pages[oldIdx])
-    reorderPages(reordered.map((p) => p.id))
-  }
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIdx = pages.findIndex((p) => p.id === active.id);
+    const newIdx = pages.findIndex((p) => p.id === over.id);
+    if (oldIdx === -1 || newIdx === -1) return;
+    const reordered = [...pages];
+    reordered.splice(oldIdx, 1);
+    reordered.splice(newIdx, 0, pages[oldIdx]);
+    reorderPages(reordered.map((p) => p.id));
+  };
 
   if (isLoading) return <PageLoading />;
 
@@ -293,9 +317,40 @@ export function WorkspacePage() {
     (t) => t.id === activeTab,
   )?.Component;
   const currentPage = pages.find((p) => p.id === currentPageId);
+  const selectedRegion = regions.find((r) => r.id === selectedRegionId);
+
+  const handleSubmitAssignedTask = (formValues) => {
+    if (!selectedRegion) return;
+
+    submitNewTask({
+      regionId: selectedRegion.id,
+      regionType: selectedRegion.regionType || "OTHER",
+      title: formValues.title,
+      description: formValues.description,
+      notes: formValues.notes,
+      priority: formValues.priority,
+      dueDate: formValues.dueDate,
+      difficulty: formValues.difficulty,
+      assistantId: formValues.assistantId,
+      assignedBy: user?.id || 1,
+      pageImageUrl:
+        currentPage?.originalImageUrl || currentPage?.webImageUrl || "",
+      referenceImageUrl: "",
+    });
+
+    setCreateTaskOpen(false);
+    addToast({
+      title: "Task created",
+      description: `Assigned to region ${selectedRegion.label || `#${selectedRegion.id}`}`,
+      variant: "success",
+    });
+    navigate(taskFlowReturnTo);
+  };
 
   const regionCount = regions.length;
-  const completedRegions = regions.filter((r) => r.status === 'COMPLETED' || r.status === 'APPROVED').length;
+  const completedRegions = regions.filter(
+    (r) => r.status === "COMPLETED" || r.status === "APPROVED",
+  ).length;
 
   return (
     <div className="h-screen bg-surface flex flex-col overflow-hidden select-none">
@@ -305,12 +360,18 @@ export function WorkspacePage() {
         <div className="flex items-center gap-6">
           <div className="flex items-center gap-2">
             <BookOpen size={22} className="text-primary" />
-            <span className="text-[24px] font-semibold text-on-surface tracking-tight">MangaFlow</span>
+            <span className="text-[24px] font-semibold text-on-surface tracking-tight">
+              MangaFlow
+            </span>
           </div>
           <div className="w-px h-8 bg-outline-variant" />
           <div className="flex items-center gap-1">
             <button
-              onClick={() => navigate(isReviewMode ? "/review" : `/series/${chapter.seriesId}`)}
+              onClick={() =>
+                navigate(
+                  isReviewMode ? "/review" : `/series/${chapter.seriesId}`,
+                )
+              }
               className="p-1.5 rounded-lg hover:bg-surface-container-high text-on-surface-variant transition-all"
               title="Back"
             >
@@ -318,7 +379,8 @@ export function WorkspacePage() {
             </button>
           </div>
           <span className="text-sm font-medium text-on-surface">
-            Ch.{chapter.chapterNumber}{chapter.title ? ` — ${chapter.title}` : ''}
+            Ch.{chapter.chapterNumber}
+            {chapter.title ? ` — ${chapter.title}` : ""}
           </span>
           <StatusBadge status={chapterStatus} size="sm" />
           <div className="w-px h-6 bg-outline-variant" />
@@ -349,10 +411,16 @@ export function WorkspacePage() {
 
           {/* Save status + Undo/Redo */}
           <div className="flex items-center gap-4 text-sm text-on-surface-variant">
-            <span className="flex items-center gap-1.5"><Cloud size={16} /> Saved</span>
+            <span className="flex items-center gap-1.5">
+              <Cloud size={16} /> Saved
+            </span>
             <div className="flex items-center gap-1">
-              <button className="p-1 hover:bg-surface-container-high rounded-lg text-on-surface-variant transition-colors"><Undo2 size={16} /></button>
-              <button className="p-1 hover:bg-surface-container-high rounded-lg text-on-surface-variant transition-colors"><Redo2 size={16} /></button>
+              <button className="p-1 hover:bg-surface-container-high rounded-lg text-on-surface-variant transition-colors">
+                <Undo2 size={16} />
+              </button>
+              <button className="p-1 hover:bg-surface-container-high rounded-lg text-on-surface-variant transition-colors">
+                <Redo2 size={16} />
+              </button>
             </div>
           </div>
         </div>
@@ -367,7 +435,9 @@ export function WorkspacePage() {
             >
               <Minus size={16} />
             </button>
-            <span className="mx-3 text-sm font-medium min-w-[40px] text-center tabular-nums">{Math.round(zoom * 100)}%</span>
+            <span className="mx-3 text-sm font-medium min-w-[40px] text-center tabular-nums">
+              {Math.round(zoom * 100)}%
+            </span>
             <button
               onClick={() => setZoom(Math.min(4, zoom + 0.25))}
               className="text-on-surface-variant hover:text-primary transition-colors"
@@ -390,7 +460,7 @@ export function WorkspacePage() {
           {/* User avatar */}
           <div className="flex items-center gap-2 pl-2">
             <div className="w-8 h-8 rounded-full bg-primary-container/20 flex items-center justify-center text-primary font-bold text-xs ring-2 ring-primary/20">
-              {user?.displayName?.charAt(0)?.toUpperCase() || 'U'}
+              {user?.displayName?.charAt(0)?.toUpperCase() || "U"}
             </div>
           </div>
 
@@ -510,10 +580,10 @@ export function WorkspacePage() {
             {/* Pages/Layers tabs */}
             <div className="flex border-b border-outline-variant flex-shrink-0">
               <button
-                onClick={() => setLeftPanelTab('pages')}
+                onClick={() => setLeftPanelTab("pages")}
                 className={cn(
                   "flex-1 py-3 text-sm font-medium transition-colors",
-                  leftPanelTab === 'pages'
+                  leftPanelTab === "pages"
                     ? "text-primary border-b-2 border-primary"
                     : "text-on-surface-variant hover:text-on-surface",
                 )}
@@ -521,10 +591,10 @@ export function WorkspacePage() {
                 Pages
               </button>
               <button
-                onClick={() => setLeftPanelTab('layers')}
+                onClick={() => setLeftPanelTab("layers")}
                 className={cn(
                   "flex-1 py-3 text-sm font-medium transition-colors",
-                  leftPanelTab === 'layers'
+                  leftPanelTab === "layers"
                     ? "text-primary border-b-2 border-primary"
                     : "text-on-surface-variant hover:text-on-surface",
                 )}
@@ -534,10 +604,17 @@ export function WorkspacePage() {
             </div>
 
             {/* Pages tab */}
-            {leftPanelTab === 'pages' && (
+            {leftPanelTab === "pages" && (
               <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd} sensors={sensors}>
-                  <SortableContext items={pages.map((p) => p.id)} strategy={verticalListSortingStrategy}>
+                <DndContext
+                  collisionDetection={closestCenter}
+                  onDragEnd={handleDragEnd}
+                  sensors={sensors}
+                >
+                  <SortableContext
+                    items={pages.map((p) => p.id)}
+                    strategy={verticalListSortingStrategy}
+                  >
                     {pages.map((p) => (
                       <SortablePageCard
                         key={p.id}
@@ -558,7 +635,9 @@ export function WorkspacePage() {
                   >
                     <div className="w-full aspect-[210/297] bg-surface-container-highest/20 flex flex-col items-center justify-center border border-dashed border-outline-variant rounded-lg">
                       <Plus size={24} className="text-outline" />
-                      <span className="text-xs text-outline mt-2">Add Page</span>
+                      <span className="text-xs text-outline mt-2">
+                        Add Page
+                      </span>
                     </div>
                   </div>
                 )}
@@ -566,18 +645,26 @@ export function WorkspacePage() {
                 {/* Project Status */}
                 <div className="pt-4 border-t border-outline-variant">
                   <div className="flex items-center justify-between mb-3">
-                    <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Project Status</span>
+                    <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">
+                      Project Status
+                    </span>
                     <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
                   </div>
                   <div className="space-y-2">
                     <div className="flex justify-between text-xs font-medium">
-                      <span className="text-on-surface-variant">Regions Labeled</span>
-                      <span className="text-on-surface">{completedRegions}/{regionCount}</span>
+                      <span className="text-on-surface-variant">
+                        Regions Labeled
+                      </span>
+                      <span className="text-on-surface">
+                        {completedRegions}/{regionCount}
+                      </span>
                     </div>
                     <div className="w-full h-1.5 bg-surface-variant rounded-full overflow-hidden">
                       <div
                         className="h-full bg-primary rounded-full transition-all"
-                        style={{ width: `${regionCount > 0 ? (completedRegions / regionCount) * 100 : 0}%` }}
+                        style={{
+                          width: `${regionCount > 0 ? (completedRegions / regionCount) * 100 : 0}%`,
+                        }}
                       />
                     </div>
                   </div>
@@ -586,7 +673,7 @@ export function WorkspacePage() {
             )}
 
             {/* Layers tab */}
-            {leftPanelTab === 'layers' && (
+            {leftPanelTab === "layers" && (
               <div className="flex-1 overflow-y-auto p-2">
                 <LayerPanel />
               </div>
@@ -595,18 +682,22 @@ export function WorkspacePage() {
         )}
 
         {/* Canvas */}
-        <div className="flex-1 relative overflow-hidden min-w-0"
+        <div
+          className="flex-1 relative overflow-hidden min-w-0"
           style={{
-            backgroundImage: 'radial-gradient(circle, #2a2a2c 1px, transparent 1px)',
-            backgroundSize: '24px 24px',
-            backgroundColor: '#0e0e10',
+            backgroundImage:
+              "radial-gradient(circle, #2a2a2c 1px, transparent 1px)",
+            backgroundSize: "24px 24px",
+            backgroundColor: "#0e0e10",
           }}
         >
           {currentPageId ? (
             <WorkspaceCanvas />
           ) : (
             <div className="flex items-center justify-center h-full">
-              <p className="text-sm text-on-surface-variant/60">Select a page</p>
+              <p className="text-sm text-on-surface-variant/60">
+                Select a page
+              </p>
             </div>
           )}
 
@@ -674,6 +765,23 @@ export function WorkspacePage() {
             <div className="flex-1 overflow-y-auto">
               {ActiveComponent && <ActiveComponent />}
             </div>
+
+            {taskCreationFlow && !isReviewMode && (
+              <div className="border-t border-outline-variant p-4">
+                <button
+                  onClick={() => setCreateTaskOpen(true)}
+                  disabled={!selectedRegion}
+                  className="w-full rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-on-primary transition-all hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Assign Task
+                </button>
+                {!selectedRegion && (
+                  <p className="mt-2 text-xs text-on-surface-variant">
+                    Select a region on canvas or in Regions tab to continue.
+                  </p>
+                )}
+              </div>
+            )}
           </aside>
         )}
       </div>
@@ -692,17 +800,32 @@ export function WorkspacePage() {
           }}
         />
       )}
+
+      <CreateTaskModal
+        open={createTaskOpen}
+        region={selectedRegion}
+        page={currentPage}
+        onClose={() => setCreateTaskOpen(false)}
+        onSubmit={handleSubmitAssignedTask}
+      />
     </div>
   );
 }
 
 function SortablePageCard({ page, isActive, onClick, isMangaka }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: page.id })
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: page.id });
 
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-  }
+  };
 
   return (
     <div
@@ -730,7 +853,7 @@ function SortablePageCard({ page, isActive, onClick, isMangaka }) {
       )}
       <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 to-transparent p-2">
         <span className="text-xs font-bold text-white">
-          {page.label || `Page ${String(page.pageNumber).padStart(2, '0')}`}
+          {page.label || `Page ${String(page.pageNumber).padStart(2, "0")}`}
         </span>
       </div>
       {isActive && (
@@ -739,5 +862,5 @@ function SortablePageCard({ page, isActive, onClick, isMangaka }) {
         </div>
       )}
     </div>
-  )
+  );
 }
