@@ -7,15 +7,17 @@
   vẽ/annotation, layer panel, region/task/comment panels.
   Ở review mode, hiển thị công cụ review (pen, highlight, text)
   và các actions phê duyệt (Submit to Board, Approve, Reject...).
-  QUYỀN TRUY CẬP:
-    - MANGAKA: Regions, Tasks, Comments tabs + vùng vẽ
-    - ASSISTANT: Tasks, Comments tabs
-    - TANTOU_EDITOR: Review mode + Comment + annotation tools
-    - EDITORIAL_BOARD: Review mode + Approve/Reject
+
+  📌 Kết nối API:
+    - Chapter detail: GET /api/chapters/{id}
+    - Pages + Reorder: GET+PUT /api/v1/chapters/{chapterId}/pages
+    - Merge: POST /api/v1/pages/{id}/merge
+    - Layers: POST /api/v1/pages/{pageId}/layers (add)
+    - Comments/Annotations: giữ mock tạm (backend chưa có API)
   ==========================================================
 */
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import {
   ArrowLeft,
@@ -28,13 +30,10 @@ import {
   Hand,
   ZoomIn,
   ZoomOut,
-  Maximize,
   Plus,
   Minus,
   ChevronLeft,
   ChevronRight,
-  PanelRightOpen,
-  PanelRightClose,
   Check,
   RotateCcw,
   X,
@@ -46,8 +45,10 @@ import {
   Undo2,
   Redo2,
   Cloud,
-  MoreVertical,
-  BookOpen,
+  Combine,
+  Loader2,
+  FileImage,
+  Download,
 } from "lucide-react";
 import {
   DndContext,
@@ -62,12 +63,12 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { useChapterDetail } from "../../shared/hooks/useMockData";
 import { useWorkspaceStore } from "../../app/stores/workspaceStore";
 import { useSeriesStore } from "../../app/stores/seriesStore";
 import { useAuthStore } from "../../app/stores/authStore";
 import { useUIStore } from "../../app/stores/uiStore";
 import { useTaskStore } from "../../app/stores/taskStore";
+import chapterService from "../../services/chapterService";
 import { WorkspaceCanvas } from "../../shared/components/workspace/WorkspaceCanvas";
 import { RegionPanel } from "../../shared/components/workspace/RegionPanel";
 import { LayerPanel } from "../../shared/components/workspace/LayerPanel";
@@ -77,6 +78,8 @@ import { NewPageDialog } from "../../shared/components/workspace/NewPageDialog";
 import { CreateTaskModal } from "../../shared/components/workspace/CreateTaskModal";
 import { PageLoading } from "../../shared/components/shared/LoadingSpinner";
 import { StatusBadge } from "../../shared/components/shared/StatusBadge";
+import { Dialog } from "../../shared/components/ui/dialog";
+import { Button } from "../../shared/components/ui/button";
 import { cn } from "../../shared/utils";
 
 /* Tab definitions cho review mode (chỉ Comments) */
@@ -89,7 +92,7 @@ const reviewTabDefs = [
   },
 ];
 
-/* Tab definitions cho workspace mode (Regions, Tasks, Comments) */
+/* Tab definitions cho workspace mode (Regions + Tasks) */
 const tabDefs = [
   {
     id: "regions",
@@ -114,7 +117,7 @@ const tabDefs = [
   },
 ];
 
-/* Tools cho MANGAKA/ASSISTANT workspace — matches workspace.html */
+/* Tools cho MANGAKA/ASSISTANT workspace */
 const toolDefs = [
   {
     id: "select",
@@ -151,11 +154,15 @@ export function WorkspacePage() {
   const taskCreationFlow = Boolean(location.state?.taskCreationFlow);
   const taskFlowReturnTo = location.state?.returnTo || "/tasks";
 
+  // ─── WorkspaceStore ───
   const currentPageId = useWorkspaceStore((s) => s.currentPageId);
   const pages = useWorkspaceStore((s) => s.pages);
   const regions = useWorkspaceStore((s) => s.regions);
   const zoom = useWorkspaceStore((s) => s.zoom);
   const activeTab = useWorkspaceStore((s) => s.activeTab);
+  const isLoading = useWorkspaceStore((s) => s.isLoading);
+  const isLoadingPage = useWorkspaceStore((s) => s.isLoadingPage);
+  const mergeResult = useWorkspaceStore((s) => s.mergeResult);
   const loadChapter = useWorkspaceStore((s) => s.loadChapter);
   const loadPage = useWorkspaceStore((s) => s.loadPage);
   const mode = useWorkspaceStore((s) => s.mode);
@@ -163,33 +170,48 @@ export function WorkspacePage() {
   const setZoom = useWorkspaceStore((s) => s.setZoom);
   const setActiveTab = useWorkspaceStore((s) => s.setActiveTab);
   const addPage = useWorkspaceStore((s) => s.addPage);
+  const addLayer = useWorkspaceStore((s) => s.addLayer);
   const reorderPages = useWorkspaceStore((s) => s.reorderPages);
   const layers = useWorkspaceStore((s) => s.layers);
   const selectedRegionId = useWorkspaceStore((s) => s.selectedRegionId);
+  const mergePage = useWorkspaceStore((s) => s.mergePage);
+  const clearMergeResult = useWorkspaceStore((s) => s.clearMergeResult);
+  const flattenPage = useWorkspaceStore((s) => s.flattenPage);
   const reset = useWorkspaceStore((s) => s.reset);
 
+  // ─── Other stores ───
   const user = useAuthStore((s) => s.user);
   const addToast = useUIStore((s) => s.addToast);
-  const submitNewTask = useTaskStore((s) => s.submitNewTask);
+  const createTask = useTaskStore((s) => s.createTask);
   const updateChapterStatus = useSeriesStore((s) => s.updateChapterStatus);
   const chapters = useSeriesStore((s) => s.chapters);
 
+  // ─── Local state ───
+  const [chapter, setChapter] = useState(null);
+  const [chapterLoading, setChapterLoading] = useState(true);
   const [newPageOpen, setNewPageOpen] = useState(false);
   const [showLeftPanel, setShowLeftPanel] = useState(!isReviewMode);
   const [showRightPanel, setShowRightPanel] = useState(true);
-  const [showPagePicker, setShowPagePicker] = useState(false);
-  const [layerExpanded, setLayerExpanded] = useState(true);
   const [leftPanelTab, setLeftPanelTab] = useState("pages");
   const [createTaskOpen, setCreateTaskOpen] = useState(false);
+  const [showMergeDialog, setShowMergeDialog] = useState(false);
+  const [merging, setMerging] = useState(false);
+  const [mergeImageUrl, setMergeImageUrl] = useState("");
+  const [showFlattenDialog, setShowFlattenDialog] = useState(false);
+  const [flattening, setFlattening] = useState(false);
+  const layerFileInputRef = useRef(null);
 
-  const { data: chapter, isLoading } = useChapterDetail(id);
-  const isTantou = user?.role === "TANTOU_EDITOR";
-  const isEb = user?.role === "EDITORIAL_BOARD";
-  const isEditor = isTantou || isEb;
-  const isMangaka = user?.role === "MANGAKA";
-  const storeChapters = Object.values(chapters).flat();
-  const chapterStatus =
-    storeChapters.find((c) => c.id === id)?.status || chapter?.status;
+  // ─── Fetch chapter detail từ API thay vì mock hook ───
+  // Endpoint: GET /api/chapters/{id}
+  useEffect(() => {
+    if (!id) return;
+    setChapterLoading(true);
+    chapterService
+      .getById(id)
+      .then((data) => setChapter(data))
+      .catch(() => setChapter(null))
+      .finally(() => setChapterLoading(false));
+  }, [id]);
 
   /*
     Khi component mount, load chapter data vào workspaceStore.
@@ -226,8 +248,7 @@ export function WorkspacePage() {
   /*
     Keyboard shortcuts:
     - ArrowLeft/Right: chuyển page
-    - S/V/R/C/H/P/T: chọn tool
-    - 0: reset zoom
+    - V/H/R/P/T/0: chọn tool / zoom
   */
   useEffect(() => {
     const handleKey = (e) => {
@@ -253,7 +274,7 @@ export function WorkspacePage() {
           else setMode("hand");
           break;
         case "r":
-          if (!isReviewMode && isMangaka) setMode("draw");
+          if (!isReviewMode && user?.role === "MANGAKA") setMode("draw");
           break;
         case "p":
           setMode("pen");
@@ -268,12 +289,24 @@ export function WorkspacePage() {
     };
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
-  }, [setMode, setZoom, isReviewMode, prevPage, nextPage, loadPage]);
+  }, [setMode, setZoom, isReviewMode, prevPage, nextPage, loadPage, user]);
+
+  const isTantou = user?.role === "TANTOU_EDITOR";
+  const isEb = user?.role === "EDITORIAL_BOARD";
+  const isEditor = isTantou || isEb;
+  const isMangaka = user?.role === "MANGAKA";
+  const storeChapters = Object.values(chapters).flat();
+  const chapterStatus =
+    storeChapters.find((c) => c.id === id)?.status || chapter?.status;
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
   );
 
+  /**
+   * Kéo thả pages: gọi API reorder + optimistic update.
+   * Endpoint: PUT /api/v1/chapters/{chapterId}/pages/reorder
+   */
   const handleDragEnd = (event) => {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
@@ -286,18 +319,155 @@ export function WorkspacePage() {
     reorderPages(reordered.map((p) => p.id));
   };
 
-  if (isLoading) return <PageLoading />;
+  /**
+   * Merge & Export: gọi POST /api/v1/pages/{id}/merge
+   * Hiển thị ảnh kết quả trong dialog preview.
+   */
+  const handleMerge = async () => {
+    if (!currentPageId) return;
+    setMerging(true);
+    try {
+      const url = await mergePage(currentPageId);
+      if (url) {
+        setMergeImageUrl(url);
+        setShowMergeDialog(true);
+        addToast({
+          title: "Merge complete",
+          description: "Layers merged successfully",
+          variant: "success",
+        });
+      } else {
+        addToast({
+          title: "Merge failed",
+          description: "No result returned",
+          variant: "error",
+        });
+      }
+    } catch {
+      addToast({
+        title: "Merge failed",
+        description: "Could not merge layers",
+        variant: "error",
+      });
+    } finally {
+      setMerging(false);
+    }
+  };
+
+  /**
+   * Flatten: merge layers vào ảnh nền + replace original + xoá toàn bộ layers.
+   * Endpoint: POST /api/v1/pages/{id}/flatten
+   */
+  const handleFlatten = async () => {
+    if (!currentPageId) return;
+    setFlattening(true);
+    setShowFlattenDialog(false);
+    try {
+      const ok = await flattenPage(currentPageId);
+      if (ok) {
+        addToast({
+          title: "Flatten complete",
+          description: "Layers merged into page successfully",
+          variant: "success",
+        });
+      } else {
+        addToast({
+          title: "Flatten failed",
+          description: "Could not flatten layers",
+          variant: "error",
+        });
+      }
+    } catch {
+      addToast({
+        title: "Flatten failed",
+        description: "An error occurred",
+        variant: "error",
+      });
+    } finally {
+      setFlattening(false);
+    }
+  };
+
+  /**
+   * Add Layer (upload file): gọi POST /api/v1/pages/{pageId}/layers
+   * LayerPanel xử lý upload chi tiết, nút này là shortcut nhanh.
+   */
+  const handleAddLayerFile = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file || !currentPageId) return;
+    const formData = new FormData();
+    formData.append("file", file);
+    // Backend yêu cầu field 'request' là JSON string chứa metadata
+    formData.append("request", JSON.stringify({
+      label: `Layer ${layers.length + 1}`,
+      opacity: 1,
+    }));
+    try {
+      await addLayer(currentPageId, formData);
+      addToast({
+        title: "Layer added",
+        description: file.name,
+        variant: "success",
+      });
+    } catch {
+      addToast({
+        title: "Upload failed",
+        description: "Could not add layer",
+        variant: "error",
+      });
+    }
+    if (layerFileInputRef.current) layerFileInputRef.current.value = "";
+  };
+
+  /**
+   * Submit assigned task: gọi taskStore.createTask (API).
+   * Endpoint: POST /api/regions/{regionId}/tasks
+   */
+  const handleSubmitAssignedTask = async (formValues) => {
+    if (!selectedRegion) return;
+
+    try {
+      await createTask(selectedRegion.id, {
+        regionType: selectedRegion.regionType || "OTHER",
+        title: formValues.title,
+        description: formValues.description,
+        notes: formValues.notes,
+        priority: formValues.priority,
+        dueDate: formValues.dueDate,
+        assistantId: formValues.assistantId,
+        pageImageUrl:
+          pages.find((p) => p.id === currentPageId)?.originalImageUrl || "",
+        referenceImageUrl: "",
+      });
+
+      setCreateTaskOpen(false);
+      addToast({
+        title: "Task created",
+        description: `Assigned to region ${selectedRegion.label || `#${selectedRegion.id}`}`,
+        variant: "success",
+      });
+      navigate(taskFlowReturnTo);
+    } catch {
+      addToast({
+        title: "Failed",
+        description: "Could not create task",
+        variant: "error",
+      });
+    }
+  };
+
+  if (chapterLoading || isLoading) return <PageLoading />;
 
   if (!chapter) {
     return (
-      <div className="h-screen bg-workspace-bg flex items-center justify-center">
+      <div className="h-screen bg-surface flex items-center justify-center">
         <div className="text-center">
-          <p className="text-workspace-text-secondary text-sm">
+          <p className="text-on-surface-variant text-sm">
             Chapter not found
           </p>
           <button
             onClick={() => navigate("/series")}
-            className="mt-3 text-xs text-workspace-accent hover:underline"
+            className="mt-3 text-xs text-primary hover:underline"
           >
             Go to Series
           </button>
@@ -319,34 +489,6 @@ export function WorkspacePage() {
   const currentPage = pages.find((p) => p.id === currentPageId);
   const selectedRegion = regions.find((r) => r.id === selectedRegionId);
 
-  const handleSubmitAssignedTask = (formValues) => {
-    if (!selectedRegion) return;
-
-    submitNewTask({
-      regionId: selectedRegion.id,
-      regionType: selectedRegion.regionType || "OTHER",
-      title: formValues.title,
-      description: formValues.description,
-      notes: formValues.notes,
-      priority: formValues.priority,
-      dueDate: formValues.dueDate,
-      difficulty: formValues.difficulty,
-      assistantId: formValues.assistantId,
-      assignedBy: user?.id || 1,
-      pageImageUrl:
-        currentPage?.originalImageUrl || currentPage?.webImageUrl || "",
-      referenceImageUrl: "",
-    });
-
-    setCreateTaskOpen(false);
-    addToast({
-      title: "Task created",
-      description: `Assigned to region ${selectedRegion.label || `#${selectedRegion.id}`}`,
-      variant: "success",
-    });
-    navigate(taskFlowReturnTo);
-  };
-
   const regionCount = regions.length;
   const completedRegions = regions.filter(
     (r) => r.status === "COMPLETED" || r.status === "APPROVED",
@@ -354,29 +496,23 @@ export function WorkspacePage() {
 
   return (
     <div className="h-screen bg-surface flex flex-col overflow-hidden select-none">
-      {/* ── Top Toolbar (workspace.html styling) ── */}
-      <header className="h-14 bg-surface border-b border-outline-variant flex items-center justify-between px-4 z-50 flex-shrink-0">
-        {/* Left section: Brand + Chapter nav */}
+      {/* ── Top Toolbar ── */}
+      <header className="h-14 bg-surface/80 backdrop-blur-md border-b border-outline-variant/30 flex items-center justify-between px-6 z-50 flex-shrink-0 shadow-sm shadow-black/5">
+        {/* Left section */}
         <div className="flex items-center gap-6">
-          <div className="flex items-center gap-2">
-            <BookOpen size={22} className="text-primary" />
-            <span className="text-[24px] font-semibold text-on-surface tracking-tight">
-              MangaFlow
-            </span>
-          </div>
-          <div className="w-px h-8 bg-outline-variant" />
           <div className="flex items-center gap-1">
-            <button
+            <Button
+              variant="ghost"
+              size="icon"
               onClick={() =>
                 navigate(
                   isReviewMode ? "/review" : `/series/${chapter.seriesId}`,
                 )
               }
-              className="p-1.5 rounded-lg hover:bg-surface-container-high text-on-surface-variant transition-all"
               title="Back"
             >
               <ArrowLeft size={18} />
-            </button>
+            </Button>
           </div>
           <span className="text-sm font-medium text-on-surface">
             Ch.{chapter.chapterNumber}
@@ -390,71 +526,124 @@ export function WorkspacePage() {
             {currentTools.map((t) => {
               const Icon = t.icon;
               return (
-                <button
+                <Button
                   key={t.id}
+                  variant={mode === t.id ? "default" : "ghost"}
+                  size="icon"
                   onClick={() => setMode(t.id)}
                   disabled={currentPageId === null}
                   className={cn(
-                    "p-1.5 rounded-lg transition-all disabled:opacity-30",
-                    mode === t.id
-                      ? "bg-primary/10 text-primary border border-primary/20"
-                      : "text-on-surface-variant hover:bg-surface-container-high",
+                    mode === t.id && "bg-primary/10 text-primary border border-primary/20",
                   )}
                   title={t.label}
                 >
                   <Icon size={18} />
-                </button>
+                </Button>
               );
             })}
           </nav>
           <div className="w-px h-6 bg-outline-variant" />
 
           {/* Save status + Undo/Redo */}
-          <div className="flex items-center gap-4 text-sm text-on-surface-variant">
-            <span className="flex items-center gap-1.5">
-              <Cloud size={16} /> Saved
+          <div className="flex items-center gap-3 text-xs text-on-surface-variant">
+            <span className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-status-success/5 text-status-success">
+              <Cloud size={14} /> Saved
             </span>
-            <div className="flex items-center gap-1">
-              <button className="p-1 hover:bg-surface-container-high rounded-lg text-on-surface-variant transition-colors">
-                <Undo2 size={16} />
-              </button>
-              <button className="p-1 hover:bg-surface-container-high rounded-lg text-on-surface-variant transition-colors">
-                <Redo2 size={16} />
-              </button>
+            <div className="flex items-center gap-0.5">
+              <Button variant="ghost" size="icon" className="w-7 h-7">
+                <Undo2 size={14} />
+              </Button>
+              <Button variant="ghost" size="icon" className="w-7 h-7">
+                <Redo2 size={14} />
+              </Button>
             </div>
           </div>
         </div>
 
-        {/* Right section: Zoom + Upload + Avatar */}
+        {/* Right section: Merge + Add Layer + Zoom + Upload + Avatar */}
         <div className="flex items-center gap-4">
-          {/* Zoom control */}
-          <div className="flex items-center bg-surface-container-low px-3 py-1 rounded-full border border-outline-variant">
-            <button
-              onClick={() => setZoom(Math.max(0.25, zoom - 0.25))}
-              className="text-on-surface-variant hover:text-primary transition-colors"
+          {/* Merge & Export button (MANGAKA only) */}
+          {!isReviewMode && isMangaka && currentPageId && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleMerge}
+              disabled={merging || layers.length < 2}
+              title="Merge all layers into final image"
             >
-              <Minus size={16} />
-            </button>
-            <span className="mx-3 text-sm font-medium min-w-[40px] text-center tabular-nums">
+              {merging ? (
+                <Loader2 size={14} className="animate-spin" />
+              ) : (
+                <Combine size={14} />
+              )}
+              Merge & Export
+            </Button>
+          )}
+
+          {/* Flatten button (MANGAKA only) */}
+          {!isReviewMode && isMangaka && currentPageId && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowFlattenDialog(true)}
+              disabled={flattening || layers.length < 2}
+              title="Flatten: merge layers into page and delete all layers"
+            >
+              {flattening ? (
+                <Loader2 size={14} className="animate-spin" />
+              ) : (
+                <Layers size={14} />
+              )}
+              Flatten
+            </Button>
+          )}
+
+          {/* Zoom control */}
+          <div className="flex items-center bg-surface-container-low px-1 py-1 rounded-xl border border-outline-variant/50 shadow-sm">
+            <Button variant="ghost" size="icon" className="w-7 h-7" onClick={() => setZoom(Math.max(0.25, zoom - 0.25))}>
+              <Minus size={14} />
+            </Button>
+            <span className="mx-2 text-sm font-medium min-w-[36px] text-center tabular-nums text-on-surface">
               {Math.round(zoom * 100)}%
             </span>
-            <button
-              onClick={() => setZoom(Math.min(4, zoom + 0.25))}
-              className="text-on-surface-variant hover:text-primary transition-colors"
-            >
-              <Plus size={16} />
-            </button>
+            <Button variant="ghost" size="icon" className="w-7 h-7" onClick={() => setZoom(Math.min(10, zoom + 0.25))}>
+              <Plus size={14} />
+            </Button>
           </div>
+
+          {/* Add Layer button (MANGAKA only — quick upload) */}
+          {!isReviewMode && isMangaka && currentPageId && (
+            <>
+              <input
+                ref={layerFileInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleAddLayerFile}
+              />
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => layerFileInputRef.current?.click()}
+                title="Add a new layer"
+              >
+                <Plus size={14} />
+                Add Layer
+              </Button>
+            </>
+          )}
 
           {/* Upload Page button */}
           {!isReviewMode && isMangaka && (
-            <button
+            <Button
+              variant="primary"
+              size="sm"
               onClick={() => setNewPageOpen(true)}
-              className="bg-primary text-on-primary px-4 py-1.5 rounded-full text-sm font-medium hover:brightness-110 active:scale-95 transition-all flex items-center gap-2 shadow-sm"
+              className="shadow-sm"
             >
-              <Upload size={18} />
+              <Upload size={16} />
               Upload Page
-            </button>
+            </Button>
           )}
 
           {/* User avatar */}
@@ -479,65 +668,32 @@ export function WorkspacePage() {
               {isTantou &&
                 (chapterStatus === "IN_REVIEW" ||
                   chapterStatus === "SUBMITTED") && (
-                  <>
-                    <div className="flex items-center gap-1">
-                      <button
-                        onClick={() => {
-                          updateChapterStatus(id, "PENDING_BOARD_APPROVAL");
-                          addToast({
-                            type: "success",
-                            title: "Submitted to Board",
-                            message: `Ch.${chapter.chapterNumber} has been submitted for Editorial Board approval.`,
-                          });
-                        }}
-                        className="flex items-center gap-1 px-2.5 py-1.5 text-xs text-status-success border border-status-success/30 hover:bg-status-success/5 rounded-lg"
-                      >
-                        <Send size={14} /> Submit to Board
-                      </button>
-                      <button
-                        onClick={() => {
-                          updateChapterStatus(id, "REVISION_REQUIRED");
-                          addToast({
-                            type: "success",
-                            title: "Revision requested",
-                            message: `Changes requested for Ch.${chapter.chapterNumber}.`,
-                          });
-                        }}
-                        className="flex items-center gap-1 px-2.5 py-1.5 text-xs text-status-warning border border-status-warning/30 hover:bg-status-warning/5 rounded-lg"
-                      >
-                        <RotateCcw size={14} /> Revise
-                      </button>
-                      <button
-                        onClick={() => {
-                          updateChapterStatus(id, "REJECTED");
-                          addToast({
-                            type: "success",
-                            title: "Chapter rejected",
-                            message: `Ch.${chapter.chapterNumber} has been rejected.`,
-                          });
-                        }}
-                        className="flex items-center gap-1 px-2.5 py-1.5 text-xs text-status-danger border border-status-danger/30 hover:bg-status-danger/5 rounded-lg"
-                      >
-                        <X size={14} /> Reject
-                      </button>
-                    </div>
-                  </>
-                )}
-              {isEb && chapterStatus === "PENDING_BOARD_APPROVAL" && (
-                <>
                   <div className="flex items-center gap-1">
                     <button
                       onClick={() => {
-                        updateChapterStatus(id, "APPROVED");
+                        updateChapterStatus(id, "PENDING_BOARD_APPROVAL");
                         addToast({
                           type: "success",
-                          title: "Chapter approved",
-                          message: `Ch.${chapter.chapterNumber} has been approved.`,
+                          title: "Submitted to Board",
+                          message: `Ch.${chapter.chapterNumber} has been submitted for Editorial Board approval.`,
                         });
                       }}
-                      className="flex items-center gap-1 px-2.5 py-1.5 text-xs text-status-success border border-status-success/30 hover:bg-status-success/5 rounded-lg"
+                      className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-status-success border border-status-success/30 hover:bg-status-success/5 rounded-lg transition-all"
                     >
-                      <Check size={14} /> Approve
+                      <Send size={14} /> Submit to Board
+                    </button>
+                    <button
+                      onClick={() => {
+                        updateChapterStatus(id, "REVISION_REQUIRED");
+                        addToast({
+                          type: "success",
+                          title: "Revision requested",
+                          message: `Changes requested for Ch.${chapter.chapterNumber}.`,
+                        });
+                      }}
+                      className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-status-warning border border-status-warning/30 hover:bg-status-warning/5 rounded-lg transition-all"
+                    >
+                      <RotateCcw size={14} /> Revise
                     </button>
                     <button
                       onClick={() => {
@@ -548,12 +704,41 @@ export function WorkspacePage() {
                           message: `Ch.${chapter.chapterNumber} has been rejected.`,
                         });
                       }}
-                      className="flex items-center gap-1 px-2.5 py-1.5 text-xs text-status-danger border border-status-danger/30 hover:bg-status-danger/5 rounded-lg"
+                      className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-status-danger border border-status-danger/30 hover:bg-status-danger/5 rounded-lg transition-all"
                     >
                       <X size={14} /> Reject
                     </button>
                   </div>
-                </>
+                )}
+              {isEb && chapterStatus === "PENDING_BOARD_APPROVAL" && (
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => {
+                      updateChapterStatus(id, "APPROVED");
+                      addToast({
+                        type: "success",
+                        title: "Chapter approved",
+                        message: `Ch.${chapter.chapterNumber} has been approved.`,
+                      });
+                    }}
+                    className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-status-success border border-status-success/30 hover:bg-status-success/5 rounded-lg transition-all"
+                  >
+                    <Check size={14} /> Approve
+                  </button>
+                  <button
+                    onClick={() => {
+                      updateChapterStatus(id, "REJECTED");
+                      addToast({
+                        type: "success",
+                        title: "Chapter rejected",
+                        message: `Ch.${chapter.chapterNumber} has been rejected.`,
+                      });
+                    }}
+                    className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-status-danger border border-status-danger/30 hover:bg-status-danger/5 rounded-lg transition-all"
+                  >
+                    <X size={14} /> Reject
+                  </button>
+                </div>
               )}
             </>
           )}
@@ -562,13 +747,11 @@ export function WorkspacePage() {
 
       {/* ── Main area ── */}
       <div className="flex-1 flex overflow-hidden">
-        {/* Left Panel — Pages/Layers (workspace.html styling) */}
-
-        {/* Right panel toggle button — always visible on the left edge */}
+        {/* Left panel toggle */}
         {!showLeftPanel && !isReviewMode && isMangaka && (
           <button
             onClick={() => setShowLeftPanel(true)}
-            className="flex-shrink-0 w-6 bg-surface-container-low border-r border-outline-variant flex items-center justify-center text-on-surface-variant hover:text-primary transition-colors"
+            className="flex-shrink-0 w-6 bg-surface border-r border-outline-variant/30 flex items-center justify-center text-on-surface-variant hover:text-primary hover:bg-surface-container-low transition-colors"
             title="Show Pages"
           >
             <ChevronRight size={14} />
@@ -576,16 +759,16 @@ export function WorkspacePage() {
         )}
 
         {showLeftPanel && !isReviewMode && isMangaka && (
-          <aside className="w-64 flex-shrink-0 bg-surface-container-low border-r border-outline-variant flex flex-col overflow-hidden">
+          <aside className="w-72 flex-shrink-0 bg-surface border-r border-outline-variant/50 flex flex-col overflow-hidden">
             {/* Pages/Layers tabs */}
-            <div className="flex border-b border-outline-variant flex-shrink-0">
+            <div className="flex border-b border-outline-variant/50 flex-shrink-0 px-1 pt-1">
               <button
                 onClick={() => setLeftPanelTab("pages")}
                 className={cn(
-                  "flex-1 py-3 text-sm font-medium transition-colors",
+                  "flex-1 py-2.5 text-sm font-medium transition-all rounded-t-lg",
                   leftPanelTab === "pages"
-                    ? "text-primary border-b-2 border-primary"
-                    : "text-on-surface-variant hover:text-on-surface",
+                    ? "text-primary bg-surface-container-low border-b-2 border-primary"
+                    : "text-on-surface-variant hover:text-on-surface hover:bg-surface-container-low/50",
                 )}
               >
                 Pages
@@ -593,10 +776,10 @@ export function WorkspacePage() {
               <button
                 onClick={() => setLeftPanelTab("layers")}
                 className={cn(
-                  "flex-1 py-3 text-sm font-medium transition-colors",
+                  "flex-1 py-2.5 text-sm font-medium transition-all rounded-t-lg",
                   leftPanelTab === "layers"
-                    ? "text-primary border-b-2 border-primary"
-                    : "text-on-surface-variant hover:text-on-surface",
+                    ? "text-primary bg-surface-container-low border-b-2 border-primary"
+                    : "text-on-surface-variant hover:text-on-surface hover:bg-surface-container-low/50",
                 )}
               >
                 Layers
@@ -674,8 +857,15 @@ export function WorkspacePage() {
 
             {/* Layers tab */}
             {leftPanelTab === "layers" && (
-              <div className="flex-1 overflow-y-auto p-2">
+              <div className="flex-1 overflow-y-auto">
                 <LayerPanel />
+              </div>
+            )}
+
+            {/* Loading indicator khi load page data */}
+            {isLoadingPage && (
+              <div className="absolute inset-0 bg-surface/60 flex items-center justify-center z-10">
+                <Loader2 size={20} className="animate-spin text-primary" />
               </div>
             )}
           </aside>
@@ -701,28 +891,19 @@ export function WorkspacePage() {
             </div>
           )}
 
-          {/* Floating Zoom Control (workspace.html styling) */}
-          <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-1 p-1.5 bg-surface-container-highest/90 backdrop-blur-md rounded-xl border border-outline-variant shadow-2xl">
-            <button
-              onClick={() => setZoom(Math.max(0.25, zoom - 0.25))}
-              className="p-2 hover:bg-surface-container-high rounded-lg text-on-surface-variant transition-colors"
-            >
-              <ZoomOut size={16} />
-            </button>
-            <div className="w-px h-4 bg-outline-variant mx-1" />
-            <button
-              onClick={() => setZoom(1)}
-              className="px-4 py-1 text-sm font-bold hover:bg-surface-container-high rounded-lg text-on-surface-variant transition-colors"
-            >
+          {/* Floating Zoom Control */}
+          <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-0.5 p-1 bg-surface-container-highest/90 backdrop-blur-md rounded-xl border border-outline-variant/50 shadow-2xl">
+            <Button variant="ghost" size="icon" className="w-8 h-8" onClick={() => setZoom(Math.max(0.25, zoom - 0.25))}>
+              <ZoomOut size={15} />
+            </Button>
+            <div className="w-px h-4 bg-outline-variant/30 mx-0.5" />
+            <Button variant="ghost" size="sm" className="px-3 font-bold" onClick={() => setZoom(1)}>
               Fit To Screen
-            </button>
-            <div className="w-px h-4 bg-outline-variant mx-1" />
-            <button
-              onClick={() => setZoom(Math.min(4, zoom + 0.25))}
-              className="p-2 hover:bg-surface-container-high rounded-lg text-on-surface-variant transition-colors"
-            >
-              <ZoomIn size={16} />
-            </button>
+            </Button>
+            <div className="w-px h-4 bg-outline-variant/30 mx-0.5" />
+            <Button variant="ghost" size="icon" className="w-8 h-8" onClick={() => setZoom(Math.min(4, zoom + 0.25))}>
+              <ZoomIn size={15} />
+            </Button>
           </div>
         </div>
 
@@ -730,7 +911,7 @@ export function WorkspacePage() {
         {!showRightPanel && (
           <button
             onClick={() => setShowRightPanel(true)}
-            className="flex-shrink-0 w-6 bg-surface-container-low border-l border-outline-variant flex items-center justify-center text-on-surface-variant hover:text-primary transition-colors"
+            className="flex-shrink-0 w-6 bg-surface border-l border-outline-variant/30 flex items-center justify-center text-on-surface-variant hover:text-primary hover:bg-surface-container-low transition-colors"
             title="Show panel"
           >
             <ChevronLeft size={14} />
@@ -739,8 +920,8 @@ export function WorkspacePage() {
 
         {/* Right panel — Regions/Tasks/Comments */}
         {showRightPanel && (
-          <aside className="w-80 flex-shrink-0 bg-surface-container-low border-l border-outline-variant flex flex-col overflow-hidden">
-            <div className="flex border-b border-outline-variant flex-shrink-0">
+          <aside className="w-80 flex-shrink-0 bg-surface border-l border-outline-variant/50 flex flex-col overflow-hidden">
+            <div className="flex border-b border-outline-variant/50 flex-shrink-0 px-1 pt-1">
               {currentTabs.map((tab) => {
                 const Icon = tab.icon;
                 return (
@@ -748,10 +929,10 @@ export function WorkspacePage() {
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
                     className={cn(
-                      "flex-1 py-3 text-sm font-medium transition-colors",
+                      "flex-1 py-2.5 text-sm font-medium transition-all rounded-t-lg",
                       activeTab === tab.id
-                        ? "text-primary border-b-2 border-primary"
-                        : "text-on-surface-variant hover:text-on-surface",
+                        ? "text-primary bg-surface-container-low border-b-2 border-primary"
+                        : "text-on-surface-variant hover:text-on-surface hover:bg-surface-container-low/50",
                     )}
                   >
                     <div className="flex items-center justify-center gap-1.5">
@@ -808,6 +989,89 @@ export function WorkspacePage() {
         onClose={() => setCreateTaskOpen(false)}
         onSubmit={handleSubmitAssignedTask}
       />
+
+      {/* Merge Result Dialog — hiển thị ảnh sau khi merge layers */}
+      <Dialog
+        open={showMergeDialog}
+        onClose={() => {
+          setShowMergeDialog(false);
+          clearMergeResult();
+        }}
+        title="Merge & Export"
+        description="Final composite image after merging all layers"
+        size="lg"
+      >
+        <div className="space-y-4">
+          {mergeImageUrl ? (
+            <div className="border border-outline-variant rounded-lg overflow-hidden bg-surface-variant/20">
+              <img
+                src={mergeImageUrl}
+                alt="Merged result"
+                className="w-full h-auto max-h-[70vh] object-contain mx-auto"
+              />
+            </div>
+          ) : (
+            <div className="flex items-center justify-center h-40 text-on-surface-variant/60">
+              <FileImage size={32} />
+            </div>
+          )}
+          <div className="flex items-center justify-end gap-2 pt-2 border-t border-outline-variant">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setShowMergeDialog(false);
+                clearMergeResult();
+              }}
+            >
+              Close
+            </Button>
+            {mergeImageUrl && (
+              <Button
+                size="sm"
+                onClick={() => {
+                  const a = document.createElement("a");
+                  a.href = mergeImageUrl;
+                  a.download = `page-${currentPageId}-merged.png`;
+                  a.click();
+                }}
+              >
+                <Download size={14} className="mr-1" /> Download
+              </Button>
+            )}
+          </div>
+        </div>
+      </Dialog>
+
+      {/* Flatten Confirm Dialog */}
+      <Dialog
+        open={showFlattenDialog}
+        onClose={() => setShowFlattenDialog(false)}
+        title="Flatten Layers"
+        description="Gộp tất cả layers vào ảnh nền và xoá toàn bộ layers. Hành động này không thể hoàn tác."
+      >
+        <div className="flex items-center justify-end gap-2 pt-4 border-t border-outline-variant">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setShowFlattenDialog(false)}
+          >
+            Cancel
+          </Button>
+          <Button
+            size="sm"
+            variant="danger"
+            onClick={handleFlatten}
+          >
+            {flattening ? (
+              <Loader2 size={14} className="animate-spin mr-1" />
+            ) : (
+              <Layers size={14} className="mr-1" />
+            )}
+            Flatten
+          </Button>
+        </div>
+      </Dialog>
     </div>
   );
 }
