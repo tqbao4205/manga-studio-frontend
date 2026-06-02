@@ -9,6 +9,8 @@
  *   GET   /api/v1/chapters/{chapterId}/pages         — Danh sách pages
  *   POST  /api/v1/chapters/{chapterId}/pages/batch   — Upload nhiều pages
  *   DELETE /api/v1/pages/{id}                        — Xoá page
+ *   POST  /api/v1/pages/{id}/merge                   — Merge layers thành 1 ảnh
+ *   POST  /api/v1/pages/{id}/flatten                 — Flatten: merge + replace + xoá layers
  *   PUT   /api/v1/chapters/{chapterId}/pages/reorder — Sắp xếp pages
  */
 
@@ -50,6 +52,28 @@ const pageService = {
    */
   delete: async (pageId) => {
     return api.delete(`/v1/pages/${pageId}`);
+  },
+
+  /**
+   * Merge tất cả visible layers của page thành 1 ảnh composite.
+   * Endpoint: POST /api/v1/pages/{id}/merge
+   *
+   * @param {number} pageId - ID của page
+   * @returns {Promise<Object>} { finalImageUrl: string }
+   */
+  merge: async (pageId) => {
+    return api.post(`/v1/pages/${pageId}/merge`);
+  },
+
+  /**
+   * Flatten page: merge layers vào ảnh nền, ghi đè originalImageUrl, xoá toàn bộ layers.
+   * Endpoint: POST /api/v1/pages/{id}/flatten
+   *
+   * @param {number} pageId - ID của page
+   * @returns {Promise<Object>} PageResponse (originalImageUrl đã update)
+   */
+  flatten: async (pageId) => {
+    return api.post(`/v1/pages/${pageId}/flatten`);
   },
 
   /**

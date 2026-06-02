@@ -640,6 +640,8 @@ export function WorkspaceCanvas() {
           {[...layers]
             .sort((a, b) => a.sortOrder - b.sortOrder)
             .map((layer) => {
+              // Bỏ qua virtual base layer vì đã được render ở background
+              if (layer.virtual) return null;
               if (!layer.visible) return null;
               return (
                 <LayerImage
