@@ -67,6 +67,7 @@ export function SeriesDetailPage() {
   const navigate = useNavigate()
   const id = Number(seriesId)
   const user = useAuthStore((s) => s.user)
+  const assistantTrigger = useAuthStore((s) => s.assistantTrigger) // 👈 watch trigger để refetch realtime
   const addToast = useUIStore((s) => s.addToast)
 
   const { currentSeries, seriesLoading, seriesError, fetchById } = useSeriesStore()
@@ -97,7 +98,7 @@ export function SeriesDetailPage() {
   useEffect(() => {
     if (!id) return
     assistantService.getBySeries(id).then(setSeriesAssistants).catch(() => {})
-  }, [id])
+  }, [id, assistantTrigger]) // 👈 chạy lại mỗi khi WebSocket báo có assistant accept/reject
 
   // ── Debounced search assistant ──
   const handleSearchChange = useCallback((value) => {

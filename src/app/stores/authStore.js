@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import authService from '../../services/authService'
+import { connectWebSocket, disconnectWebSocket } from '../../services/websocket'
 
 /**
  * ─────────────────────────────────────────────
@@ -34,6 +35,59 @@ import authService from '../../services/authService'
  *   └─────────────────────────────────────────────┘
  */
 
+/**
+ * handleWebSocketMessage: Xử lý message realtime từ backend.
+ *
+ * Khi WebSocket nhận được event từ backend, hàm này được gọi.
+ * Tuỳ vào type, nó sẽ dispatch action tới store tương ứng.
+ *
+ * Các event hiện tại:
+ *   - INVITATION_SENT        → ASSISTANT có lời mời mới
+ *   - INVITATION_ACCEPTED    → MANGAKA biết assistant đã đồng ý
+ *   - INVITATION_REJECTED    → MANGAKA biết assistant đã từ chối
+ *
+ * @param {string} type - Loại sự kiện (do backend quy định)
+ * @param {any}    data - Dữ liệu kèm theo (VD: SeriesAssistantResponse)
+ */
+/**
+ * handleWebSocketMessage: Xử lý message realtime từ backend.
+ *
+ * Khi WebSocket nhận được event từ backend, hàm này được gọi.
+ * Nó dispatch action tới store tương ứng để cập nhật UI realtime.
+ *
+ * Các event hiện tại:
+ *   - INVITATION_SENT        → ASSISTANT có lời mời mới → tăng invitationTrigger
+ *   - INVITATION_ACCEPTED    → MANGAKA biết assistant đã đồng ý
+ *   - INVITATION_REJECTED    → MANGAKA biết assistant đã từ chối
+ *
+ * Cơ chế "trigger":
+ *   - Khi nhận INVITATION_SENT, tăng biến invitationTrigger lên 1.
+ *   - InvitationsPage watch biến này → phát hiện thay đổi → tự động refetch.
+ *   - Không cần import store khác → tránh circular dependency.
+ *
+ * @param {string} type - Loại sự kiện (do backend quy định)
+ * @param {any}    data - Dữ liệu kèm theo (VD: SeriesAssistantResponse)
+ */
+const handleWebSocketMessage = (type, data) => {
+  console.log(`[WS Event] ${type}:`, data)
+
+  switch (type) {
+    case 'INVITATION_SENT':
+      // ASSISTANT: có lời mời mới → tăng trigger để InvitationsPage tự refetch
+      useAuthStore.getState().incrementInvitationTrigger()
+      break
+
+    case 'INVITATION_ACCEPTED':
+    case 'INVITATION_REJECTED':
+      // MANGAKA: assistant đã phản hồi → tăng trigger để SeriesDetailPage refetch
+      useAuthStore.getState().incrementAssistantTrigger()
+      break
+
+    default:
+      break
+  }
+}
+
 export const useAuthStore = create((set, get) => ({
   // ────────────────────────────────────────────────
   //  State — Giá trị khởi tạo
@@ -50,6 +104,30 @@ export const useAuthStore = create((set, get) => ({
   isAuthenticated: false,
   isLoading: false,
   initializing: true, // ← quan trọng: tránh ProtectedRoute redirect /login khi đang kiểm tra
+
+  /**
+   * assistantTrigger: Biến đếm dùng để trigger refetch danh sách assistant.
+   *
+   * Cách hoạt động:
+   *   - Khi WebSocket nhận INVITATION_ACCEPTED / INVITATION_REJECTED
+   *   → incrementAssistantTrigger() được gọi
+   *   - SeriesDetailPage watch biến này → useEffect phát hiện thay đổi → refetch assistants
+   */
+  assistantTrigger: 0,
+
+  /**
+   * invitationTrigger: Biến đếm dùng để trigger refetch danh sách lời mời.
+   *
+   * Cách hoạt động:
+   *   - Khi WebSocket nhận INVITATION_SENT → incrementInvitationTrigger() được gọi
+   *   - InvitationsPage watch biến này → useEffect phát hiện thay đổi → gọi fetch lại API
+   *   - Mỗi lần tăng = 1 lần cần refetch
+   *
+   * Tại sao không dùng boolean?
+   *   - Nếu nhận 2 event liên tiếp, boolean true → true không trigger re-render
+   *   - Dùng số đếm → mỗi lần tăng đều là giá trị mới → React luôn phát hiện thay đổi
+   */
+  invitationTrigger: 0,
 
   // ────────────────────────────────────────────────
   //  1. LOGIN — Đăng nhập
@@ -91,6 +169,9 @@ export const useAuthStore = create((set, get) => ({
         isAuthenticated: true,
         isLoading: false,
       })
+
+      // ─── Kết nối WebSocket để nhận realtime event ───
+      connectWebSocket(user.id, handleWebSocketMessage)
     } catch (error) {
       // Lỗi từ authService hoặc api.js interceptor
       // error.message có thể là: "Invalid credentials", "Không thể kết nối đến máy chủ", ...
@@ -157,6 +238,9 @@ export const useAuthStore = create((set, get) => ({
         isAuthenticated: true,
         isLoading: false,
       })
+
+      // ─── Kết nối WebSocket để nhận realtime event ───
+      connectWebSocket(user.id, handleWebSocketMessage)
     } catch (error) {
       // Lỗi từ authService hoặc api.js interceptor
       //
@@ -189,6 +273,10 @@ export const useAuthStore = create((set, get) => ({
    *   - api.js interceptor không còn token → request API mới sẽ không gắn Authorization header
    */
   logout: () => {
+    // ─── Ngắt kết nối WebSocket trước khi xoá session ───
+    // Tránh leak connection khi user đăng xuất
+    disconnectWebSocket()
+
     // Xoá dữ liệu phiên khỏi localStorage
     localStorage.removeItem('accessToken')
     localStorage.removeItem('user')
@@ -241,6 +329,10 @@ export const useAuthStore = create((set, get) => ({
         isAuthenticated: true,
         initializing: false,
       })
+
+      // ─── Kết nối WebSocket khi khôi phục session thành công ───
+      // (trường hợp user refresh page mà vẫn còn token hợp lệ)
+      connectWebSocket(user.id, handleWebSocketMessage)
     } catch {
       // Token không hợp lệ hoặc hết hạn → xoá sạch
       localStorage.removeItem('accessToken')
@@ -268,5 +360,29 @@ export const useAuthStore = create((set, get) => ({
     // Cập nhật cả localStorage để đồng bộ
     localStorage.setItem('user', JSON.stringify(user))
     set({ user })
+  },
+
+  // ────────────────────────────────────────────────
+  //  6. INCREMENT ASSISTANT TRIGGER — Báo hiệu cần refetch
+  // ────────────────────────────────────────────────
+  /**
+   * Tăng assistantTrigger lên 1 khi WebSocket nhận INVITATION_ACCEPTED/REJECTED.
+   * SeriesDetailPage watch biến này để tự động refetch danh sách assistant.
+   */
+  incrementAssistantTrigger: () => {
+    set((state) => ({ assistantTrigger: state.assistantTrigger + 1 }))
+  },
+
+  // ────────────────────────────────────────────────
+  //  7. INCREMENT INVITATION TRIGGER — Báo hiệu cần refetch
+  // ────────────────────────────────────────────────
+  /**
+   * Tăng invitationTrigger lên 1 để các component đang watch biến này
+   * phát hiện thay đổi và tự động refetch danh sách lời mời.
+   *
+   * Được gọi từ handleWebSocketMessage khi nhận INVITATION_SENT.
+   */
+  incrementInvitationTrigger: () => {
+    set((state) => ({ invitationTrigger: state.invitationTrigger + 1 }))
   },
 }))

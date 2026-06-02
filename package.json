@@ -42,6 +42,8 @@
     "react-konva": "^18.2.10",
     "react-router-dom": "^6.30.3",
     "recharts": "^3.8.1",
+    "@stomp/stompjs": "^7.0.0",
+    "sockjs-client": "^1.6.1",
     "tailwind-merge": "^3.6.0",
     "zod": "^4.4.3",
     "zustand": "^5.0.13"
