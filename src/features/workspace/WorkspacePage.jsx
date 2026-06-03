@@ -38,9 +38,7 @@ import {
   RotateCcw,
   X,
   Send,
-  Pen,
   Highlighter,
-  Type,
   Loader2,
   FileImage,
   Download,
@@ -127,17 +125,15 @@ const toolDefs = [
     roles: ["MANGAKA", "ASSISTANT"],
   },
   { id: "draw", icon: Square, label: "Region (R)", roles: ["MANGAKA"] },
-  { id: "pen", icon: Pen, label: "Pen (P)", roles: ["MANGAKA"] },
-  { id: "text-annotation", icon: Type, label: "Text (T)", roles: ["MANGAKA"] },
+  { id: "comment", icon: MessageSquare, label: "Comment (C)", roles: ["MANGAKA", "ASSISTANT"] },
 ];
 
 /* Tools cho review mode (TANTOU_EDITOR / EDITORIAL_BOARD) */
 const reviewTools = [
   { id: "select", icon: MousePointer2, label: "Select (S)" },
   { id: "hand", icon: Hand, label: "Pan (V)" },
-  { id: "pen", icon: Pen, label: "Pen (P)" },
   { id: "highlight", icon: Highlighter, label: "Highlight (H)" },
-  { id: "text-annotation", icon: Type, label: "Text (T)" },
+  { id: "comment", icon: MessageSquare, label: "Comment (C)" },
 ];
 
 export function WorkspacePage() {
@@ -275,11 +271,8 @@ export function WorkspacePage() {
         case "r":
           if (!isReviewMode && user?.role === "MANGAKA") setMode("draw");
           break;
-        case "p":
-          setMode("pen");
-          break;
-        case "t":
-          setMode("text-annotation");
+        case "c":
+          setMode("comment");
           break;
         case "0":
           setZoom(1);
@@ -827,7 +820,7 @@ export function WorkspacePage() {
 
         {/* Right panel — Regions/Tasks/Comments */}
         {showRightPanel && (
-          <aside className="w-80 flex-shrink-0 bg-surface border-l border-outline-variant/50 flex flex-col overflow-hidden">
+          <aside className="w-96 flex-shrink-0 bg-surface border-l border-outline-variant/50 flex flex-col overflow-hidden">
             <div className="flex border-b border-outline-variant/50 flex-shrink-0 px-1 pt-1">
               {currentTabs.map((tab) => {
                 const Icon = tab.icon;

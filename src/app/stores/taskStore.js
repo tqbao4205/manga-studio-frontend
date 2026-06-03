@@ -91,6 +91,7 @@ export const useTaskStore = create((set, get) => ({
       await get().loadTasks(regionId);
     } catch (err) {
       console.error('[taskStore] createTask failed:', err);
+      throw err;
     }
   },
 

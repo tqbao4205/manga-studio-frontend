@@ -120,7 +120,9 @@ export function WorkspaceCanvas() {
   const deleteRegion = useWorkspaceStore((s) => s.deleteRegion);
   const addRegion = useWorkspaceStore((s) => s.addRegion);
   const addComment = useWorkspaceStore((s) => s.addComment);
+  const replyComment = useWorkspaceStore((s) => s.replyComment);
   const updateComment = useWorkspaceStore((s) => s.updateComment);
+  const deleteComment = useWorkspaceStore((s) => s.deleteComment);
   const addAnnotation = useWorkspaceStore((s) => s.addAnnotation);
   const deleteAnnotation = useWorkspaceStore((s) => s.deleteAnnotation);
   const hiddenRegionIds = useWorkspaceStore((s) => s.hiddenRegionIds);
@@ -136,6 +138,7 @@ export function WorkspaceCanvas() {
   const [commentPos, setCommentPos] = useState(null); // Vị trí comment đang nhập
   const [commentText, setCommentText] = useState(""); // Nội dung comment
   const [replyText, setReplyText] = useState(""); // Nội dung reply
+  const [popupReplyText, setPopupReplyText] = useState(""); // Reply trong popup comment
   const [penPoints, setPenPoints] = useState(null); // Mảng tọa độ bút vẽ tự do
   const [annotationTextPos, setAnnotationTextPos] = useState(null); // Vị trí annotation dạng text
   const [annotationTextValue, setAnnotationTextValue] = useState("");
@@ -145,6 +148,7 @@ export function WorkspaceCanvas() {
 
   // --- Tính toán dữ liệu hiển thị ---
   const commentsOnPage = allComments.filter((c) => c.pageId === currentPageId && c.status !== 'RESOLVED');
+  const selectedComment = allComments.find((c) => c.id === selectedCommentId);
 
   const page = pages.find((p) => p.id === currentPageId);
   const pageImage = usePageImage(
@@ -227,58 +231,34 @@ export function WorkspaceCanvas() {
   );
 
   /**
-   * Gửi comment mới lên store
+   * Gửi comment mới lên API qua store.
+   * addComment() trong store sẽ gọi POST /api/v1/pages/{pageId}/comments
+   * và trả về CommentResponse từ backend (có id thật, author từ JWT).
    */
   const submitComment = useCallback(() => {
     if (!commentPos || !commentText.trim() || !currentPageId || !user) return;
-    const comment = {
-      id: Date.now(),
-      pageId: currentPageId,
+    addComment({
       content: commentText.trim(),
-      status: "OPEN",
-      positionX: commentPos.x,
-      positionY: commentPos.y,
-      editor: {
-        id: user.id,
-        displayName: user.displayName,
-        avatarUrl: user.avatarUrl || "",
-      },
-      createdAt: new Date().toISOString(),
-      replyCount: 0,
-    };
-    addComment(comment);
+      posX: commentPos.x,
+      posY: commentPos.y,
+    });
     setCommentPos(null);
     setCommentText("");
   }, [commentPos, commentText, currentPageId, user, addComment]);
 
   /**
-   * Gửi reply cho một comment cha
+   * Gửi reply cho một comment cha qua API.
+   * replyComment() trong store sẽ gọi POST /api/v1/comments/{parentId}/replies
+   * và tự động cập nhật replyCount của comment cha.
    */
   const handleReplySubmit = useCallback(
-    (parentComment) => {
+    async (parentComment) => {
       if (!replyText.trim() || !user || !currentPageId) return;
-      const reply = {
-        id: Date.now(),
-        pageId: currentPageId,
-        parentCommentId: parentComment.id,
-        content: replyText.trim(),
-        status: "OPEN",
-        editor: {
-          id: user.id,
-          displayName: user.displayName,
-          avatarUrl: user.avatarUrl || "",
-        },
-        createdAt: new Date().toISOString(),
-        replyCount: 0,
-      };
-      addComment(reply);
-      updateComment(parentComment.id, {
-        replyCount: (parentComment.replyCount || 0) + 1,
-      });
+      await replyComment(parentComment.id, replyText.trim());
       addToast({ title: "Reply added", variant: "success" });
       setReplyText("");
     },
-    [replyText, user, currentPageId, addComment, updateComment, addToast],
+    [replyText, user, currentPageId, replyComment, addToast],
   );
 
   /**
@@ -854,15 +834,18 @@ export function WorkspaceCanvas() {
             return null;
           })}
 
-          {/* Comment markers */}
+          {/* Comment markers — dùng posX/posY từ backend CommentResponse */}
           {commentsOnPage.map((c) => {
             const isSelected = selectedCommentId === c.id;
             const r = isSelected ? 14 / scale : 10 / scale;
+            const cx = c.posX ?? c.positionX;
+            const cy = c.posY ?? c.positionY;
+            if (cx == null || cy == null) return null;
             return (
               <Group
                 key={`comment-${c.id}`}
-                x={c.positionX}
-                y={c.positionY}
+                x={cx}
+                y={cy}
                 onClick={(e) => {
                   e.cancelBubble = true;
                   selectComment(selectedCommentId === c.id ? null : c.id);
@@ -1000,6 +983,111 @@ export function WorkspaceCanvas() {
                   >
                     Add Comment
                   </button>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+
+      {/* Popup comment khi click marker — hiển thị nội dung + reply inline */}
+      {selectedComment &&
+        (() => {
+          const s = stageRef.current;
+          const sx = s ? s.x() : (containerSize.w - stageW) / 2;
+          const sy = s ? s.y() : (containerSize.h - stageH) / 2;
+          const cx = selectedComment.posX ?? selectedComment.positionX;
+          const cy = selectedComment.posY ?? selectedComment.positionY;
+          if (cx == null || cy == null) return null;
+          return (
+            <div
+              className="absolute z-20"
+              style={{
+                left: sx + cx * scale + 20,
+                top: sy + cy * scale - 40,
+              }}
+            >
+              <div className="bg-surface border border-outline-variant/30 px-3.5 py-2.5 shadow-xl w-64 rounded-xl">
+                {/* Header: avatar + tên + status */}
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center text-[10px] font-bold text-primary flex-shrink-0">
+                    {(selectedComment.authorName || '?')[0]}
+                  </div>
+                  <span className="text-xs font-semibold text-on-surface truncate">
+                    {selectedComment.authorName || 'Unknown'}
+                  </span>
+                  <span className={`ml-auto text-[9px] font-semibold uppercase px-1.5 py-0.5 rounded-full ${
+                    selectedComment.status === 'RESOLVED'
+                      ? 'bg-status-success/15 text-status-success'
+                      : 'bg-status-warning/15 text-status-warning'
+                  }`}>
+                    {selectedComment.status === 'RESOLVED' ? 'Resolved' : 'Active'}
+                  </span>
+                </div>
+
+                {/* Nội dung comment */}
+                <p className="text-xs text-on-surface/80 leading-relaxed mb-2.5 whitespace-pre-wrap break-words">
+                  {selectedComment.content}
+                </p>
+
+                {/* Reply input */}
+                <div className="border-t border-outline-variant/20 pt-2 mt-1">
+                  <textarea
+                    value={popupReplyText}
+                    onChange={(e) => setPopupReplyText(e.target.value)}
+                    placeholder="Write a reply..."
+                    rows={2}
+                    className="w-full bg-surface-container-high text-xs text-on-surface placeholder:text-on-surface-variant/40 outline-none resize-none rounded-lg px-2.5 py-1.5 border border-outline-variant/20 focus:border-primary/50 transition-colors"
+                  />
+                  <div className="flex items-center justify-between mt-1.5">
+                    <div className="flex items-center gap-1">
+                      {user?.id === selectedComment.authorId && (
+                        <button
+                          onClick={async () => {
+                            await deleteComment(selectedComment.id);
+                            selectComment(null);
+                            addToast({ title: 'Comment deleted', variant: 'info' });
+                          }}
+                          className="text-[10px] text-status-danger hover:text-status-danger/80 transition-colors"
+                        >
+                          Delete
+                        </button>
+                      )}
+                      <button
+                        onClick={async () => {
+                          await updateComment(selectedComment.id, {
+                            status: selectedComment.status === 'RESOLVED' ? 'ACTIVE' : 'RESOLVED',
+                          });
+                          addToast({
+                            title: selectedComment.status === 'RESOLVED' ? 'Reopened' : 'Resolved',
+                            variant: 'success',
+                          });
+                        }}
+                        className="text-[10px] text-primary hover:text-primary/80 transition-colors ml-2"
+                      >
+                        {selectedComment.status === 'RESOLVED' ? 'Reopen' : 'Resolve'}
+                      </button>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => selectComment(null)}
+                        className="text-[10px] text-on-surface-variant/60 hover:text-on-surface-variant transition-colors"
+                      >
+                        Close
+                      </button>
+                      <button
+                        onClick={async () => {
+                          if (!popupReplyText.trim()) return;
+                          await replyComment(selectedComment.id, popupReplyText.trim());
+                          setPopupReplyText("");
+                          addToast({ title: 'Reply added', variant: 'success' });
+                        }}
+                        disabled={!popupReplyText.trim()}
+                        className="text-[10px] font-semibold text-primary disabled:opacity-30 disabled:cursor-not-allowed hover:text-primary/80 transition-colors"
+                      >
+                        Reply
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

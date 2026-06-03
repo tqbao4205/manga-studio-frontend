@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { X, CalendarDays, ChevronDown } from "lucide-react";
+import { X, CalendarDays, ChevronDown, Loader2 } from "lucide-react";
 import { useWorkspaceStore } from "../../../app/stores/workspaceStore";
 import assistantService from "../../../services/assistantService";
 
@@ -28,6 +28,7 @@ export function CreateTaskModal({ open, region, page, seriesId: propSeriesId, on
   const [description, setDescription] = useState("");
   const [notes, setNotes] = useState("");
   const [referenceImageUrl, setReferenceImageUrl] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     if (!region) return;
@@ -62,7 +63,7 @@ export function CreateTaskModal({ open, region, page, seriesId: propSeriesId, on
 
   if (!open || !region) return null;
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     console.log("[CreateTaskModal] submit check — title:", title, "assistantId:", assistantId);
     if (!title.trim() || !assistantId) return;
 
@@ -80,7 +81,12 @@ export function CreateTaskModal({ open, region, page, seriesId: propSeriesId, on
       payload.dueDate = `${dueDate}T00:00:00`;
     }
 
-    onSubmit(payload);
+    setSubmitting(true);
+    try {
+      await onSubmit(payload);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const pageImg = page?.originalImageUrl || page?.webImageUrl;
@@ -247,10 +253,11 @@ export function CreateTaskModal({ open, region, page, seriesId: propSeriesId, on
           </button>
           <button
             onClick={handleSubmit}
-            disabled={(() => { const d = !title.trim() || !assistantId; console.log("[CreateTaskModal] button disabled:", d, "title:", JSON.stringify(title), "assistantId:", assistantId, "seriesId:", seriesId); return d; })()}
-            className="h-10 px-6 rounded-lg bg-primary text-sm font-semibold text-on-primary hover:brightness-110 disabled:opacity-40 disabled:cursor-not-allowed transition-all active:scale-[0.98]"
+            disabled={(() => { const d = !title.trim() || !assistantId || submitting; return d; })()}
+            className="h-10 px-6 rounded-lg bg-primary text-sm font-semibold text-on-primary hover:brightness-110 disabled:opacity-40 disabled:cursor-not-allowed transition-all active:scale-[0.98] inline-flex items-center gap-2"
           >
-            Create & Assign Task
+            {submitting && <Loader2 size={14} className="animate-spin" />}
+            {submitting ? 'Creating...' : 'Create & Assign Task'}
           </button>
         </div>
       </div>

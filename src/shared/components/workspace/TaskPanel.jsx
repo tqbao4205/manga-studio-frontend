@@ -85,6 +85,7 @@ export function TaskPanel() {
 
   const [realAssistants, setRealAssistants] = useState([])
   const [loadingAssistants, setLoadingAssistants] = useState(false)
+  const [posting, setPosting] = useState(false)
 
   const [submitTarget, setSubmitTarget] = useState(null)
   const [reviewTarget, setReviewTarget] = useState(null)
@@ -166,6 +167,7 @@ export function TaskPanel() {
 
     const defaultDeadline = new Date(Date.now() + 14 * 86400000).toISOString().slice(0, 10)
 
+    setPosting(true)
     try {
       await createTask(region.id, {
         regionType: region.regionType || 'OTHER',
@@ -175,7 +177,6 @@ export function TaskPanel() {
         priority: taskPriority,
         dueDate: (taskDeadline || defaultDeadline) + 'T00:00:00',
         assistantId: assistant.assistant.id,
-        pageImageUrl: currentPage?.webImageUrl || currentPage?.originalImageUrl || '',
         referenceImageUrl: '',
       })
 
@@ -188,6 +189,8 @@ export function TaskPanel() {
       resetAssignForm()
     } catch {
       addToast({ title: 'Failed to assign task', variant: 'error' })
+    } finally {
+      setPosting(false)
     }
   }
 
@@ -460,7 +463,7 @@ export function TaskPanel() {
       )}
 
       {/* ─── Dialog Assign Task ─── */}
-      <Dialog open={assignOpen} onClose={() => { setAssignOpen(false); resetAssignForm() }} title="Assign Task" description="Assign a region to an assistant" size="sm">
+      <Dialog open={assignOpen} onClose={() => { setAssignOpen(false); resetAssignForm() }} title="Assign Task" description="Assign a region to an assistant" size="md">
         <div className="space-y-4">
           <div className="space-y-1.5">
             <label className="text-[10px] font-semibold uppercase tracking-wider text-on-surface-variant/60">Region <span className="text-error">*</span></label>
@@ -577,10 +580,11 @@ export function TaskPanel() {
             </button>
             <button
               onClick={handleAssign}
-              disabled={(() => { const d = !selectedRegion || !selectedAssistant || !taskTitle.trim(); console.log("[TaskPanel] Assign button disabled:", d, "selectedRegion:", selectedRegion, "selectedAssistant:", selectedAssistant, "taskTitle:", JSON.stringify(taskTitle)); return d; })()}
-              className="h-9 px-5 rounded-lg bg-primary text-sm font-semibold text-on-primary hover:brightness-110 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+              disabled={(() => { const d = !selectedRegion || !selectedAssistant || !taskTitle.trim() || posting; return d; })()}
+              className="h-9 px-5 rounded-lg bg-primary text-sm font-semibold text-on-primary hover:brightness-110 disabled:opacity-40 disabled:cursor-not-allowed transition-all inline-flex items-center gap-2"
             >
-              Assign Task
+              {posting && <Loader2 size={14} className="animate-spin" />}
+              {posting ? 'Assigning...' : 'Assign Task'}
             </button>
           </div>
         </div>

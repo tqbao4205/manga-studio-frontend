@@ -3,7 +3,7 @@
  *
  * 🎯 Mục đích:
  *   - Quản lý toàn bộ state cho trang Workspace: pages, layers, regions, comments, annotations
- *   - Các async actions gọi API qua service files (pageService, layerService, regionService)
+ *   - Các async actions gọi API qua service files (pageService, layerService, regionService, commentService)
  *   - UI state thuần (zoom, mode, selected*) được giữ local, không gọi API
  *
  * 📌 Luồng dữ liệu:
@@ -14,8 +14,8 @@
  *
  * 📌 State structure:
  *   - chapterId, currentPageId, pages[]          — Chapter & Page
- *   - regions[], layers[]                        — Dữ liệu page hiện tại
- *   - comments[], annotations[]                  — Tạm giữ mock (backend chưa có API)
+ *   - regions[], layers[], comments[]            — Dữ liệu page hiện tại (API)
+ *   - annotations[]                              — Local canvas drawings (pen, highlight, text)
  *   - zoom, mode, selected*Id, activeTab         — UI state
  *   - isLoading, isLoadingPage, mergeResult      — Loading/result states
  */
@@ -24,9 +24,43 @@ import { create } from 'zustand';
 import pageService from '../../services/pageService';
 import layerService from '../../services/layerService';
 import regionService from '../../services/regionService';
+import commentService from '../../services/commentService';
 
 /** ID đặc biệt cho virtual base layer (không tồn tại trong DB) */
 const VIRTUAL_BASE_ID = 'virtual-base';
+
+/**
+ * Chuyển cây comments từ backend (dạng lồng nhau) thành mảng flat.
+ *
+ * Backend trả về:
+ *   [ { id:1, parentId:null, replies: [ { id:2, parentId:1 }, { id:3, parentId:1 } ] },
+ *     { id:4, parentId:null, replies: [] } ]
+ *
+ * → Flatten thành:
+ *   [ { id:1, parentId:null, replyCount:2 }, { id:2, parentId:1 }, { id:3, parentId:1 }, { id:4, parentId:null, replyCount:0 } ]
+ *
+ * Giữ nguyên field names từ backend (posX, posY, authorId, authorName, ...)
+ * để components tự map sang frontend convention.
+ *
+ * @param {Array} comments - Mảng CommentResponse từ API (dạng cây)
+ * @returns {Array} Mảng flat, mỗi item không có field "replies"
+ */
+function flattenComments(comments) {
+  if (!comments || !Array.isArray(comments)) return [];
+  const flat = [];
+  for (const root of comments) {
+    // Tách replies ra khỏi comment gốc, đếm số lượng
+    const { replies, ...rest } = root;
+    flat.push({ ...rest, replyCount: replies?.length || 0 });
+    // Đẩy từng reply vào mảng flat (reply không có replies con — chỉ 1 cấp)
+    if (replies?.length) {
+      for (const reply of replies) {
+        flat.push({ ...reply, replies: undefined, replyCount: 0 });
+      }
+    }
+  }
+  return flat;
+}
 
 export const useWorkspaceStore = create((set, get) => ({
 
@@ -99,22 +133,28 @@ export const useWorkspaceStore = create((set, get) => ({
   },
 
   /**
-   * Load page: lấy regions + layers của page được chọn.
-   * Gọi song song 2 API để tối ưu thời gian.
+   * Load page: lấy regions + layers + comments của page được chọn.
+   * Gọi song song 3 API để tối ưu thời gian.
    *
    * Endpoints:
    *   GET /api/v1/pages/{pageId}/regions
    *   GET /api/v1/pages/{pageId}/layers
+   *   GET /api/v1/pages/{pageId}/comments
+   *
+   * 📌 Comments từ backend trả về dạng cây (gốc + replies lồng nhau).
+   *    Hàm flattenComments() sẽ làm phẳng thành mảng 1 cấp để phù hợp
+   *    với cấu trúc CommentPanel hiện tại.
    *
    * @param {number} pageId - ID của page
    */
   loadPage: async (pageId) => {
     set({ isLoadingPage: true, currentPageId: pageId });
     try {
-      // Gọi song song regions + layers
-      const [regions, layers] = await Promise.all([
+      // Gọi song song regions + layers + comments
+      const [regions, layers, apiComments] = await Promise.all([
         regionService.getByPage(pageId),
         layerService.getByPage(pageId),
+        commentService.getByPage(pageId),
       ]);
       // Nếu page có ảnh gốc, inject virtual base layer ở sortOrder 0
       const { pages } = get();
@@ -136,12 +176,18 @@ export const useWorkspaceStore = create((set, get) => ({
           ...finalLayers.map((l, i) => ({ ...l, sortOrder: i + 1 })),
         ];
       }
+
+      // Flatten comments từ dạng cây → mảng flat
+      const flatComments = flattenComments(apiComments);
+
       set({
         regions: regions || [],
         hiddenRegionIds: [],
         layers: finalLayers,
+        comments: flatComments,
         selectedRegionId: null,
         selectedLayerId: null,
+        selectedCommentId: null,
         isLoadingPage: false,
       });
     } catch (err) {
@@ -494,21 +540,165 @@ export const useWorkspaceStore = create((set, get) => ({
   },
 
   // ═══════════════════════════════════════════
-  //  COMMENTS & ANNOTATIONS — TẠM GIỮ MOCK
-  //  (backend chưa có API, sẽ rewrite sau)
+  //  COMMENTS — ASYNC ACTIONS (kết nối API)
+  //  ANNOTATIONS — local canvas drawings (pen, highlight, text)
   // ═══════════════════════════════════════════
 
-  updateComment: (commentId, patch) =>
+  /**
+   * Cập nhật comment.
+   *
+   * 📌 Async action — tuỳ theo patch field mà gọi API khác nhau:
+   *   - patch.status  → gọi PATCH  /comments/{id}/status (resolve/reopen)
+   *   - patch.content → gọi PUT    /comments/{id} (sửa nội dung)
+   *   - replyCount    → update local (không có API cho field này)
+   *   - Các field khác → update local
+   *
+   * 📌 Status mapping:
+   *   Frontend dùng 'OPEN'/'RESOLVED'
+   *   Backend  dùng 'ACTIVE'/'RESOLVED'
+   *   → Tự động map 'OPEN' → 'ACTIVE' khi gọi API
+   *
+   * @param {number} commentId - ID của comment
+   * @param {Object} patch - Các field cần update
+   */
+  updateComment: async (commentId, patch) => {
+    const currentComment = get().comments.find((c) => c.id === commentId);
+    if (!currentComment) return;
+
+    try {
+      let updated = null;
+
+      // TH1: Đổi status → gọi API updateStatus
+      if (patch.status) {
+        // Map 'OPEN' → 'ACTIVE' (frontend convention → backend enum)
+        const backendStatus = patch.status === 'OPEN' ? 'ACTIVE' : patch.status;
+        updated = await commentService.updateStatus(commentId, backendStatus);
+      }
+      // TH2: Sửa content → gọi API update
+      else if (patch.content) {
+        updated = await commentService.update(commentId, { content: patch.content });
+      }
+
+      // Nếu có response từ API → dùng response để update store
+      if (updated) {
+        set((s) => ({
+          comments: s.comments.map((c) =>
+            c.id === commentId ? { ...c, ...updated, ...patch } : c,
+          ),
+        }));
+        return;
+      }
+    } catch (err) {
+      console.error('[workspaceStore] updateComment API failed:', err);
+      // Không return — fallback xuống local update bên dưới
+    }
+
+    // Fallback: update local cho các field không có API (replyCount, ...)
     set((s) => ({
       comments: s.comments.map((c) =>
         c.id === commentId ? { ...c, ...patch } : c,
       ),
-    })),
+    }));
+  },
 
-  addComment: (comment) =>
-    set((s) => ({
-      comments: [...s.comments, comment],
-    })),
+  /**
+   * Tạo comment mới trên page hiện tại.
+   * Gọi API POST /api/v1/pages/{pageId}/comments.
+   *
+   * Nhận vào object comment với các field:
+   *   - content (string, required)
+   *   - posX, posY (number, optional) — toạ độ annotation
+   *   - positionX, positionY (alias cho posX/posY — tương thích ngược)
+   *   - parentId / parentCommentId (number, optional) — nếu là reply
+   *
+   * Backend trả về CommentResponse đã có id thật, authorName, authorAvatar, ...
+   * → Append response vào store.
+   *
+   * @param {Object} comment - Thông tin comment cần tạo
+   */
+  addComment: async (comment) => {
+    const { currentPageId } = get();
+    if (!currentPageId || !comment?.content?.trim()) return;
+    try {
+      // Map field names từ frontend → backend convention
+      const created = await commentService.create(currentPageId, {
+        content: comment.content,
+        posX: comment.posX ?? comment.positionX,
+        posY: comment.posY ?? comment.positionY,
+        parentId: comment.parentId ?? comment.parentCommentId,
+      });
+      set((s) => ({ comments: [...s.comments, created] }));
+      return created;
+    } catch (err) {
+      console.error('[workspaceStore] addComment failed:', err);
+    }
+  },
+
+  /**
+   * Reply vào 1 comment có sẵn.
+   * Gọi API POST /api/v1/comments/{parentId}/replies.
+   *
+   * 📌 Khác với addComment():
+   *    - parentId lấy từ tham số, không từ object
+   *    - pageId tự động lấy từ comment cha (backend xử lý)
+   *    - Không cần toạ độ (reply không phải annotation)
+   *
+   * 📌 Luồng:
+   *    1. Gọi API tạo reply → nhận CommentResponse từ backend
+   *    2. Append reply vào store.comments[]
+   *    3. Cập nhật replyCount của comment cha (để UI hiển thị đúng số lượng)
+   *
+   * @param {number} parentId - ID của comment cha
+   * @param {string} content - Nội dung reply
+   * @returns {Promise<Object|undefined>} CommentResponse hoặc undefined nếu lỗi
+   */
+  replyComment: async (parentId, content) => {
+    if (!parentId || !content?.trim()) return;
+    try {
+      const created = await commentService.reply(parentId, { content });
+      set((s) => ({
+        comments: [
+          ...s.comments,
+          created,
+          // Cập nhật replyCount của comment cha
+        ].map((c) =>
+          c.id === parentId
+            ? { ...c, replyCount: (c.replyCount || 0) + 1 }
+            : c,
+        ),
+      }));
+      return created;
+    } catch (err) {
+      console.error('[workspaceStore] replyComment failed:', err);
+    }
+  },
+
+  /**
+   * Xoá 1 comment (chỉ AUTHOR mới xoá được).
+   * Gọi API DELETE /api/v1/comments/{id}.
+   *
+   * 📌 Backend tự động xoá replies nếu xoá comment gốc.
+   *    Store cũng xoá toàn bộ replies trong mảng flat.
+   *
+   * 📌 Nếu comment đang được chọn → clear selection.
+   *
+   * @param {number} commentId - ID của comment cần xoá
+   */
+  deleteComment: async (commentId) => {
+    if (!commentId) return;
+    try {
+      await commentService.delete(commentId);
+      set((s) => ({
+        comments: s.comments.filter((c) =>
+          c.id !== commentId && c.parentId !== commentId
+        ),
+        selectedCommentId:
+          s.selectedCommentId === commentId ? null : s.selectedCommentId,
+      }));
+    } catch (err) {
+      console.error('[workspaceStore] deleteComment failed:', err);
+    }
+  },
 
   addAnnotation: (annotation) =>
     set((s) => ({
