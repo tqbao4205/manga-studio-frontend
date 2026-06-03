@@ -32,12 +32,11 @@ import { StatusBadge } from '../shared/StatusBadge'
 import { Dialog } from '../ui/dialog'
 import { SubmitDialog } from './SubmitDialog'
 import { ReviewDialog } from './ReviewDialog'
-import { ComparisonSlider } from './ComparisonSlider'
 import {
   Plus, Upload, Check, RotateCcw, AlertCircle, Clock, Eye,
-  Flag, Download, Loader2,
+  Flag, Download, Loader2, ChevronDown, CalendarDays,
 } from 'lucide-react'
-import { mockUsers } from '../../constants/mock-data'
+import assistantService from '../../../services/assistantService'
 import { getPriorityColor } from '../../utils'
 
 /** Danh sách mức độ ưu tiên (giữ nguyên) */
@@ -54,7 +53,11 @@ export function TaskPanel() {
   const regions = useWorkspaceStore((s) => s.regions)
   const pages = useWorkspaceStore((s) => s.pages)
   const selectedRegionId = useWorkspaceStore((s) => s.selectedRegionId)
+  const seriesId = useWorkspaceStore((s) => s.seriesId)
   const addLayer = useWorkspaceStore((s) => s.addLayer)
+  const loadPage = useWorkspaceStore((s) => s.loadPage)
+  const selectRegion = useWorkspaceStore((s) => s.selectRegion)
+  const hideRegion = useWorkspaceStore((s) => s.hideRegion)
 
   const tasksByRegion = useTaskStore((s) => s.tasksByRegion)
   const isLoading = useTaskStore((s) => s.isLoading)
@@ -68,6 +71,8 @@ export function TaskPanel() {
   const user = useAuthStore((s) => s.user)
   const addToast = useUIStore((s) => s.addToast)
 
+  const currentPage = pages.find((p) => p.id === currentPageId)
+
   // ─── Local state ───
   const [assignOpen, setAssignOpen] = useState(false)
   const [selectedRegion, setSelectedRegion] = useState('')
@@ -78,9 +83,28 @@ export function TaskPanel() {
   const [taskPriority, setTaskPriority] = useState('MEDIUM')
   const [taskDeadline, setTaskDeadline] = useState('')
 
+  const [realAssistants, setRealAssistants] = useState([])
+  const [loadingAssistants, setLoadingAssistants] = useState(false)
+
   const [submitTarget, setSubmitTarget] = useState(null)
   const [reviewTarget, setReviewTarget] = useState(null)
-  const [compareTarget, setCompareTarget] = useState(null)
+
+  // ─── Fetch assistants đã ACCEPTED trong series ───
+  useEffect(() => {
+    if (!seriesId) return
+    setLoadingAssistants(true)
+    assistantService.getBySeries(seriesId)
+      .then((data) => setRealAssistants(data.filter((a) => a.status === 'ACCEPTED')))
+      .catch(() => setRealAssistants([]))
+      .finally(() => setLoadingAssistants(false))
+  }, [seriesId])
+
+  // ─── Auto-select assistant đầu tiên khi dialog Assign mở ───
+  useEffect(() => {
+    if (assignOpen && realAssistants.length > 0) {
+      setSelectedAssistant(String(realAssistants[0].assistant.id))
+    }
+  }, [assignOpen, realAssistants])
 
   // ─── Load tasks cho tất cả regions của page ───
   // Khi regions thay đổi, load tasks cho những region chưa có trong tasksByRegion.
@@ -98,6 +122,13 @@ export function TaskPanel() {
     .flatMap((r) => tasksByRegion[r.id] || [])
     .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
 
+  // ─── Auto-hide regions khi task DONE ───
+  useEffect(() => {
+    allPageTasks.forEach((t) => {
+      if (t.status === 'DONE') hideRegion(t.regionId)
+    })
+  }, [allPageTasks])
+
   // Kiểm tra chọn trang
   if (!currentPageId) {
     return (
@@ -110,8 +141,7 @@ export function TaskPanel() {
   const assignedRegionIds = new Set(allPageTasks.map((t) => t.regionId))
   const unassignedRegions = regions.filter((r) => !assignedRegionIds.has(r.id))
 
-  const canSubmit = (status) => status === 'TODO' || status === 'IN_PROGRESS'
-  const assistants = mockUsers.filter((u) => u.role === 'ASSISTANT')
+  const canSubmit = (status) => status === 'TODO' || status === 'IN_PROGRESS' || status === 'REJECTED'
 
   // ─── Handlers ───
 
@@ -131,10 +161,9 @@ export function TaskPanel() {
   const handleAssign = async () => {
     if (!selectedRegion || !selectedAssistant) return
     const region = regions.find((r) => r.id === Number(selectedRegion))
-    const assistant = assistants.find((a) => a.id === Number(selectedAssistant))
+    const assistant = realAssistants.find((a) => a.assistant.id === Number(selectedAssistant))
     if (!region || !assistant) return
 
-    const currentPage = pages.find((p) => p.id === currentPageId)
     const defaultDeadline = new Date(Date.now() + 14 * 86400000).toISOString().slice(0, 10)
 
     try {
@@ -144,15 +173,15 @@ export function TaskPanel() {
         description: taskDescription.trim() || '',
         notes: taskNotes.trim() || '',
         priority: taskPriority,
-        dueDate: taskDeadline || defaultDeadline,
-        assistantId: assistant.id,
+        dueDate: (taskDeadline || defaultDeadline) + 'T00:00:00',
+        assistantId: assistant.assistant.id,
         pageImageUrl: currentPage?.webImageUrl || currentPage?.originalImageUrl || '',
         referenceImageUrl: '',
       })
 
       addToast({
         title: 'Task assigned',
-        description: `"${taskTitle}" → ${assistant.displayName}`,
+        description: `"${taskTitle}" → ${assistant.assistant.displayName}`,
         variant: 'success',
       })
       setAssignOpen(false)
@@ -175,6 +204,8 @@ export function TaskPanel() {
 
     try {
       await submitTask(submitTarget.taskId, formData)
+      await loadTasks(submitTarget.regionId)
+      selectRegion(null)
       addToast({
         title: 'Submitted',
         description: `${submitTarget.label} submitted for review`,
@@ -191,29 +222,46 @@ export function TaskPanel() {
    * Endpoint: PATCH /api/submissions/{id}/status
    */
   const handleReview = async (submissionId, status, note, addAsLayer) => {
+      if (status === 'APPROVED') {
+        selectRegion(null)
+        if (reviewTarget?.regionId) hideRegion(reviewTarget.regionId)
+        loadPage(currentPageId)
+      }
     try {
-      const updated = await reviewSubmission(submissionId, status, note)
+      const result = await reviewSubmission(submissionId, status, note)
+      if (!result) {
+        addToast({
+          title: 'Review failed',
+          variant: 'error',
+        })
+        return
+      }
+      // Update local task data ngay lập tức
+      const regionId = reviewTarget?.regionId
+      if (regionId) {
+        useTaskStore.setState((s) => {
+          const tasks = (s.tasksByRegion[regionId] || []).map((t) => {
+            if (t.id !== reviewTarget?.taskId) return t
+            return {
+              ...t,
+              status: status === 'APPROVED' ? 'DONE' : 'REJECTED',
+              submissions: t.submissions?.map((sub) =>
+                sub.id === submissionId ? { ...sub, status } : sub
+              ) || [],
+            }
+          })
+          return { tasksByRegion: { ...s.tasksByRegion, [regionId]: tasks } }
+        })
+      }
       addToast({
         title: status === 'APPROVED' ? 'Approved' : 'Revision requested',
         variant: status === 'APPROVED' ? 'success' : 'info',
       })
-
-      // Nếu APPROVED + "Add as layer": tạo layer từ ảnh kết quả
-      if (status === 'APPROVED' && addAsLayer && updated?.resultImageUrl) {
-        try {
-          // Fetch ảnh về → tạo FormData → gọi addLayer
-          const resp = await fetch(updated.resultImageUrl)
-          const blob = await resp.blob()
-          const file = new File([blob], `submission-${submissionId}.png`, { type: 'image/png' })
-          const fd = new FormData()
-          fd.append('file', file)
-          fd.append('label', reviewTarget?.label || `Submission ${submissionId}`)
-          fd.append('opacity', '1')
-          await addLayer(currentPageId, fd)
-          addToast({ title: 'Layer added from submission', variant: 'success' })
-        } catch {
-          addToast({ title: 'Failed to add layer from submission', variant: 'warning' })
-        }
+      if (status === 'APPROVED') {
+        loadPage(currentPageId)
+      }
+      if (regionId) {
+        loadTasks(regionId)
       }
     } catch {
       addToast({
@@ -295,9 +343,17 @@ export function TaskPanel() {
           {allPageTasks.map((t) => {
             const region = regions.find((r) => r.id === t.regionId)
             const taskStatus = t.status
+            const latestSubmission = t.submissions?.length
+              ? t.submissions.reduce((a, b) =>
+                  (a.version || 0) > (b.version || 0) ? a : b
+                )
+              : null
 
             return (
-              <div key={t.id} className="px-3 py-2 bg-surface-container-low border border-outline-variant/20 rounded-lg">
+              <div
+                key={t.id}
+                className="px-3 py-2 bg-surface-container-low border border-outline-variant/20 rounded-lg"
+              >
                 {/* Dòng 1: icon + title + badge */}
                 <div className="flex items-start gap-2">
                   <div className="flex-1 min-w-0 space-y-0.5">
@@ -310,7 +366,7 @@ export function TaskPanel() {
                     {/* Assistant name + priority */}
                     <div className="flex items-center gap-1.5 text-[10px] text-on-surface-variant">
                       <span className="truncate">
-                        {mockUsers.find((u) => u.id === t.assistantId)?.displayName || 'Unknown'}
+                        {t.assistant?.displayName || 'Unknown'}
                       </span>
                       {t.priority && (
                         <span
@@ -338,7 +394,7 @@ export function TaskPanel() {
                 )}
 
                 {/* Download Page (ASSISTANT only) */}
-                {t.pageImageUrl && user?.role === 'ASSISTANT' && t.assistantId === user.id && (
+                {t.pageImageUrl && user?.role === 'ASSISTANT' && t.assistant?.id === user.id && (
                   <button
                     onClick={(e) => {
                       e.stopPropagation()
@@ -353,8 +409,8 @@ export function TaskPanel() {
                   </button>
                 )}
 
-                {/* Submit button (ASSISTANT, task TODO/IN_PROGRESS) */}
-                {canSubmit(taskStatus) && (
+                {/* Submit button (chỉ ASSISTANT được gán task, chưa có submission chờ duyệt) */}
+                {user?.role === 'ASSISTANT' && t.assistant?.id === user.id && canSubmit(taskStatus) && !t.submissions?.some(s => s.status === 'SUBMITTED') && (
                   <button
                     onClick={() =>
                       setSubmitTarget({
@@ -369,33 +425,28 @@ export function TaskPanel() {
                   </button>
                 )}
 
-                {/* Review buttons (MANGAKA, task DONE) */}
-                {user?.role === 'MANGAKA' && taskStatus === 'DONE' && (
+                {/* Pending Review (đã submit, chờ MANGAKA duyệt) */}
+                {user?.role === 'ASSISTANT' && t.assistant?.id === user.id && t.submissions?.some(s => s.status === 'SUBMITTED') && (
+                  <span className="mt-1.5 flex items-center gap-1 text-[10px] text-status-warning">
+                    <Clock size={10} /> Pending Review
+                  </span>
+                )}
+
+                {/* Review buttons (MANGAKA, có submission chờ review) */}
+                {user?.role === 'MANGAKA' && t.submissions?.some(s => s.status === 'SUBMITTED') && (
                   <div className="mt-1.5 flex items-center gap-2">
                     <button
-                      onClick={() =>
-                        setCompareTarget({
-                          region: region?.label || `Region #${t.regionId}`,
-                          originalLabel: 'Original Page',
-                          submissionLabel: `${
-                            mockUsers.find((u) => u.id === t.assistantId)?.displayName || 'Unknown'
-                          }'s Submission`,
-                        })
-                      }
-                      className="flex items-center gap-0.5 text-[10px] font-medium text-primary hover:text-primary/80 transition-colors"
-                    >
-                      <Eye size={10} /> Compare
-                    </button>
-                    <button
-                      onClick={() =>
+                      onClick={() => {
                         setReviewTarget({
                           taskId: t.id,
-                          submissionId: t.submissions?.[0]?.id || null,
+                          regionId: t.regionId,
+                          submissionId: latestSubmission?.id || null,
                           label: region?.label || `Region #${t.regionId}`,
-                          resultImageUrl: t.submissions?.[0]?.resultImageUrl || '',
-                          submissionNote: t.submissions?.[0]?.note || '',
+                          resultImageUrl: latestSubmission?.resultImageUrl || '',
+                          submissionNote: latestSubmission?.note || '',
+                          originalUrl: currentPage?.webImageUrl || currentPage?.originalImageUrl || '',
                         })
-                      }
+                      }}
                       className="flex items-center gap-0.5 text-[10px] font-medium text-status-success hover:text-status-success/80 transition-colors"
                     >
                       <Check size={10} /> Review
@@ -409,125 +460,128 @@ export function TaskPanel() {
       )}
 
       {/* ─── Dialog Assign Task ─── */}
-      <Dialog
-        open={assignOpen}
-        onClose={() => { setAssignOpen(false); resetAssignForm() }}
-        title="Assign Task"
-        size="md"
-      >
-        <div className="space-y-3">
-          {/* Region */}
-          <div>
-            <label className="text-[10px] font-semibold uppercase tracking-wider text-on-surface-variant block mb-1">Region *</label>
-            <select
-              value={selectedRegion}
-              onChange={(e) => {
-                setSelectedRegion(e.target.value)
-                const region = regions.find((r) => r.id === Number(e.target.value))
-                if (region && !taskTitle) {
-                  setTaskTitle(`${region.regionType || 'Work'} — Page ?`)
-                }
-              }}
-              className="w-full h-8 px-2 text-xs bg-surface-container-low border border-outline-variant/30 outline-none focus:border-primary text-on-surface rounded"
-            >
-              <option value="">Select region...</option>
-              {unassignedRegions.map((r) => (
-                <option key={r.id} value={r.id}>
-                  {r.label || `Region #${r.id}`} ({r.regionType})
-                </option>
-              ))}
-            </select>
+      <Dialog open={assignOpen} onClose={() => { setAssignOpen(false); resetAssignForm() }} title="Assign Task" description="Assign a region to an assistant" size="sm">
+        <div className="space-y-4">
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-semibold uppercase tracking-wider text-on-surface-variant/60">Region <span className="text-error">*</span></label>
+            <div className="relative">
+              <select
+                value={selectedRegion}
+                onChange={(e) => setSelectedRegion(e.target.value)}
+                className="w-full h-9 px-3 pr-8 text-sm bg-surface-container-high border border-outline-variant/20 rounded-lg outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/30 text-on-surface appearance-none cursor-pointer transition-all"
+              >
+                <option value="">Select region...</option>
+                {unassignedRegions.map((r) => (
+                  <option key={r.id} value={r.id}>
+                    {r.label || `Region #${r.id}`} ({r.regionType})
+                  </option>
+                ))}
+              </select>
+              <ChevronDown size={14} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant/40" />
+            </div>
           </div>
 
-          {/* Title */}
-          <div>
-            <label className="text-[10px] font-semibold uppercase tracking-wider text-on-surface-variant block mb-1">Task Title *</label>
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-semibold uppercase tracking-wider text-on-surface-variant/60">Assistant <span className="text-error">*</span></label>
+            <div className="relative">
+              <select
+                value={selectedAssistant}
+                onChange={(e) => setSelectedAssistant(e.target.value)}
+                className="w-full h-9 px-3 pr-8 text-sm bg-surface-container-high border border-outline-variant/20 rounded-lg outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/30 text-on-surface appearance-none cursor-pointer transition-all"
+                disabled={loadingAssistants || realAssistants.length === 0}
+              >
+                {loadingAssistants ? (
+                  <option value="" className="bg-surface-container-high text-on-surface">Loading...</option>
+                ) : realAssistants.length === 0 ? (
+                  <option value="" className="bg-surface-container-high text-on-surface">No assistants available</option>
+                ) : (
+                  realAssistants.map((a) => (
+                    <option key={a.assistant.id} value={a.assistant.id} className="bg-surface-container-high text-on-surface">{a.assistant.displayName}</option>
+                  ))
+                )}
+              </select>
+              <ChevronDown size={14} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant/40" />
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-semibold uppercase tracking-wider text-on-surface-variant/60">Task Title <span className="text-error">*</span></label>
             <input
               value={taskTitle}
               onChange={(e) => setTaskTitle(e.target.value)}
               placeholder="e.g. Castle Background — Page 3"
-              className="w-full h-8 px-2 text-xs bg-surface-container-low border border-outline-variant/30 outline-none focus:border-primary text-on-surface rounded placeholder:text-on-surface-variant/40"
+              className="w-full h-9 px-3 text-sm bg-surface-container-high border border-outline-variant/20 rounded-lg outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/30 text-on-surface transition-all"
             />
           </div>
 
-          {/* Assistant */}
-          <div>
-            <label className="text-[10px] font-semibold uppercase tracking-wider text-on-surface-variant block mb-1">Assistant *</label>
-            <select
-              value={selectedAssistant}
-              onChange={(e) => setSelectedAssistant(e.target.value)}
-              className="w-full h-8 px-2 text-xs bg-surface-container-low border border-outline-variant/30 outline-none focus:border-primary text-on-surface rounded"
-            >
-              <option value="">Select assistant...</option>
-              {assistants.map((a) => (
-                <option key={a.id} value={a.id}>{a.displayName}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* Priority */}
-          <div>
-            <label className="text-[10px] font-semibold uppercase tracking-wider text-on-surface-variant block mb-1">Priority</label>
-            <div className="flex flex-wrap gap-1.5">
-              {priorityOptions.map((p) => (
-                <button
-                  key={p.value}
-                  onClick={() => setTaskPriority(p.value)}
-                  className={`text-[10px] px-2.5 py-1 border transition-colors rounded ${
-                    taskPriority === p.value
-                      ? 'border-primary text-primary font-semibold bg-primary/5'
-                      : 'border-outline-variant/30 text-on-surface-variant hover:text-on-surface'
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-semibold uppercase tracking-wider text-on-surface-variant/60">Priority</label>
+              <div className="relative">
+                <select
+                  value={taskPriority}
+                  onChange={(e) => setTaskPriority(e.target.value)}
+                  className={`w-full h-9 px-3 pr-8 text-sm border rounded-lg outline-none appearance-none cursor-pointer transition-all ${
+                    taskPriority === 'LOW' ? 'bg-status-success/15 text-status-success border-status-success/30' :
+                    taskPriority === 'MEDIUM' ? 'bg-status-warning/15 text-status-warning border-status-warning/30' :
+                    taskPriority === 'HIGH' ? 'bg-status-danger/15 text-status-danger border-status-danger/30' :
+                    'bg-error/20 text-error border-error/40'
                   }`}
                 >
-                  <span className="flex items-center gap-1">
-                    <Flag size={10} style={{ color: getPriorityColor(p.value) }} />
-                    {p.label}
-                  </span>
-                </button>
-              ))}
+                  {priorityOptions.map((p) => (
+                    <option key={p.value} value={p.value} className="bg-surface-container-high text-on-surface">{p.label}</option>
+                  ))}
+                </select>
+                <ChevronDown size={14} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant/40" />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-semibold uppercase tracking-wider text-on-surface-variant/60">Deadline</label>
+              <div className="relative">
+                <CalendarDays size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant/40" />
+                <input
+                  type="date"
+                  value={taskDeadline}
+                  onChange={(e) => setTaskDeadline(e.target.value)}
+                  className="w-full h-9 pl-9 pr-3 text-sm bg-surface-container-high border border-outline-variant/20 rounded-lg outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/30 text-on-surface transition-all"
+                />
+              </div>
             </div>
           </div>
 
-          {/* Deadline */}
-          <div>
-            <label className="text-[10px] font-semibold uppercase tracking-wider text-on-surface-variant block mb-1">Deadline</label>
-            <input
-              type="date"
-              value={taskDeadline}
-              onChange={(e) => setTaskDeadline(e.target.value)}
-              className="w-full h-8 px-2 text-xs bg-surface-container-low border border-outline-variant/30 outline-none focus:border-primary text-on-surface rounded"
-            />
-          </div>
-
-          {/* Description */}
-          <div>
-            <label className="text-[10px] font-semibold uppercase tracking-wider text-on-surface-variant block mb-1">Description</label>
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-semibold uppercase tracking-wider text-on-surface-variant/60">Description</label>
             <textarea
               value={taskDescription}
               onChange={(e) => setTaskDescription(e.target.value)}
               placeholder="What needs to be done?"
               rows={3}
-              className="w-full px-2 py-1.5 text-xs bg-surface-container-low border border-outline-variant/30 outline-none focus:border-primary text-on-surface rounded placeholder:text-on-surface-variant/40 resize-none"
+              className="w-full resize-none px-3 py-2 text-sm bg-surface-container-high border border-outline-variant/20 rounded-lg outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/30 text-on-surface transition-all"
             />
           </div>
 
-          {/* Notes */}
-          <div>
-            <label className="text-[10px] font-semibold uppercase tracking-wider text-on-surface-variant block mb-1">Notes / Instructions</label>
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-semibold uppercase tracking-wider text-on-surface-variant/60">Notes / Instructions</label>
             <textarea
               value={taskNotes}
               onChange={(e) => setTaskNotes(e.target.value)}
               placeholder="Reference sheets, color palettes, style notes..."
               rows={2}
-              className="w-full px-2 py-1.5 text-xs bg-surface-container-low border border-outline-variant/30 outline-none focus:border-primary text-on-surface rounded placeholder:text-on-surface-variant/40 resize-none"
+              className="w-full resize-none px-3 py-2 text-sm bg-surface-container-high border border-outline-variant/20 rounded-lg outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/30 text-on-surface transition-all"
             />
           </div>
 
-          <div className="flex justify-end gap-2 pt-2 border-t border-outline-variant">
-            <Button variant="ghost" size="sm" onClick={() => { setAssignOpen(false); resetAssignForm() }}>Cancel</Button>
-            <Button variant="primary" size="sm" onClick={handleAssign} disabled={!selectedRegion || !selectedAssistant || !taskTitle.trim()}>
-              <Plus size={14} /> Assign Task
-            </Button>
+          <div className="flex justify-end gap-2 pt-3 border-t border-outline-variant/20">
+            <button onClick={() => { setAssignOpen(false); resetAssignForm() }} className="h-9 px-4 rounded-lg text-sm font-medium text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-colors">
+              Cancel
+            </button>
+            <button
+              onClick={handleAssign}
+              disabled={(() => { const d = !selectedRegion || !selectedAssistant || !taskTitle.trim(); console.log("[TaskPanel] Assign button disabled:", d, "selectedRegion:", selectedRegion, "selectedAssistant:", selectedAssistant, "taskTitle:", JSON.stringify(taskTitle)); return d; })()}
+              className="h-9 px-5 rounded-lg bg-primary text-sm font-semibold text-on-primary hover:brightness-110 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+            >
+              Assign Task
+            </button>
           </div>
         </div>
       </Dialog>
@@ -544,28 +598,21 @@ export function TaskPanel() {
 
       {/* ─── ReviewDialog ─── */}
       {reviewTarget && (
-        <ReviewDialog
-          open={!!reviewTarget}
-          onClose={() => setReviewTarget(null)}
-          submission={reviewTarget.submissionId ? {
-            id: reviewTarget.submissionId,
-            resultImageUrl: reviewTarget.resultImageUrl,
-            note: reviewTarget.submissionNote,
-          } : null}
-          taskLabel={reviewTarget.label}
-          onReview={handleReview}
-          isReviewing={isSubmitting}
-        />
+          <ReviewDialog
+            open={!!reviewTarget}
+            onClose={() => setReviewTarget(null)}
+            submission={reviewTarget.submissionId ? {
+              id: reviewTarget.submissionId,
+              resultImageUrl: reviewTarget.resultImageUrl,
+              note: reviewTarget.submissionNote,
+            } : null}
+            originalUrl={reviewTarget.originalUrl}
+            taskLabel={reviewTarget.label}
+            onReview={handleReview}
+            isReviewing={isSubmitting}
+          />
       )}
 
-      {/* ─── ComparisonSlider ─── */}
-      <ComparisonSlider
-        open={!!compareTarget}
-        onClose={() => setCompareTarget(null)}
-        label={compareTarget?.region}
-        originalLabel={compareTarget?.originalLabel}
-        submissionLabel={compareTarget?.submissionLabel}
-      />
     </div>
   )
 }

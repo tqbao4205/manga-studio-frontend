@@ -1,49 +1,24 @@
-/**
- * ── RegionPanel.jsx — Quản lý Region (kết nối API thật) ──
- *
- * 🎯 Mục đích:
- *   - Hiển thị danh sách regions của page đang chọn
- *   - Click region → select + load tasks từ API
- *   - Inline edit label, change type, change status
- *
- * 📌 API calls:
- *   - updateRegion(id, patch)       → PUT /api/v1/regions/{id}
- *   - updateRegionStatus(id, status) → PATCH /api/v1/regions/{id}/status
- *   - loadTasks(regionId)           → GET /api/regions/{regionId}/tasks (taskStore)
- */
-
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef } from 'react'
 import { cn } from '../../utils'
 import { useWorkspaceStore } from '../../../app/stores/workspaceStore'
 import { useTaskStore } from '../../../app/stores/taskStore'
 import { useUIStore } from '../../../app/stores/uiStore'
 import {
   User, Image, Type, Zap, Palette, Square,
-  MoreVertical, Check, Clock, AlertCircle,
-  ChevronDown, ChevronUp,
+  MoreVertical,
 } from 'lucide-react'
 import { REGION_COLORS } from '../../constants'
 
-const statusIcons = {
-  APPROVED: Check,
-  COMPLETED: Check,
-  SUBMITTED: Check,
-  IN_PROGRESS: Clock,
-  PENDING: AlertCircle,
-}
-
-const statusLabels = {
-  PENDING: 'Pending',
-  IN_PROGRESS: 'In Progress',
-  COMPLETED: 'Completed',
-  APPROVED: 'Approved',
-  SUBMITTED: 'Submitted',
-}
-
-/** Các trạng thái có thể chuyển đổi (không cho phép chuyển ngược) */
-const STATUS_TRANSITIONS = ['PENDING', 'IN_PROGRESS', 'COMPLETED']
-
 const REGION_TYPES = ['BACKGROUND', 'CHARACTER', 'TEXT', 'EFFECT', 'TONE', 'OTHER']
+
+const typeLabels = {
+  BACKGROUND: 'Bg',
+  CHARACTER: 'Char',
+  TEXT: 'Text',
+  EFFECT: 'FX',
+  TONE: 'Tone',
+  OTHER: 'Other',
+}
 
 const typeIcons = {
   BACKGROUND: Image,
@@ -59,55 +34,56 @@ export function RegionPanel() {
   const selectedRegionId = useWorkspaceStore((s) => s.selectedRegionId)
   const selectRegion = useWorkspaceStore((s) => s.selectRegion)
   const updateRegion = useWorkspaceStore((s) => s.updateRegion)
-  const updateRegionStatus = useWorkspaceStore((s) => s.updateRegionStatus)
+  const hiddenRegionIds = useWorkspaceStore((s) => s.hiddenRegionIds)
+
+  const visibleRegions = regions.filter((r) => !hiddenRegionIds.includes(r.id))
   const loadTasks = useTaskStore((s) => s.loadTasks)
   const addToast = useUIStore((s) => s.addToast)
 
-  const [editLabel, setEditLabel] = useState('')
-  const [expandedStatus, setExpandedStatus] = useState(false)
+  const [openMenuRegionId, setOpenMenuRegionId] = useState(null)
+  const [labelValue, setLabelValue] = useState('')
+  const labelValueRef = useRef('')
 
-  const selectedRegion = regions.find(r => r.id === selectedRegionId)
-
-  /**
-   * Khi click region: select vào store + load tasks từ API.
-   * Endpoint: GET /api/regions/{regionId}/tasks
-   */
-  const handleSelectRegion = (regionId, label) => {
+  const handleSelectRegion = (regionId) => {
     const isSelected = selectedRegionId === regionId
     selectRegion(isSelected ? null : regionId)
     if (!isSelected) {
-      setEditLabel(label || '')
-      // Load tasks của region vừa chọn
       loadTasks(regionId)
     }
+    if (openMenuRegionId) setOpenMenuRegionId(null)
   }
 
-  /**
-   * Lưu label region → updateRegion (PUT /api/v1/regions/{id}).
-   */
-  const handleLabelSave = useCallback((region) => {
-    if (editLabel.trim() && editLabel !== region.label) {
-      updateRegion(region.id, { label: editLabel.trim() })
-      addToast({ title: 'Region label updated', variant: 'info' })
-    }
-  }, [editLabel, updateRegion, addToast])
+  const handleToggleMenu = (e, regionId) => {
+    e.stopPropagation()
+    setOpenMenuRegionId(prev => {
+      if (prev !== regionId) {
+        const region = regions.find(r => r.id === regionId)
+        const val = region?.label || ''
+        setLabelValue(val)
+        labelValueRef.current = val
+      }
+      return prev === regionId ? null : regionId
+    })
+  }
 
-  /**
-   * Đổi type region → updateRegion (PUT /api/v1/regions/{id}).
-   */
-  const handleTypeChange = useCallback((region, type) => {
-    updateRegion(region.id, { regionType: type })
-    addToast({ title: `Type changed to ${type}`, variant: 'info' })
+  const handleLabelSave = useCallback(async (region) => {
+    const trimmed = labelValueRef.current.trim()
+    try {
+      await updateRegion(region.id, { label: trimmed })
+      addToast({ title: 'Region label updated', variant: 'info' })
+    } catch {
+      addToast({ title: 'Failed to update label', variant: 'error' })
+    }
   }, [updateRegion, addToast])
 
-  /**
-   * Đổi status region → updateRegionStatus (PATCH /api/v1/regions/{id}/status).
-   */
-  const handleStatusChange = useCallback((region, newStatus) => {
-    updateRegionStatus(region.id, newStatus)
-    addToast({ title: `Status changed to ${statusLabels[newStatus] || newStatus}`, variant: 'info' })
-    setExpandedStatus(false)
-  }, [updateRegionStatus, addToast])
+  const handleTypeChange = useCallback(async (region, type) => {
+    try {
+      await updateRegion(region.id, { regionType: type })
+      addToast({ title: `Type changed to ${type}`, variant: 'info' })
+    } catch {
+      addToast({ title: 'Failed to change type', variant: 'error' })
+    }
+  }, [updateRegion, addToast])
 
   if (regions.length === 0) {
     return (
@@ -130,25 +106,15 @@ export function RegionPanel() {
         </h4>
 
         <div className="space-y-2">
-          {regions.map((r) => {
+          {visibleRegions.map((r) => {
             const TypeIcon = typeIcons[r.regionType] || Square
-            const StatusIcon = statusIcons[r.status] || AlertCircle
             const color = REGION_COLORS[r.regionType] || '#6b7280'
             const isSelected = selectedRegionId === r.id
 
-            const statusColorClass = {
-              APPROVED: 'text-status-success',
-              COMPLETED: 'text-status-success',
-              SUBMITTED: 'text-primary',
-              IN_PROGRESS: 'text-status-warning',
-              PENDING: 'text-on-surface-variant',
-            }[r.status] || 'text-on-surface-variant'
-
             return (
               <div key={r.id}>
-                {/* Card chính: click → select region + load tasks */}
                 <div
-                  onClick={() => handleSelectRegion(r.id, r.label)}
+                  onClick={() => handleSelectRegion(r.id)}
                   className={cn(
                     'group flex items-center justify-between p-3 rounded-xl cursor-pointer transition-all border',
                     isSelected
@@ -172,116 +138,58 @@ export function RegionPanel() {
                       </div>
                       <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-tighter">
                         <span style={{ color }}>{r.regionType}</span>
-                        <span className="text-on-surface-variant font-medium normal-case">·</span>
-                        <span className={cn('flex items-center gap-1 font-medium normal-case', statusColorClass)}>
-                          <StatusIcon size={11} />
-                          {statusLabels[r.status] || r.status}
-                        </span>
                       </div>
                     </div>
                   </div>
-                  <MoreVertical size={16} className="text-on-surface-variant opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <button
+                    onClick={(e) => handleToggleMenu(e, r.id)}
+                    className="p-1 rounded-lg hover:bg-surface-container-high transition-colors opacity-0 group-hover:opacity-100"
+                  >
+                    <MoreVertical size={16} className="text-on-surface-variant" />
+                  </button>
                 </div>
 
-                {/* Expanded section: label edit + type picker + status dropdown */}
-                {isSelected && (
-                  <div className="px-4 pb-3 pt-2 space-y-2 bg-surface-container-lowest border-x border-b border-outline-variant/30 rounded-b-xl -mt-1">
-                    {/* Label */}
+                {openMenuRegionId === r.id && (
+                  <div className="px-4 pb-4 pt-3 space-y-3 bg-surface-container-lowest border-x border-b border-outline-variant/30 rounded-b-xl -mt-0.5">
                     <div>
-                      <label className="text-[11px] font-semibold uppercase tracking-wider text-on-surface-variant block mb-1">
+                      <label className="text-[10px] font-semibold uppercase tracking-widest text-on-surface-variant/50 block mb-1.5">
                         Label
                       </label>
                       <input
-                        value={editLabel}
-                        onChange={(e) => setEditLabel(e.target.value)}
+                        value={labelValue}
+                        onChange={(e) => { setLabelValue(e.target.value); labelValueRef.current = e.target.value }}
                         onBlur={() => handleLabelSave(r)}
                         onKeyDown={(e) => { if (e.key === 'Enter') e.target.blur() }}
-                        className="w-full h-8 px-2.5 text-sm bg-surface-container-low border border-outline-variant/30 outline-none focus:border-primary text-on-surface rounded-lg placeholder:text-on-surface-variant/40"
+                        className="w-full h-9 px-3 text-sm bg-surface-container border border-outline-variant/20 outline-none focus:border-primary/60 text-on-surface rounded-lg placeholder:text-on-surface-variant/30 transition-colors"
+                        placeholder="Enter region label…"
                       />
                     </div>
 
-                    {/* Type */}
                     <div>
-                      <label className="text-[11px] font-semibold uppercase tracking-wider text-on-surface-variant block mb-1">
+                      <label className="text-[10px] font-semibold uppercase tracking-widest text-on-surface-variant/50 block mb-1.5">
                         Type
                       </label>
-                      <div className="flex flex-wrap gap-1.5">
+                      <div className="grid grid-cols-3 gap-1.5">
                         {REGION_TYPES.map((t) => {
                           const tc = REGION_COLORS[t]
                           const isActive = r.regionType === t
+                          const Icon = typeIcons[t]
                           return (
                             <button
                               key={t}
                               onClick={() => handleTypeChange(r, t)}
                               className={cn(
-                                'text-xs px-2.5 py-1 rounded-lg border transition-all',
+                                'flex items-center gap-1.5 text-[11px] px-2 py-1.5 rounded-lg border transition-all font-medium leading-none',
                                 isActive
-                                  ? 'border-primary text-on-surface font-semibold bg-primary/5'
-                                  : 'border-outline-variant/30 text-on-surface-variant hover:text-on-surface hover:border-outline-variant',
+                                  ? 'border-primary/50 text-on-surface bg-primary/5 shadow-sm'
+                                  : 'border-outline-variant/20 text-on-surface-variant/60 hover:text-on-surface hover:border-outline-variant/40 hover:bg-surface-container',
                               )}
                             >
-                              <span
-                                className="inline-block w-2 h-2 mr-1.5 align-middle rounded-sm"
-                                style={{ background: tc }}
-                              />
-                              {t}
+                              <Icon size={13} style={{ color: tc }} className="shrink-0" />
+                              <span className="truncate">{typeLabels[t]}</span>
                             </button>
                           )
                         })}
-                      </div>
-                    </div>
-
-                    {/* Status — dropdown với các trạng thái có thể chuyển */}
-                    <div>
-                      <label className="text-[11px] font-semibold uppercase tracking-wider text-on-surface-variant block mb-1">
-                        Status
-                      </label>
-                      <div className="relative">
-                        <button
-                          onClick={() => setExpandedStatus(!expandedStatus)}
-                          className="w-full h-8 px-2.5 text-sm bg-surface-container-low border border-outline-variant/30 outline-none focus:border-primary text-on-surface rounded-lg flex items-center justify-between"
-                        >
-                          <span className="flex items-center gap-1.5">
-                            <StatusIcon size={13} className={statusColorClass} />
-                            {statusLabels[r.status] || r.status}
-                          </span>
-                          {expandedStatus ? (
-                            <ChevronUp size={14} className="text-on-surface-variant" />
-                          ) : (
-                            <ChevronDown size={14} className="text-on-surface-variant" />
-                          )}
-                        </button>
-
-                        {expandedStatus && (
-                          <div className="absolute left-0 right-0 top-full mt-1 bg-surface-container border border-outline-variant/50 rounded-lg shadow-lg z-10 overflow-hidden">
-                            {STATUS_TRANSITIONS.map((s) => {
-                              const StIcon = statusIcons[s] || AlertCircle
-                              const stColor = {
-                                APPROVED: 'text-status-success',
-                                COMPLETED: 'text-status-success',
-                                IN_PROGRESS: 'text-status-warning',
-                                PENDING: 'text-on-surface-variant',
-                              }[s] || 'text-on-surface-variant'
-
-                              return (
-                                <button
-                                  key={s}
-                                  onClick={() => handleStatusChange(r, s)}
-                                  disabled={s === r.status}
-                                  className={cn(
-                                    'w-full flex items-center gap-2 px-3 py-2 text-xs text-left transition-colors',
-                                    s === r.status
-                                      ? 'bg-primary/5 text-primary font-semibold cursor-default'
-                                      : 'text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface',
-                                  )}
-                                >
-                                  <StIcon size={13} className={stColor} />
-                                  {statusLabels[s] || s}
-                                </button>
-                              )
-                            })}
-                          </div>
-                        )}
                       </div>
                     </div>
                   </div>

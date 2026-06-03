@@ -5,11 +5,12 @@ import { useUIStore } from '../../../app/stores/uiStore'
 import {
   Eye, EyeOff, Lock, Unlock, Trash2,
   Pencil, Plus, Upload, SunMoon,
+  Layers, Loader2,
 } from 'lucide-react'
 import { cn } from '../../utils'
 import { Button } from '../ui/button'
 
-export function LayerPanel() {
+export function LayerPanel({ flattenDisabled, flattening, onFlattenClick }) {
   const currentPageId = useWorkspaceStore((s) => s.currentPageId)
   const layers = useWorkspaceStore((s) => s.layers)
   const updateLayer = useWorkspaceStore((s) => s.updateLayer)
@@ -28,6 +29,7 @@ export function LayerPanel() {
   const [soloLayerId, setSoloLayerId] = useState(null)
 
   const sorted = [...layers].sort((a, b) => a.sortOrder - b.sortOrder)
+  const realLayers = sorted.filter(l => !l.virtual)
 
   const exitSpecialMode = useCallback(() => {
     if (soloLayerId || compareMode) {
@@ -62,7 +64,12 @@ export function LayerPanel() {
     setSoloLayerId(layerId)
   }, [layers, updateLayer])
 
-  const handleDragStart = useCallback((id) => {
+  const handleDragStart = useCallback((e, id) => {
+    const el = document.elementFromPoint(e.clientX, e.clientY)
+    if (!el || el.closest('input, button, select, textarea, a')) {
+      e.preventDefault()
+      return
+    }
     setDragId(id)
   }, [])
 
@@ -160,27 +167,10 @@ export function LayerPanel() {
     updateLayer(layer.id, { opacity: parseFloat(opacity) })
   }
 
-  if (layers.length === 0) {
-    return (
-      <div className="py-8 text-center space-y-4">
-        <div className="w-10 h-10 mx-auto rounded-xl bg-surface-variant/30 flex items-center justify-center">
-          <Upload size={16} className="text-on-surface-variant/40" />
-        </div>
-        <p className="text-xs text-on-surface-variant/60">No layers yet</p>
-        <button
-          onClick={handleAddLayer}
-          className="inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:text-primary/80 transition-colors"
-        >
-          <Plus size={14} /> Add Layer
-        </button>
-      </div>
-    )
-  }
-
   return (
-      <div className="space-y-0.5">
+      <div className="flex flex-col h-full">
         {/* Header toolbar */}
-        <div className="flex items-center justify-between px-3 py-2.5 border-b border-outline-variant/20">
+        <div className="flex items-center justify-between px-3 py-2.5 border-b border-outline-variant/20 flex-shrink-0">
         <Button variant="ghost" size="sm" onClick={handleAddLayer} className="gap-1.5">
           <Plus size={14} />
           Add Layer
@@ -199,21 +189,32 @@ export function LayerPanel() {
       </div>
 
       {/* Layer list */}
-      {sorted.map((layer) => {
-        const isVirtual = layer.virtual
-        return (
+      <div className="flex-1 min-h-0 overflow-y-auto">
+      {realLayers.length === 0 ? (
+        <div className="py-8 text-center space-y-4">
+          <div className="w-10 h-10 mx-auto rounded-xl bg-surface-variant/30 flex items-center justify-center">
+            <Upload size={16} className="text-on-surface-variant/40" />
+          </div>
+          <p className="text-xs text-on-surface-variant/60">No layers yet</p>
+          <button
+            onClick={handleAddLayer}
+            className="inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:text-primary/80 transition-colors"
+          >
+            <Plus size={14} /> Add Layer
+          </button>
+        </div>
+      ) : realLayers.map((layer) => (
         <div
           key={layer.id}
-          draggable={!isVirtual}
-          onDragStart={() => !isVirtual && handleDragStart(layer.id)}
-          onDragOver={(e) => !isVirtual && handleDragOver(e, layer.id)}
-          onDragLeave={!isVirtual && handleDragLeave}
-          onDrop={(e) => !isVirtual && handleDrop(e, layer.id)}
+          draggable
+          onDragStart={(e) => handleDragStart(e, layer.id)}
+          onDragOver={(e) => handleDragOver(e, layer.id)}
+          onDragLeave={handleDragLeave}
+          onDrop={(e) => handleDrop(e, layer.id)}
           className={cn(
             'px-3 py-2.5 text-xs transition-colors',
             dropTarget === layer.id ? 'bg-primary/5' : 'hover:bg-surface-container-low',
             dragId === layer.id ? 'opacity-40' : '',
-            isVirtual && 'opacity-60',
           )}
         >
           {/* Row 1: eye | thumbnail | name | lock | delete */}
@@ -262,11 +263,9 @@ export function LayerPanel() {
                   )}
                 >
                   {layer.label || `Layer ${layer.sortOrder}`}
-                  {isVirtual && <span className="ml-1.5 text-[9px] text-on-surface-variant/40 font-normal">Base</span>}
                 </p>
               )}
             </div>
-            {!isVirtual && (
             <button
               onPointerDown={(e) => e.stopPropagation()}
               onClick={() => toggleLocked(layer)}
@@ -277,8 +276,6 @@ export function LayerPanel() {
             >
               {layer.locked ? <Lock size={15} /> : <Unlock size={15} />}
             </button>
-            )}
-            {!isVirtual && (
             <button
               onPointerDown={(e) => e.stopPropagation()}
               onClick={() => handleDelete(layer)}
@@ -286,11 +283,9 @@ export function LayerPanel() {
             >
               <Trash2 size={15} />
             </button>
-            )}
           </div>
 
           {/* Row 2: opacity + rename */}
-          {!isVirtual && (
           <div className="flex items-center gap-3 mt-1.5">
             <span className="text-[10px] text-on-surface-variant/50 w-7 text-right tabular-nums font-medium flex-shrink-0">
               {Math.round(layer.opacity * 100)}%
@@ -316,10 +311,30 @@ export function LayerPanel() {
               <Pencil size={13} />
             </button>
           </div>
-          )}
         </div>
-        )
-      })}
+      ))}
+    </div>
+
+      {/* Flatten — ở cuối thanh layer */}
+      {onFlattenClick && (
+        <div className="px-3 py-2 border-t border-outline-variant/20 bg-surface-container flex-shrink-0">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onFlattenClick}
+            disabled={flattenDisabled}
+            title="Flatten: merge layers into page and delete all layers"
+            className="w-full justify-center gap-1.5"
+          >
+            {flattening ? (
+              <Loader2 size={14} className="animate-spin" />
+            ) : (
+              <Layers size={14} />
+            )}
+            Flatten
+          </Button>
+        </div>
+      )}
     </div>
   )
 }

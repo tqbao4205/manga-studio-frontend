@@ -59,18 +59,6 @@ const regionService = {
   },
 
   /**
-   * Thay đổi trạng thái region (PENDING → IN_PROGRESS → COMPLETED).
-   * Endpoint: PATCH /api/v1/regions/{id}/status
-   *
-   * @param {number} id - ID của region
-   * @param {string} status - Trạng thái mới (PENDING | IN_PROGRESS | COMPLETED | APPROVED)
-   * @returns {Promise<Object>} RegionResponse đã cập nhật status
-   */
-  updateStatus: async (id, status) => {
-    return api.patch(`/v1/regions/${id}/status`, { status });
-  },
-
-  /**
    * Xoá region (chỉ được xoá khi status = PENDING).
    * Endpoint: DELETE /api/v1/regions/{id}
    *

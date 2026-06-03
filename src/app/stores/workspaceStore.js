@@ -34,10 +34,12 @@ export const useWorkspaceStore = create((set, get) => ({
   //  STATE
   // ═══════════════════════════════════════════
 
+  seriesId: null,
   chapterId: null,
   currentPageId: null,
   pages: [],
   regions: [],
+  hiddenRegionIds: [],
   layers: [],
   comments: [],
   annotations: [],
@@ -68,14 +70,16 @@ export const useWorkspaceStore = create((set, get) => ({
    *
    * @param {number} chapterId - ID của chapter
    */
-  loadChapter: async (chapterId) => {
+  loadChapter: async (chapterId, targetPageId) => {
     set({ isLoading: true, chapterId });
     try {
       const pages = await pageService.getByChapter(chapterId);
       const firstPageId = pages?.[0]?.id || null;
+      const pageExists = targetPageId && pages?.some((p) => p.id === targetPageId);
+      const selectedPageId = pageExists ? targetPageId : firstPageId;
       set({
         pages: pages || [],
-        currentPageId: firstPageId,
+        currentPageId: selectedPageId,
         regions: [],
         layers: [],
         comments: [],
@@ -84,9 +88,9 @@ export const useWorkspaceStore = create((set, get) => ({
         selectedLayerId: null,
         isLoading: false,
       });
-      // Nếu có page đầu tiên, tự động load regions + layers
-      if (firstPageId) {
-        get().loadPage(firstPageId);
+      // Nếu có page, tự động load regions + layers
+      if (selectedPageId) {
+        get().loadPage(selectedPageId);
       }
     } catch (err) {
       console.error('[workspaceStore] loadChapter failed:', err);
@@ -134,6 +138,7 @@ export const useWorkspaceStore = create((set, get) => ({
       }
       set({
         regions: regions || [],
+        hiddenRegionIds: [],
         layers: finalLayers,
         selectedRegionId: null,
         selectedLayerId: null,
@@ -149,6 +154,7 @@ export const useWorkspaceStore = create((set, get) => ({
   //  UI STATE — PURE (không gọi API)
   // ═══════════════════════════════════════════
 
+  setSeriesId: (seriesId) => set({ seriesId }),
   setMode: (mode) => set({ mode }),
   setZoom: (zoom) => set({ zoom: Math.max(0.1, Math.min(10, zoom)) }),
 
@@ -156,6 +162,12 @@ export const useWorkspaceStore = create((set, get) => ({
     selectedRegionId: regionId,
     selectedLayerId: null,
   }),
+  hideRegion: (regionId) => set((s) => ({
+    hiddenRegionIds: s.hiddenRegionIds.includes(regionId)
+      ? s.hiddenRegionIds
+      : [...s.hiddenRegionIds, regionId],
+  })),
+  resetHiddenRegions: () => set({ hiddenRegionIds: [] }),
   selectLayer: (layerId) => set({
     selectedLayerId: layerId,
     selectedRegionId: null,
@@ -198,26 +210,10 @@ export const useWorkspaceStore = create((set, get) => ({
       set((s) => ({
         regions: s.regions.map((r) => (r.id === regionId ? updated : r)),
       }));
+      return updated;
     } catch (err) {
       console.error('[workspaceStore] updateRegion failed:', err);
-    }
-  },
-
-  /**
-   * Thay đổi trạng thái region.
-   * Endpoint: PATCH /api/v1/regions/{id}/status
-   *
-   * @param {number} regionId - ID của region
-   * @param {string} status - PENDING | IN_PROGRESS | COMPLETED | APPROVED
-   */
-  updateRegionStatus: async (regionId, status) => {
-    try {
-      const updated = await regionService.updateStatus(regionId, status);
-      set((s) => ({
-        regions: s.regions.map((r) => (r.id === regionId ? updated : r)),
-      }));
-    } catch (err) {
-      console.error('[workspaceStore] updateRegionStatus failed:', err);
+      throw err;
     }
   },
 

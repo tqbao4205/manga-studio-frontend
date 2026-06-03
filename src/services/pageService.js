@@ -73,7 +73,7 @@ const pageService = {
    * @returns {Promise<Object>} PageResponse (originalImageUrl đã update)
    */
   flatten: async (pageId) => {
-    return api.post(`/v1/pages/${pageId}/flatten`);
+    return api.post(`/v1/pages/${pageId}/flatten`, null, { timeout: 180000 });
   },
 
   /**

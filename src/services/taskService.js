@@ -170,6 +170,7 @@ const taskService = {
   submit: async (taskId, formData) => {
     return api.post(`/tasks/${taskId}/submissions`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 120000,
     });
   },
 
@@ -203,7 +204,7 @@ const taskService = {
    */
   addAttachment: async (taskId, formData) => {
     return api.post(`/tasks/${taskId}/attachments`, formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 120000,
     });
   },
 

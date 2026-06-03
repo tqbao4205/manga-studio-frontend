@@ -177,29 +177,29 @@ export const mockPages = {
 
 export const mockRegions = {
   100: [
-    { id: 500, pageId: 100, regionType: 'BACKGROUND', label: 'Castle background', x: 0, y: 0, width: 4200, height: 3000, color: '#4ECDC4', status: 'APPROVED', sortOrder: 1, createdAt: '2026-04-12' },
-    { id: 501, pageId: 100, regionType: 'CHARACTER', label: 'Protagonist', x: 500, y: 800, width: 800, height: 1200, color: '#FF6B6B', status: 'APPROVED', sortOrder: 2, createdAt: '2026-04-12' },
-    { id: 502, pageId: 100, regionType: 'TEXT', label: 'Speech bubble top', x: 100, y: 100, width: 600, height: 200, color: '#FFE66D', status: 'IN_PROGRESS', sortOrder: 3, createdAt: '2026-04-12' },
-    { id: 503, pageId: 100, regionType: 'EFFECT', label: 'Speed lines', x: 1800, y: 2500, width: 1200, height: 800, color: '#A78BFA', status: 'PENDING', sortOrder: 4, createdAt: '2026-04-12' },
+    { id: 500, pageId: 100, regionType: 'BACKGROUND', label: 'Castle background', x: 0, y: 0, width: 4200, height: 3000, color: '#4ECDC4', sortOrder: 1, createdAt: '2026-04-12' },
+    { id: 501, pageId: 100, regionType: 'CHARACTER', label: 'Protagonist', x: 500, y: 800, width: 800, height: 1200, color: '#FF6B6B', sortOrder: 2, createdAt: '2026-04-12' },
+    { id: 502, pageId: 100, regionType: 'TEXT', label: 'Speech bubble top', x: 100, y: 100, width: 600, height: 200, color: '#FFE66D', sortOrder: 3, createdAt: '2026-04-12' },
+    { id: 503, pageId: 100, regionType: 'EFFECT', label: 'Speed lines', x: 1800, y: 2500, width: 1200, height: 800, color: '#A78BFA', sortOrder: 4, createdAt: '2026-04-12' },
   ],
   101: [
-    { id: 510, pageId: 101, regionType: 'BACKGROUND', label: 'Forest background', x: 0, y: 0, width: 4200, height: 6000, color: '#4ECDC4', status: 'SUBMITTED', sortOrder: 1, createdAt: '2026-04-13' },
+    { id: 510, pageId: 101, regionType: 'BACKGROUND', label: 'Forest background', x: 0, y: 0, width: 4200, height: 6000, color: '#4ECDC4', sortOrder: 1, createdAt: '2026-04-13' },
   ],
   200: [
-    { id: 700, pageId: 200, regionType: 'BACKGROUND', label: 'Moonlit lake', x: 0, y: 0, width: 4200, height: 3000, color: '#4ECDC4', status: 'IN_PROGRESS', sortOrder: 1, createdAt: '2026-04-28' },
-    { id: 701, pageId: 200, regionType: 'CHARACTER', label: 'Protagonist running', x: 500, y: 1500, width: 800, height: 1200, color: '#FF6B6B', status: 'PENDING', sortOrder: 2, createdAt: '2026-04-28' },
+    { id: 700, pageId: 200, regionType: 'BACKGROUND', label: 'Moonlit lake', x: 0, y: 0, width: 4200, height: 3000, color: '#4ECDC4', sortOrder: 1, createdAt: '2026-04-28' },
+    { id: 701, pageId: 200, regionType: 'CHARACTER', label: 'Protagonist running', x: 500, y: 1500, width: 800, height: 1200, color: '#FF6B6B', sortOrder: 2, createdAt: '2026-04-28' },
   ],
   600: [
-    { id: 800, pageId: 600, regionType: 'BACKGROUND', label: 'Shadow throne room', x: 0, y: 0, width: 4200, height: 6000, color: '#7c4dff', status: 'IN_PROGRESS', sortOrder: 1, createdAt: '2026-05-12' },
-    { id: 801, pageId: 600, regionType: 'CHARACTER', label: 'Shadow Monarch', x: 500, y: 1000, width: 1000, height: 1500, color: '#FF6B6B', status: 'PENDING', sortOrder: 2, createdAt: '2026-05-12' },
+    { id: 800, pageId: 600, regionType: 'BACKGROUND', label: 'Shadow throne room', x: 0, y: 0, width: 4200, height: 6000, color: '#7c4dff', sortOrder: 1, createdAt: '2026-05-12' },
+    { id: 801, pageId: 600, regionType: 'CHARACTER', label: 'Shadow Monarch', x: 500, y: 1000, width: 1000, height: 1500, color: '#FF6B6B', sortOrder: 2, createdAt: '2026-05-12' },
   ],
   700: [
-    { id: 900, pageId: 700, regionType: 'BACKGROUND', label: 'Kitchen arena', x: 0, y: 0, width: 4200, height: 6000, color: '#f4a261', status: 'APPROVED', sortOrder: 1, createdAt: '2026-04-22' },
-    { id: 901, pageId: 700, regionType: 'CHARACTER', label: 'Chef protagonist', x: 600, y: 800, width: 700, height: 1400, color: '#FF6B6B', status: 'COMPLETED', sortOrder: 2, createdAt: '2026-04-22' },
+    { id: 900, pageId: 700, regionType: 'BACKGROUND', label: 'Kitchen arena', x: 0, y: 0, width: 4200, height: 6000, color: '#f4a261', sortOrder: 1, createdAt: '2026-04-22' },
+    { id: 901, pageId: 700, regionType: 'CHARACTER', label: 'Chef protagonist', x: 600, y: 800, width: 700, height: 1400, color: '#FF6B6B', sortOrder: 2, createdAt: '2026-04-22' },
   ],
   800: [
-    { id: 1000, pageId: 800, regionType: 'BACKGROUND', label: 'Judge table', x: 0, y: 0, width: 4200, height: 3000, color: '#f4a261', status: 'PENDING', sortOrder: 1, createdAt: '2026-05-12' },
-    { id: 1001, pageId: 800, regionType: 'CHARACTER', label: 'Head judge', x: 300, y: 1200, width: 600, height: 1000, color: '#FF6B6B', status: 'PENDING', sortOrder: 2, createdAt: '2026-05-12' },
+    { id: 1000, pageId: 800, regionType: 'BACKGROUND', label: 'Judge table', x: 0, y: 0, width: 4200, height: 3000, color: '#f4a261', sortOrder: 1, createdAt: '2026-05-12' },
+    { id: 1001, pageId: 800, regionType: 'CHARACTER', label: 'Head judge', x: 300, y: 1200, width: 600, height: 1000, color: '#FF6B6B', sortOrder: 2, createdAt: '2026-05-12' },
   ],
 }
 

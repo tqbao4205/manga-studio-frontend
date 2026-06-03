@@ -41,11 +41,6 @@ import {
   Pen,
   Highlighter,
   Type,
-  Upload,
-  Undo2,
-  Redo2,
-  Cloud,
-  Combine,
   Loader2,
   FileImage,
   Download,
@@ -146,10 +141,11 @@ const reviewTools = [
 ];
 
 export function WorkspacePage() {
-  const { chapterId } = useParams();
+  const { chapterId, pageId } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
   const id = Number(chapterId);
+  const targetPageId = pageId ? Number(pageId) : null;
   const isReviewMode = location.pathname.startsWith("/review/");
   const taskCreationFlow = Boolean(location.state?.taskCreationFlow);
   const taskFlowReturnTo = location.state?.returnTo || "/tasks";
@@ -178,6 +174,7 @@ export function WorkspacePage() {
   const clearMergeResult = useWorkspaceStore((s) => s.clearMergeResult);
   const flattenPage = useWorkspaceStore((s) => s.flattenPage);
   const reset = useWorkspaceStore((s) => s.reset);
+  const setSeriesId = useWorkspaceStore((s) => s.setSeriesId);
 
   // ─── Other stores ───
   const user = useAuthStore((s) => s.user);
@@ -186,7 +183,6 @@ export function WorkspacePage() {
   const updateChapterStatus = useSeriesStore((s) => s.updateChapterStatus);
   const chapters = useSeriesStore((s) => s.chapters);
 
-  // ─── Local state ───
   const [chapter, setChapter] = useState(null);
   const [chapterLoading, setChapterLoading] = useState(true);
   const [newPageOpen, setNewPageOpen] = useState(false);
@@ -208,19 +204,22 @@ export function WorkspacePage() {
     setChapterLoading(true);
     chapterService
       .getById(id)
-      .then((data) => setChapter(data))
+      .then((data) => {
+        setChapter(data);
+        if (data?.seriesId) setSeriesId(data.seriesId);
+      })
       .catch(() => setChapter(null))
       .finally(() => setChapterLoading(false));
-  }, [id]);
+  }, [id, setSeriesId]);
 
   /*
     Khi component mount, load chapter data vào workspaceStore.
     Cleanup bằng reset() khi unmount để tránh memory leak.
   */
   useEffect(() => {
-    if (id) loadChapter(id);
+    if (id) loadChapter(id, targetPageId);
     return () => reset();
-  }, [id]);
+  }, [id, targetPageId]);
 
   /*
     Nếu là review mode, tự động chuyển sang comment tool và comments tab
@@ -428,16 +427,14 @@ export function WorkspacePage() {
 
     try {
       await createTask(selectedRegion.id, {
-        regionType: selectedRegion.regionType || "OTHER",
+        regionType: formValues.regionType || selectedRegion.regionType || "OTHER",
         title: formValues.title,
         description: formValues.description,
         notes: formValues.notes,
         priority: formValues.priority,
         dueDate: formValues.dueDate,
         assistantId: formValues.assistantId,
-        pageImageUrl:
-          pages.find((p) => p.id === currentPageId)?.originalImageUrl || "",
-        referenceImageUrl: "",
+        referenceImageUrl: formValues.referenceImageUrl || "",
       });
 
       setCreateTaskOpen(false);
@@ -497,160 +494,36 @@ export function WorkspacePage() {
   return (
     <div className="h-screen bg-surface flex flex-col overflow-hidden select-none">
       {/* ── Top Toolbar ── */}
-      <header className="h-14 bg-surface/80 backdrop-blur-md border-b border-outline-variant/30 flex items-center justify-between px-6 z-50 flex-shrink-0 shadow-sm shadow-black/5">
-        {/* Left section */}
-        <div className="flex items-center gap-6">
-          <div className="flex items-center gap-1">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() =>
-                navigate(
-                  isReviewMode ? "/review" : `/series/${chapter.seriesId}`,
-                )
-              }
-              title="Back"
-            >
-              <ArrowLeft size={18} />
-            </Button>
-          </div>
+      <header className="h-14 bg-surface/80 backdrop-blur-md border-b border-outline-variant/30 grid grid-cols-3 items-center px-6 z-50 flex-shrink-0 shadow-sm shadow-black/5">
+        {/* Left — back button */}
+        <div className="flex items-center">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() =>
+              navigate(
+                isReviewMode ? "/review" : `/series/${chapter.seriesId}`,
+              )
+            }
+            title="Back"
+          >
+            <ArrowLeft size={18} />
+          </Button>
+        </div>
+
+        {/* Center — chapter title */}
+        <div className="flex items-center justify-center gap-2">
           <span className="text-sm font-medium text-on-surface">
             Ch.{chapter.chapterNumber}
             {chapter.title ? ` — ${chapter.title}` : ""}
           </span>
           <StatusBadge status={chapterStatus} size="sm" />
-          <div className="w-px h-6 bg-outline-variant" />
-
-          {/* Tool buttons */}
-          <nav className="flex items-center gap-1">
-            {currentTools.map((t) => {
-              const Icon = t.icon;
-              return (
-                <Button
-                  key={t.id}
-                  variant={mode === t.id ? "default" : "ghost"}
-                  size="icon"
-                  onClick={() => setMode(t.id)}
-                  disabled={currentPageId === null}
-                  className={cn(
-                    mode === t.id && "bg-primary/10 text-primary border border-primary/20",
-                  )}
-                  title={t.label}
-                >
-                  <Icon size={18} />
-                </Button>
-              );
-            })}
-          </nav>
-          <div className="w-px h-6 bg-outline-variant" />
-
-          {/* Save status + Undo/Redo */}
-          <div className="flex items-center gap-3 text-xs text-on-surface-variant">
-            <span className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-status-success/5 text-status-success">
-              <Cloud size={14} /> Saved
-            </span>
-            <div className="flex items-center gap-0.5">
-              <Button variant="ghost" size="icon" className="w-7 h-7">
-                <Undo2 size={14} />
-              </Button>
-              <Button variant="ghost" size="icon" className="w-7 h-7">
-                <Redo2 size={14} />
-              </Button>
-            </div>
-          </div>
         </div>
 
-        {/* Right section: Merge + Add Layer + Zoom + Upload + Avatar */}
-        <div className="flex items-center gap-4">
-          {/* Merge & Export button (MANGAKA only) */}
-          {!isReviewMode && isMangaka && currentPageId && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleMerge}
-              disabled={merging || layers.length < 2}
-              title="Merge all layers into final image"
-            >
-              {merging ? (
-                <Loader2 size={14} className="animate-spin" />
-              ) : (
-                <Combine size={14} />
-              )}
-              Merge & Export
-            </Button>
-          )}
-
-          {/* Flatten button (MANGAKA only) */}
-          {!isReviewMode && isMangaka && currentPageId && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowFlattenDialog(true)}
-              disabled={flattening || layers.length < 2}
-              title="Flatten: merge layers into page and delete all layers"
-            >
-              {flattening ? (
-                <Loader2 size={14} className="animate-spin" />
-              ) : (
-                <Layers size={14} />
-              )}
-              Flatten
-            </Button>
-          )}
-
-          {/* Zoom control */}
-          <div className="flex items-center bg-surface-container-low px-1 py-1 rounded-xl border border-outline-variant/50 shadow-sm">
-            <Button variant="ghost" size="icon" className="w-7 h-7" onClick={() => setZoom(Math.max(0.25, zoom - 0.25))}>
-              <Minus size={14} />
-            </Button>
-            <span className="mx-2 text-sm font-medium min-w-[36px] text-center tabular-nums text-on-surface">
-              {Math.round(zoom * 100)}%
-            </span>
-            <Button variant="ghost" size="icon" className="w-7 h-7" onClick={() => setZoom(Math.min(10, zoom + 0.25))}>
-              <Plus size={14} />
-            </Button>
-          </div>
-
-          {/* Add Layer button (MANGAKA only — quick upload) */}
-          {!isReviewMode && isMangaka && currentPageId && (
-            <>
-              <input
-                ref={layerFileInputRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={handleAddLayerFile}
-              />
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => layerFileInputRef.current?.click()}
-                title="Add a new layer"
-              >
-                <Plus size={14} />
-                Add Layer
-              </Button>
-            </>
-          )}
-
-          {/* Upload Page button */}
-          {!isReviewMode && isMangaka && (
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={() => setNewPageOpen(true)}
-              className="shadow-sm"
-            >
-              <Upload size={16} />
-              Upload Page
-            </Button>
-          )}
-
-          {/* User avatar */}
-          <div className="flex items-center gap-2 pl-2">
-            <div className="w-8 h-8 rounded-full bg-primary-container/20 flex items-center justify-center text-primary font-bold text-xs ring-2 ring-primary/20">
-              {user?.displayName?.charAt(0)?.toUpperCase() || "U"}
-            </div>
+        {/* Right — user avatar */}
+        <div className="flex items-center justify-end gap-4">
+          <div className="w-8 h-8 rounded-full bg-primary-container/20 flex items-center justify-center text-primary font-bold text-xs ring-2 ring-primary/20">
+            {user?.displayName?.charAt(0)?.toUpperCase() || "U"}
           </div>
 
           {/* Review mode actions */}
@@ -748,7 +621,7 @@ export function WorkspacePage() {
       {/* ── Main area ── */}
       <div className="flex-1 flex overflow-hidden">
         {/* Left panel toggle */}
-        {!showLeftPanel && !isReviewMode && isMangaka && (
+        {!showLeftPanel && !isReviewMode && (
           <button
             onClick={() => setShowLeftPanel(true)}
             className="flex-shrink-0 w-6 bg-surface border-r border-outline-variant/30 flex items-center justify-center text-on-surface-variant hover:text-primary hover:bg-surface-container-low transition-colors"
@@ -758,7 +631,7 @@ export function WorkspacePage() {
           </button>
         )}
 
-        {showLeftPanel && !isReviewMode && isMangaka && (
+        {showLeftPanel && !isReviewMode && (
           <aside className="w-72 flex-shrink-0 bg-surface border-r border-outline-variant/50 flex flex-col overflow-hidden">
             {/* Pages/Layers tabs */}
             <div className="flex border-b border-outline-variant/50 flex-shrink-0 px-1 pt-1">
@@ -773,17 +646,19 @@ export function WorkspacePage() {
               >
                 Pages
               </button>
-              <button
-                onClick={() => setLeftPanelTab("layers")}
-                className={cn(
-                  "flex-1 py-2.5 text-sm font-medium transition-all rounded-t-lg",
-                  leftPanelTab === "layers"
-                    ? "text-primary bg-surface-container-low border-b-2 border-primary"
-                    : "text-on-surface-variant hover:text-on-surface hover:bg-surface-container-low/50",
-                )}
-              >
-                Layers
-              </button>
+              {isMangaka && (
+                <button
+                  onClick={() => setLeftPanelTab("layers")}
+                  className={cn(
+                    "flex-1 py-2.5 text-sm font-medium transition-all rounded-t-lg",
+                    leftPanelTab === "layers"
+                      ? "text-primary bg-surface-container-low border-b-2 border-primary"
+                      : "text-on-surface-variant hover:text-on-surface hover:bg-surface-container-low/50",
+                  )}
+                >
+                  Layers
+                </button>
+              )}
             </div>
 
             {/* Pages tab */}
@@ -856,9 +731,13 @@ export function WorkspacePage() {
             )}
 
             {/* Layers tab */}
-            {leftPanelTab === "layers" && (
+            {leftPanelTab === "layers" && isMangaka && (
               <div className="flex-1 overflow-y-auto">
-                <LayerPanel />
+                <LayerPanel
+                  flattening={flattening}
+                  flattenDisabled={flattening || layers.length < 2}
+                  onFlattenClick={() => setShowFlattenDialog(true)}
+                />
               </div>
             )}
 
@@ -891,18 +770,46 @@ export function WorkspacePage() {
             </div>
           )}
 
-          {/* Floating Zoom Control */}
-          <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-0.5 p-1 bg-surface-container-highest/90 backdrop-blur-md rounded-xl border border-outline-variant/50 shadow-2xl">
-            <Button variant="ghost" size="icon" className="w-8 h-8" onClick={() => setZoom(Math.max(0.25, zoom - 0.25))}>
-              <ZoomOut size={15} />
-            </Button>
-            <div className="w-px h-4 bg-outline-variant/30 mx-0.5" />
-            <Button variant="ghost" size="sm" className="px-3 font-bold" onClick={() => setZoom(1)}>
+          {/* Floating Toolbar — tools + zoom */}
+          <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-0.5 p-1.5 bg-surface-container-highest/90 backdrop-blur-md rounded-xl border border-outline-variant/50 shadow-2xl">
+            {/* Tool buttons */}
+            <nav className="flex items-center gap-0.5">
+              {currentTools.map((t) => {
+                const Icon = t.icon;
+                return (
+                  <Button
+                    key={t.id}
+                    variant={mode === t.id ? "default" : "ghost"}
+                    size="icon"
+                    onClick={() => setMode(t.id)}
+                    disabled={currentPageId === null}
+                    className={cn(
+                      'w-8 h-8',
+                      mode === t.id && "bg-primary/10 text-primary border border-primary/20",
+                    )}
+                    title={t.label}
+                  >
+                    <Icon size={16} />
+                  </Button>
+                );
+              })}
+            </nav>
+            <div className="w-px h-5 bg-outline-variant/30 mx-1" />
+            {/* Zoom control */}
+            <div className="flex items-center">
+              <Button variant="ghost" size="icon" className="w-8 h-8" onClick={() => setZoom(Math.max(0.25, zoom - 0.25))}>
+                <ZoomOut size={15} />
+              </Button>
+              <span className="mx-1 text-xs font-medium min-w-[32px] text-center tabular-nums text-on-surface tabular-nums">
+                {Math.round(zoom * 100)}%
+              </span>
+              <Button variant="ghost" size="icon" className="w-8 h-8" onClick={() => setZoom(Math.min(10, zoom + 0.25))}>
+                <ZoomIn size={15} />
+              </Button>
+            </div>
+            <div className="w-px h-5 bg-outline-variant/30 mx-1" />
+            <Button variant="ghost" size="sm" className="px-3 text-xs font-bold" onClick={() => setZoom(1)}>
               Fit To Screen
-            </Button>
-            <div className="w-px h-4 bg-outline-variant/30 mx-0.5" />
-            <Button variant="ghost" size="icon" className="w-8 h-8" onClick={() => setZoom(Math.min(4, zoom + 0.25))}>
-              <ZoomIn size={15} />
             </Button>
           </div>
         </div>
@@ -986,6 +893,7 @@ export function WorkspacePage() {
         open={createTaskOpen}
         region={selectedRegion}
         page={currentPage}
+        seriesId={chapter?.seriesId}
         onClose={() => setCreateTaskOpen(false)}
         onSubmit={handleSubmitAssignedTask}
       />
@@ -1050,7 +958,7 @@ export function WorkspacePage() {
         title="Flatten Layers"
         description="Gộp tất cả layers vào ảnh nền và xoá toàn bộ layers. Hành động này không thể hoàn tác."
       >
-        <div className="flex items-center justify-end gap-2 pt-4 border-t border-outline-variant">
+        <div className="flex items-center justify-end gap-2 pt-4">
           <Button
             variant="ghost"
             size="sm"

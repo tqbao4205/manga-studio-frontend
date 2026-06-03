@@ -1,244 +1,258 @@
-import { useMemo, useState } from "react";
-import { X, CalendarDays } from "lucide-react";
-import { mockUsers } from "../../constants/mock-data";
+import { useState, useEffect } from "react";
+import { X, CalendarDays, ChevronDown } from "lucide-react";
+import { useWorkspaceStore } from "../../../app/stores/workspaceStore";
+import assistantService from "../../../services/assistantService";
 
 const PRIORITIES = ["LOW", "MEDIUM", "HIGH", "URGENT"];
-const DIFFICULTIES = ["Easy", "Medium", "Hard"];
+const REGION_TYPES = ["BACKGROUND", "CHARACTER", "TEXT", "EFFECT", "TONE", "OTHER"];
 
-export function CreateTaskModal({ open, region, page, onClose, onSubmit }) {
-  const assistants = useMemo(
-    () => mockUsers.filter((user) => user.role === "ASSISTANT"),
-    [],
-  );
+const PRIORITY_COLORS = {
+  LOW: "bg-status-success/15 text-status-success border-status-success/30",
+  MEDIUM: "bg-status-warning/15 text-status-warning border-status-warning/30",
+  HIGH: "bg-status-danger/15 text-status-danger border-status-danger/30",
+  URGENT: "bg-error/20 text-error border-error/40",
+};
 
-  const [title, setTitle] = useState(
-    region
-      ? `${region.regionType || "Task"} - ${region.label || "Region"}`
-      : "",
-  );
-  const [assistantId, setAssistantId] = useState(assistants[0]?.id || "");
+export function CreateTaskModal({ open, region, page, seriesId: propSeriesId, onClose, onSubmit }) {
+  const storeSeriesId = useWorkspaceStore((s) => s.seriesId);
+  const seriesId = propSeriesId || storeSeriesId;
+
+  const [assistants, setAssistants] = useState([]);
+  const [loadingAssistants, setLoadingAssistants] = useState(false);
+
+  const [title, setTitle] = useState("");
+  const [assistantId, setAssistantId] = useState(null);
   const [priority, setPriority] = useState("MEDIUM");
-  const [difficulty, setDifficulty] = useState("Medium");
+  const [regionType, setRegionType] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [description, setDescription] = useState("");
   const [notes, setNotes] = useState("");
+  const [referenceImageUrl, setReferenceImageUrl] = useState("");
+
+  useEffect(() => {
+    if (!region) return;
+    setTitle(`${region.regionType || "Task"} - ${region.label || "Region"}`);
+  }, [region]);
+
+  useEffect(() => {
+    if (!open || !seriesId) return;
+    setLoadingAssistants(true);
+    setAssistantId(null);
+    console.log("[CreateTaskModal] fetching assistants for seriesId:", seriesId);
+    assistantService
+      .getBySeries(seriesId)
+      .then((data) => {
+        console.log("[CreateTaskModal] API response:", data);
+        const accepted = data.filter((a) => a.status === "ACCEPTED");
+        console.log("[CreateTaskModal] accepted:", accepted);
+        setAssistants(accepted);
+        if (accepted.length > 0) {
+          console.log("[CreateTaskModal] auto-selecting assistant id:", accepted[0].assistant.id);
+          setAssistantId(accepted[0].assistant.id);
+        } else {
+          console.log("[CreateTaskModal] no accepted assistants, keeping null");
+        }
+      })
+      .catch((err) => {
+        console.error("[CreateTaskModal] fetch error:", err);
+        setAssistants([]);
+      })
+      .finally(() => setLoadingAssistants(false));
+  }, [open, seriesId]);
 
   if (!open || !region) return null;
 
   const handleSubmit = () => {
+    console.log("[CreateTaskModal] submit check — title:", title, "assistantId:", assistantId);
     if (!title.trim() || !assistantId) return;
 
-    onSubmit({
+    const payload = {
       title: title.trim(),
-      assistantId: Number(assistantId),
+      assistantId,
       priority,
-      difficulty,
-      dueDate,
-      description: description.trim(),
-      notes: notes.trim(),
-    });
+      ...(regionType && { regionType }),
+      description: description.trim() || undefined,
+      notes: notes.trim() || undefined,
+      referenceImageUrl: referenceImageUrl.trim() || undefined,
+    };
+
+    if (dueDate) {
+      payload.dueDate = `${dueDate}T00:00:00`;
+    }
+
+    onSubmit(payload);
   };
 
+  const pageImg = page?.originalImageUrl || page?.webImageUrl;
+
   return (
-    <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/60 p-6 backdrop-blur-sm">
-      <div className="flex h-[88vh] w-full max-w-6xl overflow-hidden rounded-2xl border border-outline-variant/40 bg-surface shadow-2xl">
-        <section className="w-full border-r border-outline-variant/30 bg-surface-container-low p-6 lg:w-2/5">
-          <h3 className="text-sm font-semibold uppercase tracking-[0.1em] text-primary">
-            Selected Region
-          </h3>
-
-          <div className="mt-4 overflow-hidden rounded-xl border border-outline-variant/30 bg-surface-container-high">
-            {page?.originalImageUrl || page?.webImageUrl ? (
-              <img
-                src={page.originalImageUrl || page.webImageUrl}
-                alt="Selected page"
-                className="h-72 w-full object-cover"
-              />
-            ) : (
-              <div className="flex h-72 items-center justify-center text-sm text-on-surface-variant">
-                No preview image
+    <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+      <div className="w-full max-w-5xl max-h-[90vh] rounded-xl border border-outline-variant/30 bg-surface shadow-2xl overflow-hidden flex flex-col">
+        <div className="flex-1 flex overflow-hidden">
+          <div className="w-[38%] border-r border-outline-variant/20 bg-surface-container-low/50 p-5 flex flex-col gap-5 overflow-y-auto">
+            <div className="relative bg-surface-container-high rounded-lg overflow-hidden border border-outline-variant/20 group flex-1 min-h-[260px]">
+              {pageImg ? (
+                <img src={pageImg} alt="" className="w-full h-full object-cover" />
+              ) : (
+                <div className="flex items-center justify-center h-full text-on-surface-variant/40 text-sm">No preview</div>
+              )}
+              <div className="absolute top-2 left-2 bg-primary/90 text-on-primary text-[10px] font-bold px-2 py-0.5 rounded">
+                {region.regionType || "REGION"}
               </div>
-            )}
+            </div>
+
+            <div className="bg-surface-container rounded-lg p-4 border border-outline-variant/20">
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-primary mb-3">Region Information</h3>
+              <div className="grid grid-cols-2 gap-3">
+                {[
+                  ["Type", region.regionType || "—"],
+                  ["Label", region.label || `#${region.id}`],
+                  ["Size", `${Math.round(region.width)} x ${Math.round(region.height)} px`],
+                  ["Coords", `x:${Math.round(region.x)} y:${Math.round(region.y)}`],
+                ].map(([label, value]) => (
+                  <div key={label}>
+                    <p className="text-[10px] uppercase tracking-wide text-on-surface-variant/50">{label}</p>
+                    <p className="text-sm font-medium text-on-surface">{value}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
 
-          <div className="mt-4 grid grid-cols-2 gap-3 rounded-xl border border-outline-variant/25 bg-surface-container p-4 text-sm">
-            <div>
-              <p className="text-xs uppercase tracking-wider text-on-surface-variant">
-                Label
-              </p>
-              <p className="font-medium text-on-surface">
-                {region.label || `Region #${region.id}`}
-              </p>
+          <div className="flex-1 p-6 flex flex-col gap-6 overflow-y-auto">
+            <div className="flex items-start justify-between">
+              <div>
+                <h2 className="text-lg font-semibold text-on-surface">Create New Task</h2>
+                <p className="text-sm text-on-surface-variant/60 mt-0.5">Assign work for the selected region</p>
+              </div>
+              <button onClick={onClose} className="w-7 h-7 flex items-center justify-center rounded-lg text-on-surface-variant/50 hover:text-on-surface hover:bg-surface-container transition-colors">
+                <X size={16} />
+              </button>
             </div>
-            <div>
-              <p className="text-xs uppercase tracking-wider text-on-surface-variant">
-                Type
-              </p>
-              <p className="font-medium text-on-surface">
-                {region.regionType || "OTHER"}
-              </p>
-            </div>
-            <div>
-              <p className="text-xs uppercase tracking-wider text-on-surface-variant">
-                Coordinates
-              </p>
-              <p className="font-medium text-on-surface">
-                x: {Math.round(region.x)}, y: {Math.round(region.y)}
-              </p>
-            </div>
-            <div>
-              <p className="text-xs uppercase tracking-wider text-on-surface-variant">
-                Size
-              </p>
-              <p className="font-medium text-on-surface">
-                {Math.round(region.width)} x {Math.round(region.height)}
-              </p>
-            </div>
-          </div>
-        </section>
 
-        <section className="flex flex-1 flex-col bg-surface-container p-6">
-          <div className="mb-6 flex items-start justify-between">
-            <div>
-              <h2 className="text-2xl font-bold text-on-surface">
-                Create New Task
-              </h2>
-              <p className="text-sm text-on-surface-variant">
-                Assign work for the selected region.
-              </p>
-            </div>
-            <button
-              onClick={onClose}
-              className="rounded-lg p-2 text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface"
-              aria-label="Close"
-            >
-              <X size={18} />
-            </button>
-          </div>
-
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <label className="space-y-1">
-              <span className="text-xs font-semibold uppercase tracking-wider text-on-surface-variant">
-                Task Title
-              </span>
-              <input
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                className="w-full rounded-lg border border-outline-variant/35 bg-surface-container-high px-3 py-2.5 text-sm outline-none focus:border-primary"
-              />
-            </label>
-
-            <label className="space-y-1">
-              <span className="text-xs font-semibold uppercase tracking-wider text-on-surface-variant">
-                Assignee
-              </span>
-              <select
-                value={assistantId}
-                onChange={(e) => setAssistantId(e.target.value)}
-                className="w-full rounded-lg border border-outline-variant/35 bg-surface-container-high px-3 py-2.5 text-sm outline-none focus:border-primary"
-              >
-                {assistants.map((assistant) => (
-                  <option key={assistant.id} value={assistant.id}>
-                    {assistant.displayName}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label className="space-y-1">
-              <span className="text-xs font-semibold uppercase tracking-wider text-on-surface-variant">
-                Priority
-              </span>
-              <select
-                value={priority}
-                onChange={(e) => setPriority(e.target.value)}
-                className="w-full rounded-lg border border-outline-variant/35 bg-surface-container-high px-3 py-2.5 text-sm outline-none focus:border-primary"
-              >
-                {PRIORITIES.map((item) => (
-                  <option key={item} value={item}>
-                    {item}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label className="space-y-1">
-              <span className="text-xs font-semibold uppercase tracking-wider text-on-surface-variant">
-                Difficulty
-              </span>
-              <select
-                value={difficulty}
-                onChange={(e) => setDifficulty(e.target.value)}
-                className="w-full rounded-lg border border-outline-variant/35 bg-surface-container-high px-3 py-2.5 text-sm outline-none focus:border-primary"
-              >
-                {DIFFICULTIES.map((item) => (
-                  <option key={item} value={item}>
-                    {item}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label className="space-y-1 md:col-span-2">
-              <span className="text-xs font-semibold uppercase tracking-wider text-on-surface-variant">
-                Due Date
-              </span>
-              <div className="relative">
-                <CalendarDays
-                  size={15}
-                  className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant"
-                />
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-semibold uppercase tracking-wider text-on-surface-variant/60">Task Title <span className="text-error">*</span></label>
                 <input
-                  type="date"
-                  value={dueDate}
-                  onChange={(e) => setDueDate(e.target.value)}
-                  className="w-full rounded-lg border border-outline-variant/35 bg-surface-container-high py-2.5 pl-10 pr-3 text-sm outline-none focus:border-primary"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  className="w-full h-10 px-3.5 text-sm bg-surface-container-high border border-outline-variant/20 rounded-lg outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/30 text-on-surface transition-all"
                 />
               </div>
-            </label>
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-semibold uppercase tracking-wider text-on-surface-variant/60">Assign Assistant <span className="text-error">*</span></label>
+                <div className="relative">
+                  <select
+                    value={assistantId ?? ""}
+                    onChange={(e) => setAssistantId(Number(e.target.value) || null)}
+                    className="w-full h-10 px-3.5 text-sm bg-surface-container-high border border-outline-variant/20 rounded-lg outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/30 text-on-surface appearance-none cursor-pointer transition-all"
+                    disabled={loadingAssistants || assistants.length === 0}
+                  >
+                    {loadingAssistants ? (
+                      <option value="" className="bg-surface-container-high text-on-surface">Loading...</option>
+                    ) : assistants.length === 0 ? (
+                      <option value="" className="bg-surface-container-high text-on-surface">No assistants available</option>
+                    ) : (
+                      assistants.map((a) => (
+                        <option key={a.assistant.id} value={a.assistant.id} className="bg-surface-container-high text-on-surface">
+                          {a.assistant.displayName}
+                        </option>
+                      ))
+                    )}
+                  </select>
+                  <ChevronDown size={14} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant/40" />
+                </div>
+              </div>
+            </div>
 
-            <label className="space-y-1 md:col-span-2">
-              <span className="text-xs font-semibold uppercase tracking-wider text-on-surface-variant">
-                Task Description
-              </span>
+            <div className="grid grid-cols-3 gap-4">
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-semibold uppercase tracking-wider text-on-surface-variant/60">Priority</label>
+                <select
+                  value={priority}
+                  onChange={(e) => setPriority(e.target.value)}
+                  className={`w-full h-10 px-3.5 text-sm border rounded-lg outline-none appearance-none cursor-pointer transition-all ${PRIORITY_COLORS[priority] || "bg-surface-container-high border-outline-variant/20 text-on-surface"}`}
+                >
+                  {PRIORITIES.map((p) => (
+                    <option key={p} value={p} className="bg-surface-container-high text-on-surface">{p}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-semibold uppercase tracking-wider text-on-surface-variant/60">Region Type</label>
+                <div className="relative">
+                  <select
+                    value={regionType}
+                    onChange={(e) => setRegionType(e.target.value)}
+                    className="w-full h-10 px-3.5 text-sm bg-surface-container-high border border-outline-variant/20 rounded-lg outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/30 text-on-surface appearance-none cursor-pointer transition-all"
+                  >
+                    <option value="">— Default —</option>
+                    {REGION_TYPES.map((t) => (
+                      <option key={t} value={t}>{t}</option>
+                    ))}
+                  </select>
+                  <ChevronDown size={14} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant/40" />
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-semibold uppercase tracking-wider text-on-surface-variant/60">Due Date</label>
+                <div className="relative">
+                  <CalendarDays size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant/40" />
+                  <input
+                    type="date"
+                    value={dueDate}
+                    onChange={(e) => setDueDate(e.target.value)}
+                    className="w-full h-10 pl-9 pr-3.5 text-sm bg-surface-container-high border border-outline-variant/20 rounded-lg outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/30 text-on-surface transition-all"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-semibold uppercase tracking-wider text-on-surface-variant/60">Description</label>
               <textarea
-                rows={4}
+                rows={3}
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                className="w-full resize-none rounded-lg border border-outline-variant/35 bg-surface-container-high px-3 py-2.5 text-sm outline-none focus:border-primary"
-                placeholder="Enter detailed task instructions..."
+                className="w-full resize-none px-3.5 py-2.5 text-sm bg-surface-container-high border border-outline-variant/20 rounded-lg outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/30 text-on-surface transition-all"
+                placeholder="Detailed task instructions..."
               />
-            </label>
+            </div>
 
-            <label className="space-y-1 md:col-span-2">
-              <span className="text-xs font-semibold uppercase tracking-wider text-on-surface-variant">
-                Production Notes
-              </span>
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-semibold uppercase tracking-wider text-on-surface-variant/60">Notes</label>
               <input
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                className="w-full rounded-lg border border-outline-variant/35 bg-surface-container-high px-3 py-2.5 text-sm outline-none focus:border-primary"
+                className="w-full h-10 px-3.5 text-sm bg-surface-container-high border border-outline-variant/20 rounded-lg outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/30 text-on-surface transition-all"
                 placeholder="Internal notes / references"
               />
-            </label>
-          </div>
+            </div>
 
-          <div className="mt-auto flex items-center justify-end gap-3 pt-6">
-            <button
-              onClick={onClose}
-              className="rounded-lg border border-outline-variant/40 px-4 py-2 text-sm text-on-surface-variant hover:text-on-surface"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleSubmit}
-              disabled={!title.trim() || !assistantId}
-              className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-on-primary hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              Create & Assign Task
-            </button>
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-semibold uppercase tracking-wider text-on-surface-variant/60">Reference Image URL</label>
+              <input
+                value={referenceImageUrl}
+                onChange={(e) => setReferenceImageUrl(e.target.value)}
+                className="w-full h-10 px-3.5 text-sm bg-surface-container-high border border-outline-variant/20 rounded-lg outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/30 text-on-surface transition-all"
+                placeholder="https://example.com/reference.png"
+              />
+            </div>
           </div>
-        </section>
+        </div>
+
+        <div className="px-6 py-4 border-t border-outline-variant/20 bg-surface-container-low flex items-center justify-between">
+          <button onClick={onClose} className="h-10 px-5 rounded-lg text-sm font-medium text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-colors">
+            Cancel
+          </button>
+          <button
+            onClick={handleSubmit}
+            disabled={(() => { const d = !title.trim() || !assistantId; console.log("[CreateTaskModal] button disabled:", d, "title:", JSON.stringify(title), "assistantId:", assistantId, "seriesId:", seriesId); return d; })()}
+            className="h-10 px-6 rounded-lg bg-primary text-sm font-semibold text-on-primary hover:brightness-110 disabled:opacity-40 disabled:cursor-not-allowed transition-all active:scale-[0.98]"
+          >
+            Create & Assign Task
+          </button>
+        </div>
       </div>
     </div>
   );

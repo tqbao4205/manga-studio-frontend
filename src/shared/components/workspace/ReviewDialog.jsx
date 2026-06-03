@@ -23,13 +23,12 @@ import { cn } from '../../utils'
  * @param {Function} props.onClose - Đóng dialog
  * @param {Object} props.submission - Submission data (id, resultImageUrl, note, ...)
  * @param {string} props.taskLabel - Tên task (hiển thị trên title)
- * @param {Function} props.onReview - Callback: (submissionId, status, note, addAsLayer) => Promise
+ * @param {Function} props.onReview - Callback: (submissionId, status, note) => Promise
  * @param {boolean} props.isReviewing - Đang xử lý (disable nút)
  */
-export function ReviewDialog({ open, onClose, submission, taskLabel, onReview, isReviewing }) {
+export function ReviewDialog({ open, onClose, submission, taskLabel, onReview, isReviewing, originalUrl }) {
   const [status, setStatus] = useState(null) // 'APPROVED' | 'REVISION_REQUIRED'
   const [note, setNote] = useState('')
-  const [addAsLayer, setAddAsLayer] = useState(true)
 
   /**
    * Reset state khi đóng dialog
@@ -37,7 +36,6 @@ export function ReviewDialog({ open, onClose, submission, taskLabel, onReview, i
   const handleClose = () => {
     setStatus(null)
     setNote('')
-    setAddAsLayer(true)
     onClose()
   }
 
@@ -46,7 +44,7 @@ export function ReviewDialog({ open, onClose, submission, taskLabel, onReview, i
    */
   const handleConfirm = async () => {
     if (!status || !submission) return
-    await onReview(submission.id, status, note, addAsLayer)
+    await onReview(submission.id, status, note)
     handleClose()
   }
 
@@ -61,11 +59,18 @@ export function ReviewDialog({ open, onClose, submission, taskLabel, onReview, i
       <div className="space-y-4">
         {/* Ảnh submission */}
         {submission?.resultImageUrl ? (
-          <div className="border border-outline-variant rounded-lg overflow-hidden bg-surface-variant/20">
+          <div className="border border-outline-variant rounded-lg overflow-hidden bg-surface-variant/20 relative">
+            {originalUrl && (
+              <img
+                src={originalUrl}
+                alt="Original page"
+                className="absolute inset-0 w-full h-full object-contain"
+              />
+            )}
             <img
               src={submission.resultImageUrl}
               alt="Submission preview"
-              className="w-full h-auto max-h-[300px] object-contain mx-auto"
+              className="relative w-full h-auto max-h-[300px] object-contain mx-auto"
             />
           </div>
         ) : (
@@ -130,21 +135,6 @@ export function ReviewDialog({ open, onClose, submission, taskLabel, onReview, i
             className="w-full px-2.5 py-1.5 text-sm bg-surface-container-low border border-outline-variant/30 outline-none focus:border-primary text-on-surface rounded-lg placeholder:text-on-surface-variant/40 resize-none"
           />
         </div>
-
-        {/* Checkbox: Add as layer (chỉ khi APPROVED) */}
-        {status === 'APPROVED' && (
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={addAsLayer}
-              onChange={(e) => setAddAsLayer(e.target.checked)}
-              className="w-4 h-4 accent-primary rounded"
-            />
-            <span className="text-xs text-on-surface-variant">
-              Add result as a new layer on this page
-            </span>
-          </label>
-        )}
 
         {/* Footer */}
         <div className="flex items-center justify-end gap-2 pt-2 border-t border-outline-variant">
