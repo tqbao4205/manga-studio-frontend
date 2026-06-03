@@ -466,7 +466,7 @@ function SortablePageCard({ page, chapterId, isMangaka, onDelete }) {
     <div
       ref={setNodeRef}
       style={style}
-      onClick={() => navigate(`/workspace/${chapterId}`)}
+      onClick={() => navigate(`/workspace/${chapterId}/${page.id}`)}
       className={`group bg-surface-container-low border border-outline-variant/50 rounded-xl overflow-hidden hover:shadow-[0_8px_30px_rgb(139,92,246,0.1)] transition-all cursor-pointer ${isDragging ? 'opacity-40 z-50' : ''}`}
     >
       <div className="aspect-[3/4] relative bg-surface-container-highest overflow-hidden">

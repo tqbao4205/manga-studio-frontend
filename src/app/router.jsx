@@ -50,7 +50,7 @@ export default function App() {
         {/* ═══ Fullscreen routes — không dùng AppShell (không sidebar/padding/max-width) ═══ */}
         {/* Workspace vẽ manga → chỉ dành cho MANGAKA và ASSISTANT */}
         <Route
-          path="/workspace/:chapterId"
+          path="/workspace/:chapterId/:pageId?"
           element={
             <ProtectedRoute>
               <RoleGuard allowedRoles={["MANGAKA", "ASSISTANT"]}>

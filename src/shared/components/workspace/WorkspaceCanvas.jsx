@@ -123,6 +123,9 @@ export function WorkspaceCanvas() {
   const updateComment = useWorkspaceStore((s) => s.updateComment);
   const addAnnotation = useWorkspaceStore((s) => s.addAnnotation);
   const deleteAnnotation = useWorkspaceStore((s) => s.deleteAnnotation);
+  const hiddenRegionIds = useWorkspaceStore((s) => s.hiddenRegionIds);
+
+  const visibleRegions = regions.filter((r) => !hiddenRegionIds.includes(r.id));
   const user = useAuthStore((s) => s.user);
   const addToast = useUIStore((s) => s.addToast);
 
@@ -536,6 +539,8 @@ export function WorkspaceCanvas() {
         return;
       }
       if ((e.key === "Delete" || e.key === "Backspace") && mode === "select") {
+        // Không xoá region khi đang gõ trong ô input/text
+        if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
         if (selectedRegionId !== null) {
           e.preventDefault();
           deleteRegion(selectedRegionId);
@@ -654,7 +659,7 @@ export function WorkspaceCanvas() {
             })}
 
           {/* Các region (vùng chú thích) trên trang */}
-          {regions.map((r) => {
+          {visibleRegions.map((r) => {
             const color = REGION_COLORS[r.regionType] || "#6b7280";
             const isSelected = selectedRegionId === r.id;
             return (
@@ -697,6 +702,17 @@ export function WorkspaceCanvas() {
               </Fragment>
             );
           })}
+
+          {/* Transformer cho phép resize region được chọn */}
+          <Transformer
+            ref={transformerRef}
+            keepRatio={false}
+            enabledAnchors={['top-left', 'top-right', 'bottom-left', 'bottom-right']}
+            boundBoxFunc={(oldBox, newBox) => {
+              if (newBox.width < 50 || newBox.height < 50) return oldBox;
+              return newBox;
+            }}
+          />
 
           {/* Preview khi đang vẽ region (draw mode) */}
           {drawStart && drawCurrent && mode === "draw" && (

@@ -80,7 +80,7 @@ function Slider({ originalUrl, submissionUrl, originalLabel, submissionLabel }) 
           {/* Lớp dưới: ảnh submission (luôn hiển thị đầy đủ) */}
           <div className="absolute inset-0">
             {submissionUrl ? (
-              <img src={submissionUrl} alt={submissionLabel} className="w-full h-full object-contain" />
+              <img src={submissionUrl} alt={submissionLabel} className="w-full h-full object-cover" />
             ) : (
               <PlaceholderImage label={submissionLabel} />
             )}
@@ -92,7 +92,7 @@ function Slider({ originalUrl, submissionUrl, originalLabel, submissionLabel }) 
             style={{ clipPath: `inset(0 ${100 - sliderPos}% 0 0)` }}
           >
             {originalUrl ? (
-              <img src={originalUrl} alt={originalLabel} className="w-full h-full object-contain" />
+              <img src={originalUrl} alt={originalLabel} className="w-full h-full object-cover" />
             ) : (
               <PlaceholderImage label={originalLabel} />
             )}
