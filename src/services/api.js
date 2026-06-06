@@ -130,7 +130,7 @@ api.interceptors.response.use(
 
     // TH2: Không có response (mạng lỗi, timeout, ...)
     if (error.request) {
-      return Promise.reject(new Error('Không thể kết nối đến máy chủ. Vui lòng kiểm tra kết nối mạng.'));
+      return Promise.reject(new Error('Cannot connect to server. Please check your network connection.'));
     }
 
     // TH3: Lỗi khác
@@ -143,14 +143,14 @@ api.interceptors.response.use(
 // ────────────────────────────────────────────────
 function getDefaultMessage(status) {
   const messages = {
-    400: 'Dữ liệu gửi lên không hợp lệ',
-    401: 'Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.',
-    403: 'Bạn không có quyền thực hiện hành động này',
-    404: 'Không tìm thấy tài nguyên yêu cầu',
-    409: 'Dữ liệu đã tồn tại',
-    500: 'Máy chủ gặp lỗi. Vui lòng thử lại sau.',
+    400: 'Please check the information you entered',
+    401: 'Session expired. Please log in again.',
+    403: 'You do not have permission to perform this action',
+    404: 'The page or item you requested was not found',
+    409: 'This information already exists in our system',
+    500: 'Server error. Please try again later.',
   };
-  return messages[status] || 'Đã xảy ra lỗi không xác định';
+  return messages[status] || 'An unknown error occurred';
 }
 
 export default api;

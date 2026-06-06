@@ -83,6 +83,21 @@ const handleWebSocketMessage = (type, data) => {
       useAuthStore.getState().incrementAssistantTrigger()
       break
 
+    // ── Tantou events ──
+    case 'TANTOU_INVITATION_SENT':
+      // TANTOU_EDITOR: có lời m?i làm tantou m?i → tăng invitationTrigger
+      useAuthStore.getState().incrementInvitationTrigger()
+      break
+
+    case 'TANTOU_INVITATION_ACCEPTED':
+    case 'TANTOU_INVITATION_REJECTED':
+    case 'TANTOU_REVIEW_REQUIRED':
+    case 'TANTOU_APPROVED':
+    case 'TANTOU_REJECTED':
+      // MANGAKA / TANTOU: series có thay d?i → tăng tantouTrigger d? refetch
+      useAuthStore.getState().incrementTantouTrigger()
+      break
+
     default:
       break
   }
@@ -128,6 +143,16 @@ export const useAuthStore = create((set, get) => ({
    *   - Dùng số đếm → mỗi lần tăng đều là giá trị mới → React luôn phát hiện thay đổi
    */
   invitationTrigger: 0,
+
+  /**
+   * tantouTrigger: Biến đếm trigger refetch d? li?u tantou.
+   *
+   * Cách ho?t d?ng:
+   *   - Khi WebSocket nh?n TANTOU_INVITATION_ACCEPTED / REJECTED / REVIEW_REQUIRED / ...
+   *   → incrementTantouTrigger() du?c g?i
+   *   - SeriesDetailPage watch bi?n này → useEffect phát hi?n thay d?i → refetch series
+   */
+  tantouTrigger: 0,
 
   // ────────────────────────────────────────────────
   //  1. LOGIN — Đăng nhập
@@ -384,5 +409,16 @@ export const useAuthStore = create((set, get) => ({
    */
   incrementInvitationTrigger: () => {
     set((state) => ({ invitationTrigger: state.invitationTrigger + 1 }))
+  },
+
+  // ────────────────────────────────────────────────
+  //  8. INCREMENT TANTOU TRIGGER — Báo hi?u c?n refetch
+  // ────────────────────────────────────────────────
+  /**
+   * Tang tantouTrigger lên 1 khi WebSocket nh?n TANTOU event.
+   * SeriesDetailPage watch bi?n này d? t? d?ng refetch series.
+   */
+  incrementTantouTrigger: () => {
+    set((state) => ({ tantouTrigger: state.tantouTrigger + 1 }))
   },
 }))

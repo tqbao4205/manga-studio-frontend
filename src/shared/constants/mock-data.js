@@ -11,16 +11,16 @@ function pagePlaceholder(pageNum) {
 }
 
 export const mockUsers = [
-  { id: 1, email: 'ichikawa@manga.com', username: 'ichikawa', displayName: 'Ichikawa', role: 'MANGAKA', avatarUrl: '', bio: 'Mangaka chuyên thể loại action fantasy.', status: 'ACTIVE', createdAt: '2024-01-01T00:00:00Z', updatedAt: '2026-05-01T00:00:00Z' },
+  { id: 1, email: 'ichikawa@manga.com', username: 'ichikawa', displayName: 'Ichikawa', role: 'MANGAKA', avatarUrl: '', bio: 'Mangaka specializing in action fantasy.', status: 'ACTIVE', createdAt: '2024-01-01T00:00:00Z', updatedAt: '2026-05-01T00:00:00Z' },
   { id: 2, email: 'tanaka@manga.com', username: 'tanaka', displayName: 'Tanaka', role: 'ASSISTANT', avatarUrl: '', bio: 'Background artist.', status: 'ACTIVE', createdAt: '2024-02-01T00:00:00Z', updatedAt: '2026-04-15T00:00:00Z' },
   { id: 3, email: 'suzuki@manga.com', username: 'suzuki', displayName: 'Suzuki', role: 'ASSISTANT', avatarUrl: '', bio: 'Character inking specialist.', status: 'ACTIVE', createdAt: '2024-03-01T00:00:00Z', updatedAt: '2026-04-10T00:00:00Z' },
   { id: 4, email: 'yamamoto@manga.com', username: 'yamamoto', displayName: 'Yamamoto', role: 'ASSISTANT', avatarUrl: '', bio: 'Text and effects.', status: 'ACTIVE', createdAt: '2024-03-15T00:00:00Z', updatedAt: '2026-04-12T00:00:00Z' },
-  { id: 5, email: 'sato@editor.com', username: 'sato_editor', displayName: 'Sato', role: 'TANTOU_EDITOR', avatarUrl: '', bio: 'Editor phụ trách mảng shonen.', status: 'ACTIVE', createdAt: '2024-01-15T00:00:00Z', updatedAt: '2026-05-10T00:00:00Z' },
-  { id: 6, email: 'taniguchi@editor.com', username: 'taniguchi', displayName: 'Taniguchi', role: 'TANTOU_EDITOR', avatarUrl: '', bio: 'Editor phụ trách mảng shojo/seinen.', status: 'ACTIVE', createdAt: '2024-02-10T00:00:00Z', updatedAt: '2026-05-05T00:00:00Z' },
-  { id: 7, email: 'kimura@board.com', username: 'kimura', displayName: 'Kimura', role: 'EDITORIAL_BOARD', avatarUrl: '', bio: 'Trưởng ban biên tập.', status: 'ACTIVE', createdAt: '2023-06-01T00:00:00Z', updatedAt: '2026-05-18T00:00:00Z' },
-  { id: 8, email: 'nishida@board.com', username: 'nishida', displayName: 'Nishida', role: 'EDITORIAL_BOARD', avatarUrl: '', bio: 'Phó ban biên tập.', status: 'ACTIVE', createdAt: '2023-08-01T00:00:00Z', updatedAt: '2026-05-18T00:00:00Z' },
-  { id: 9, email: 'fujimoto@manga.com', username: 'fujimoto', displayName: 'Fujimoto', role: 'MANGAKA', avatarUrl: '', bio: 'Tác giả shojo và seinen.', status: 'ACTIVE', createdAt: '2024-04-01T00:00:00Z', updatedAt: '2026-04-20T00:00:00Z' },
-  { id: 10, email: 'ito@manga.com', username: 'ito', displayName: 'Ito', role: 'MANGAKA', avatarUrl: '', bio: 'Tác giả comedy nổi tiếng.', status: 'ACTIVE', createdAt: '2024-05-01T00:00:00Z', updatedAt: '2026-05-01T00:00:00Z' },
+  { id: 5, email: 'sato@editor.com', username: 'sato_editor', displayName: 'Sato', role: 'TANTOU_EDITOR', avatarUrl: '', bio: 'Lead editor in charge of shonen.', status: 'ACTIVE', createdAt: '2024-01-15T00:00:00Z', updatedAt: '2026-05-10T00:00:00Z' },
+  { id: 6, email: 'taniguchi@editor.com', username: 'taniguchi', displayName: 'Taniguchi', role: 'TANTOU_EDITOR', avatarUrl: '', bio: 'Lead editor in charge of shojo/seinen.', status: 'ACTIVE', createdAt: '2024-02-10T00:00:00Z', updatedAt: '2026-05-05T00:00:00Z' },
+  { id: 7, email: 'kimura@board.com', username: 'kimura', displayName: 'Kimura', role: 'EDITORIAL_BOARD', avatarUrl: '', bio: 'Head of editorial board.', status: 'ACTIVE', createdAt: '2023-06-01T00:00:00Z', updatedAt: '2026-05-18T00:00:00Z' },
+  { id: 8, email: 'nishida@board.com', username: 'nishida', displayName: 'Nishida', role: 'EDITORIAL_BOARD', avatarUrl: '', bio: 'Deputy head of editorial board.', status: 'ACTIVE', createdAt: '2023-08-01T00:00:00Z', updatedAt: '2026-05-18T00:00:00Z' },
+  { id: 9, email: 'fujimoto@manga.com', username: 'fujimoto', displayName: 'Fujimoto', role: 'MANGAKA', avatarUrl: '', bio: 'Author of shojo and seinen.', status: 'ACTIVE', createdAt: '2024-04-01T00:00:00Z', updatedAt: '2026-04-20T00:00:00Z' },
+  { id: 10, email: 'ito@manga.com', username: 'ito', displayName: 'Ito', role: 'MANGAKA', avatarUrl: '', bio: 'Famous comedy author.', status: 'ACTIVE', createdAt: '2024-05-01T00:00:00Z', updatedAt: '2026-05-01T00:00:00Z' },
 ]
 
 export const mockSeries = [

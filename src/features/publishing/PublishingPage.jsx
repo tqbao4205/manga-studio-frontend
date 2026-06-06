@@ -88,7 +88,7 @@ function NewScheduleForm({ onClose }) {
         {selectedSeries && (
           <p className="text-xs text-on-surface-variant mt-1">
             {(mockUsers.find(u => u.id === selectedSeries.mangakaId)?.displayName || 'Unknown')} · {selectedSeries.chapterCount}{" "}
-            chapters · {selectedSeries.status}
+            chapters · {{DRAFT:'Draft',PENDING_APPROVAL:'Pending Approval',APPROVED:'Approved',ONGOING:'Ongoing',HIATUS:'Hiatus',CANCELLED:'Cancelled',COMPLETED:'Completed',REJECTED:'Rejected',AT_RISK:'At Risk',PENDING_TANTOU:'Pending Lead Editor',PENDING_BOARD_VOTE:'Pending Editorial Review'}[selectedSeries.status] || selectedSeries.status}
           </p>
         )}
       </div>

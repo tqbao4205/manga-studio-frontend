@@ -412,6 +412,17 @@ export function TaskPanel() {
                   </button>
                 )}
 
+                {/* Submitted image preview */}
+                {latestSubmission?.resultImageUrl && (
+                  <div className="mt-1.5 border border-outline-variant/20 rounded-lg overflow-hidden">
+                    <img
+                      src={latestSubmission.resultImageUrl}
+                      alt="Submitted work"
+                      className="w-full h-auto max-h-28 object-contain bg-surface"
+                    />
+                  </div>
+                )}
+
                 {/* Submit button (chỉ ASSISTANT được gán task, chưa có submission chờ duyệt) */}
                 {user?.role === 'ASSISTANT' && t.assistant?.id === user.id && canSubmit(taskStatus) && !t.submissions?.some(s => s.status === 'SUBMITTED') && (
                   <button
@@ -596,6 +607,7 @@ export function TaskPanel() {
           open={!!submitTarget}
           onClose={() => setSubmitTarget(null)}
           regionLabel={submitTarget.label}
+          isSubmitting={isSubmitting}
           onConfirm={handleSubmit}
         />
       )}

@@ -30,6 +30,7 @@ import { useUIStore } from '../../app/stores/uiStore'
 import seriesService from '../../services/seriesService'
 import chapterService from '../../services/chapterService'
 import assistantService from '../../services/assistantService'
+import api from '../../services/api'
 import { Dialog } from '../../shared/components/ui/dialog'
 import { EmptyState } from '../../shared/components/shared/EmptyState'
 import { PageLoading } from '../../shared/components/shared/LoadingSpinner'
@@ -43,6 +44,7 @@ const chapterStatusColor = {
   IN_REVIEW: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20',
   SUBMITTED: 'bg-purple-500/10 text-purple-400 border-purple-500/20',
   PENDING_BOARD_APPROVAL: 'bg-purple-500/10 text-purple-400 border-purple-500/20',
+  PENDING_BOARD_VOTE: 'bg-orange-500/10 text-orange-400 border-orange-500/20',
   APPROVED: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
   REVISION_REQUIRED: 'bg-orange-500/10 text-orange-400 border-orange-500/20',
   REJECTED: 'bg-red-500/10 text-red-400 border-red-500/20',
@@ -55,9 +57,10 @@ const chapterStatusLabel = {
   IN_PROGRESS: 'In Progress',
   IN_REVIEW: 'In Review',
   SUBMITTED: 'Submitted',
-  PENDING_BOARD_APPROVAL: 'Pending Board',
+  PENDING_BOARD_APPROVAL: 'Under Editorial Review',
+  PENDING_BOARD_VOTE: 'Pending Editorial Review',
   APPROVED: 'Approved',
-  REVISION_REQUIRED: 'Revision',
+  REVISION_REQUIRED: 'Revision Needed',
   REJECTED: 'Rejected',
   PUBLISHED: 'Published',
 }
@@ -68,6 +71,7 @@ export function SeriesDetailPage() {
   const id = Number(seriesId)
   const user = useAuthStore((s) => s.user)
   const assistantTrigger = useAuthStore((s) => s.assistantTrigger) // 👈 watch trigger để refetch realtime
+  const tantouTrigger = useAuthStore((s) => s.tantouTrigger) // 👈 watch trigger tantou để refetch realtime
   const addToast = useUIStore((s) => s.addToast)
 
   const { currentSeries, seriesLoading, seriesError, fetchById } = useSeriesStore()
@@ -156,6 +160,163 @@ export function SeriesDetailPage() {
     }
   }
 
+  // ═══════════════════════════════════════════════
+  //  TANTOU STATE — Quan ly trang thai moi / duyet Tantou
+  // ═══════════════════════════════════════════════
+
+  /**
+   * showTantouInviteDialog  : Mo / dong modal moi TANTOU_EDITOR
+   * tantouSearchQuery      : Noi dung search (ten tantou can tim)
+   * tantouSearchResults    : Ket qua tim kiem tu API
+   * tantouSearching        : true khi dang goi API tim tantou
+   * invitingTantouId       : ID tantou dang duoc moi (de hien spinner tren nut Invite)
+   * tantouSearchTimeoutRef : Ref cho setTimeout debounce (tranh goi API lien tuc khi go)
+   */
+  const [showTantouInviteDialog, setShowTantouInviteDialog] = useState(false)
+  const [tantouSearchQuery, setTantouSearchQuery] = useState('')
+  const [tantouSearchResults, setTantouSearchResults] = useState([])
+  const [tantouSearching, setTantouSearching] = useState(false)
+  const [invitingTantouId, setInvitingTantouId] = useState(null)
+  const tantouSearchTimeoutRef = useRef(null)
+
+  /**
+
+   */
+
+
+  /**
+   * handleTantouSearchChange — Debounced search TANTOU_EDITOR.
+   *
+   * Co che: Khi nguoi dung go ten, doi 300ms sau lan go cuoi moi goi API.
+   * Dieu nay tranh goi hang loat request khong can thiet.
+   *
+   * Endpoint: GET /api/users/tantou-editors?search=...
+   * - Can BE implement endpoint nay. Neu chua co, goi y BE them.
+   * - Neu BE khong co, co the tam thay bang GET /api/users?role=TANTOU_EDITOR&search=...
+   *
+   * @param {string} value - Chuoi tim kiem (ten hoac email tantou).
+   */
+  const handleTantouSearchChange = useCallback((value) => {
+    setTantouSearchQuery(value)
+    if (tantouSearchTimeoutRef.current) clearTimeout(tantouSearchTimeoutRef.current)
+    if (!value.trim()) {
+      setTantouSearchResults([])
+      setTantouSearching(false)
+      return
+    }
+    setTantouSearching(true)
+    tantouSearchTimeoutRef.current = setTimeout(async () => {
+      try {
+        const res = await api.get('/users/tantou-editors', { params: { search: value } })
+        setTantouSearchResults(Array.isArray(res) ? res : res.content || [])
+      } catch {
+        setTantouSearchResults([])
+      } finally {
+        setTantouSearching(false)
+      }
+    }, 300)
+  }, [])
+
+  /**
+   * Cleanup timeout khi component unmount.
+   * Tranh goi setState tren component da bi xoa (gay memory leak).
+   */
+  useEffect(() => {
+    return () => {
+      if (tantouSearchTimeoutRef.current) clearTimeout(tantouSearchTimeoutRef.current)
+    }
+  }, [])
+
+  /**
+   * handleInviteTantou — MANGAKA moi TANTOU_EDITOR vao series.
+   *
+   * Luong:
+   *   1. Set invitingTantouId = ID tantou dang moi (hien spinner tren nut)
+   *   2. Goi API inviteTantou(seriesId, tantouId) → POST /api/series/{id}/tantou/invite
+   *   3. Thanh cong: dong modal, xoa search, show toast "Invitation sent"
+   *   4. Loi: show toast error voi message tu backend
+   *   5. Finally: xoa invitingTantouId (tat spinner)
+   *
+   * @param {number} tantouId - ID cua TANTOU_EDITOR can moi.
+   * @param {string} displayName - Ten hien thi (de hien toast).
+   */
+  const handleInviteTantou = async (tantouId, displayName) => {
+    setInvitingTantouId(tantouId)
+    try {
+      await seriesService.inviteTantou(id, tantouId)
+      addToast({ type: 'success', title: 'Invitation sent', message: `Lead editor invitation sent to ${displayName}.` })
+      setShowTantouInviteDialog(false)
+      setTantouSearchQuery('')
+      setTantouSearchResults([])
+    } catch (err) {
+      addToast({ type: 'error', title: 'Failed', message: err.response?.data?.message || err.message })
+    } finally {
+      setInvitingTantouId(null)
+    }
+  }
+
+  /**
+   * handleSubmitTantou — MANGAKA gui series cho tantou review.
+   *
+   * Chuc nang: Chuyen series tu DRAFT → PENDING_TANTOU.
+   * Sau khi submit, tantou se thay series trong danh sach can duyet.
+   *
+   * Luong:
+   *   1. Hien confirm dialog hoi nguoi dung truoc khi submit
+   *   2. Goi API submitTantou(id) → POST /api/series/{id}/submit
+   *   3. Thanh cong: toast + refetch series de cap nhat UI
+   */
+  const handleSubmitTantou = async () => {
+    if (!window.confirm(`Submit "${series?.title}" to your lead editor for review?`)) return
+    try {
+      await seriesService.submitTantou(id)
+      addToast({ type: 'success', title: 'Submitted', message: 'Series has been submitted for lead editor review.' })
+      fetchById(id)
+    } catch (err) {
+      addToast({ type: 'error', title: 'Failed', message: err.response?.data?.message || err.message })
+    }
+  }
+
+  /**
+   * handleTantouApprove — TANTOU_EDITOR duyet series.
+   *
+   * Chuc nang: Chuyen series tu PENDING_TANTOU → PENDING_BOARD_VOTE.
+   * Sau khi duyet, series se chuyen sang giai doan EB vote (do BE2 lam).
+   *
+   * Luong:
+   *   1. Hien confirm dialog truoc khi duyet
+   *   2. Goi API tantouApprove(id) → POST /api/series/{id}/tantou/approve
+   *   3. Thanh cong: toast + refetch series
+   */
+  const handleTantouApprove = async () => {
+    if (!window.confirm(`Approve "${series?.title}" and submit for final review?`)) return
+    try {
+      await seriesService.tantouApprove(id)
+      addToast({ type: 'success', title: 'Approved', message: 'Series has been submitted for final review.' })
+      fetchById(id)
+    } catch (err) {
+      addToast({ type: 'error', title: 'Failed', message: err.response?.data?.message || err.message })
+    }
+  }
+
+  /**
+   * handleTantouReject — TANTOU_EDITOR rejects the series.
+   *
+   * Chuyen series tu PENDING_TANTOU → DRAFT.
+   * Shows confirm dialog, then calls API.
+   */
+  const handleTantouReject = async () => {
+    const confirmed = window.confirm('Reject this series and return it to draft?')
+    if (!confirmed) return
+    try {
+      await seriesService.tantouReject(id)
+      addToast({ type: 'success', title: 'Rejected', message: 'Series has been returned to draft.' })
+      fetchById(id)
+    } catch (err) {
+      addToast({ type: 'error', title: 'Failed', message: err.response?.data?.message || err.message })
+    }
+  }
+
   // Tính toán deadlines s?p t?i t? chapters
   const upcomingDeadlines = useMemo(() => {
     if (!chapters || chapters.length === 0) return []
@@ -184,15 +345,18 @@ export function SeriesDetailPage() {
       await chapterService.update(chapterId, { status: newStatus })
       fetchChapters(id)
       const labelMap = {
-        PENDING_BOARD_APPROVAL: 'submitted to Editorial Board',
+        PENDING_BOARD_APPROVAL: 'submitted for review',
         APPROVED: 'approved',
         REVISION_REQUIRED: 'requested revision',
         REJECTED: 'rejected',
         PUBLISHED: 'published',
         IN_REVIEW: 'submitted for review',
         SUBMITTED: 'resubmitted',
+        DRAFT: 'set to draft',
+        PLANNED: 'planned',
+        IN_PROGRESS: 'set in progress',
       }
-      addToast({ type: 'success', title: 'Chapter updated', message: `Chapter has been ${labelMap[newStatus] || newStatus}.` })
+      addToast({ type: 'success', title: 'Chapter updated', message: `Chapter has been ${labelMap[newStatus] || 'updated'}.` })
     } catch {
       addToast({ type: 'error', title: 'Error', message: 'Failed to update chapter status.' })
     }
@@ -203,7 +367,17 @@ export function SeriesDetailPage() {
     try {
       await seriesService.updateStatus(id, { status: newStatus })
       fetchById(id)
-      addToast({ type: 'success', title: 'Series status updated', message: `"${series.title}" is now ${newStatus.toLowerCase().replace(/_/g, ' ')}.` })
+      const seriesLabelMap = {
+        PENDING_TANTOU: 'under lead editor review',
+        PENDING_BOARD_VOTE: 'under editorial review',
+        ONGOING: 'ongoing',
+        HIATUS: 'on hiatus',
+        COMPLETED: 'completed',
+        CANCELLED: 'cancelled',
+        DRAFT: 'in draft',
+        AT_RISK: 'at risk',
+      }
+      addToast({ type: 'success', title: 'Series status updated', message: `"${series.title}" is now ${seriesLabelMap[newStatus] || 'updated'}.` })
     } catch {
       addToast({ type: 'error', title: 'Error', message: 'Failed to update series status.' })
     }
@@ -211,6 +385,7 @@ export function SeriesDetailPage() {
 
   const mangaka = series.mangaka
   const tantou = series.tantouEditor
+  const isAssignedTantou = isTantou && tantou?.id === user?.id
 
   // ── Format date helpers ──
   const formatDate = (dateStr) => {
@@ -243,7 +418,7 @@ export function SeriesDetailPage() {
       return <span className="text-xs text-yellow-400 font-medium px-2">Awaiting</span>
     }
     if (isOwner && ch.status === 'PENDING_BOARD_APPROVAL') {
-      return <span className="text-xs text-purple-400 font-medium px-2">Board</span>
+      return <span className="text-xs text-purple-400 font-medium px-2">In Review</span>
     }
     if (isOwner && ch.status === 'REVISION_REQUIRED') {
       return (
@@ -261,7 +436,7 @@ export function SeriesDetailPage() {
           <button
             onClick={(e) => { e.stopPropagation(); handleChapterStatusUpdate(ch.id, 'PENDING_BOARD_APPROVAL') }}
             className="p-1.5 rounded-lg text-emerald-400 hover:bg-emerald-500/10 transition-colors"
-            title="Submit to Board"
+            title="Submit for Review"
           ><Send size={14} /></button>
           <button
             onClick={(e) => { e.stopPropagation(); handleChapterStatusUpdate(ch.id, 'REVISION_REQUIRED') }}
@@ -387,6 +562,8 @@ export function SeriesDetailPage() {
                   : series.status === 'DRAFT' ? 'Draft'
                   : series.status === 'HIATUS' ? 'Hiatus'
                   : series.status === 'PENDING_APPROVAL' ? 'Pending'
+                  : series.status === 'PENDING_TANTOU' ? 'Pending Lead Editor'
+                  : series.status === 'PENDING_BOARD_VOTE' ? 'Pending Editorial Review'
                   : series.status}
               </span>
             </div>
@@ -670,6 +847,191 @@ export function SeriesDetailPage() {
               </div>
             </div>
 
+            {/* ═══════════════════════════════════════ */}
+            {/*  TANTOU EDITOR CARD                    */}
+            {/* ═══════════════════════════════════════ */}
+            {/*
+              Card nay hien thi thong tin Tantou Editor cua series.
+              Gom 4 trang thai:
+                1. Chua co tantou + isOwner + DRAFT  → nut "Moi Tantou"
+                2. Co tantou + isOwner + DRAFT       → nut "Submit cho Tantou"
+                3. isOwner + PENDING_TANTOU           → badge "Cho Tantou duyet"
+                4. isAssignedTantou + PENDING_TANTOU  → nut "Duyet" + "Tu choi"
+            */}
+            <div className="bg-surface-container rounded-xl p-6 shadow-[0px_4px_20px_rgba(139,92,246,0.05)] border border-outline-variant/30">
+              <h4 className="text-xl font-semibold text-on-surface mb-4 flex items-center gap-2">
+                <Users size={18} className="text-primary" />
+                Lead Editor
+              </h4>
+
+              {!tantou ? (
+                /* Chua co tantou — hien button moi tantou (neu la owner + DRAFT) */
+                <div className="flex flex-col items-center py-6 text-on-surface-variant/50">
+                  <Users size={28} className="mb-2 opacity-40" />
+                  <p className="text-sm">No lead editor assigned.</p>
+                  {isOwner && series?.status === 'DRAFT' && (
+                    <>
+                      <p className="text-xs mt-1">Assign a lead editor to review your series.</p>
+                      <button
+                        onClick={() => setShowTantouInviteDialog(true)}
+                        className="mt-3 flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-primary border border-primary/30 rounded-lg hover:bg-primary/5 transition-all"
+                      >
+                        <UserPlus size={14} />
+                        Invite Lead Editor
+                      </button>
+                    </>
+                  )}
+                </div>
+              ) : (
+                /* Da co tantou — hien thong tin tantou + action buttons */
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between bg-surface-container-low rounded-lg px-4 py-2.5 border border-outline-variant/20">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary">
+                        {tantou.displayName?.[0] || 'T'}
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-on-surface">{tantou.displayName || 'Lead Editor'}</p>
+                        <p className="text-xs text-emerald-400 font-medium">
+                          {series.status === 'PENDING_TANTOU' ? 'Pending Review' : 'Approved'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* MANGAKA: submit cho tantou (chi khi status = DRAFT) */}
+                  {isOwner && series?.status === 'DRAFT' && (
+                    <button
+                      onClick={handleSubmitTantou}
+                      className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-bold text-on-primary bg-primary rounded-lg hover:brightness-110 transition-all"
+                    >
+                      <Send size={14} />
+                      Submit for Review
+                    </button>
+                  )}
+
+                  {/* MANGAKA: dang cho tantou duyet */}
+                  {isOwner && series?.status === 'PENDING_TANTOU' && (
+                    <div className="flex items-center justify-center gap-2 py-2 text-sm text-purple-400 font-medium">
+                      <Loader size={14} className="animate-spin" />
+                      Pending Review
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* TANTOU_EDITOR: nut duyet / tu choi (chi hien khi duoc assigned + series dang PENDING_TANTOU) */}
+              {isAssignedTantou && series?.status === 'PENDING_TANTOU' && (
+                <>
+                  <hr className="border-outline-variant/20 my-3" />
+                  <div className="space-y-3">
+                    <p className="text-sm text-on-surface-variant">
+                      This series is pending your review. You can approve it to submit for final review, or reject it back to draft.
+                    </p>
+                    <div className="flex gap-3">
+                      <button
+                        onClick={handleTantouReject}
+                        className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-on-surface-variant border border-outline-variant/40 rounded-lg hover:border-error/40 hover:text-error hover:bg-error/5 transition-all"
+                      >
+                        <X size={14} />
+                        Reject
+                      </button>
+                      <button
+                        onClick={handleTantouApprove}
+                        className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-bold text-on-primary bg-primary rounded-lg hover:brightness-110 transition-all"
+                      >
+                        <Check size={14} />
+                        Approve
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* ═══════════════════════════════════════ */}
+            {/*  INVITE TANTOU DIALOG                  */}
+            {/* ═══════════════════════════════════════ */}
+            {/*
+              Modal tim kiem TANTOU_EDITOR de moi vao series.
+              Co chuc nang search debounce + hien thi ket qua + nut moi.
+              Copy pattern tu Invite Assistant Dialog.
+            */}
+            <Dialog
+              open={showTantouInviteDialog}
+              onClose={() => { setShowTantouInviteDialog(false); setTantouSearchQuery(''); setTantouSearchResults([]) }}
+              title="Invite Lead Editor"
+              description="Search for a lead editor to review this series."
+              size="md"
+            >
+              <div className="space-y-4">
+                <div className="relative">
+                  <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant/50" />
+                  <input
+                    autoFocus
+                    value={tantouSearchQuery}
+                    onChange={(e) => handleTantouSearchChange(e.target.value)}
+                    placeholder="Type name to search..."
+                    className="w-full bg-surface-container-low border border-outline-variant/30 rounded-lg pl-10 pr-4 py-2.5 text-sm text-on-surface placeholder:text-on-surface-variant/30 focus:outline-none focus:border-primary transition-colors"
+                  />
+                  {tantouSearching && (
+                    <Loader size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-primary animate-spin" />
+                  )}
+                </div>
+
+                <div className="max-h-60 overflow-y-auto space-y-1">
+                  {!tantouSearchQuery.trim() ? (
+                    <p className="text-center py-8 text-sm text-on-surface-variant/40">Type to search for lead editors.</p>
+                  ) : tantouSearching ? (
+                    <div className="flex items-center justify-center py-8">
+                      <Loader size={20} className="text-primary animate-spin" />
+                    </div>
+                  ) : tantouSearchResults.length === 0 ? (
+                    <p className="text-center py-8 text-sm text-on-surface-variant/40">No lead editors found.</p>
+                  ) : (
+                    tantouSearchResults.map((t) => {
+                      const name = t.displayName || t.username || 'Unknown'
+                      const initial = name[0]
+                      return (
+                        <div
+                          key={t.id}
+                          className="flex items-center justify-between px-3 py-2.5 rounded-lg hover:bg-surface-container-high/50 transition-colors"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary">
+                              {initial}
+                            </div>
+                            <div>
+                              <p className="text-sm font-medium text-on-surface">{name}</p>
+                              {t.email && (
+                                <p className="text-xs text-on-surface-variant/50 flex items-center gap-1">
+                                  <Mail size={10} />
+                                  {t.email}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleInviteTantou(t.id, name)}
+                            disabled={invitingTantouId === t.id}
+                            className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-primary border border-primary/30 rounded-lg hover:bg-primary/5 disabled:opacity-40 transition-all"
+                          >
+                            {invitingTantouId === t.id ? (
+                              <Loader size={12} className="animate-spin" />
+                            ) : (
+                              <UserPlus size={12} />
+                            )}
+                            Invite
+                          </button>
+                        </div>
+                      )
+                    })
+                  )}
+                </div>
+              </div>
+            </Dialog>
+
             {/* Assistants */}
             <div className="bg-surface-container rounded-xl p-6 shadow-[0px_4px_20px_rgba(139,92,246,0.05)] border border-outline-variant/30">
               <div className="flex items-center justify-between mb-6">
@@ -904,7 +1266,7 @@ export function SeriesDetailPage() {
               </div>
               {chapters.length > 0 && (
                 <button className="w-full mt-6 py-2 text-primary text-sm font-medium hover:underline">
-                  View Full Audit Log
+                  View Full History
                 </button>
               )}
             </div>

@@ -99,14 +99,14 @@ const tabDefs = [
     label: "Tasks",
     icon: ListTodo,
     Component: TaskPanel,
-    roles: ["MANGAKA", "ASSISTANT"],
+    roles: ["MANGAKA", "ASSISTANT", "TANTOU_EDITOR"],
   },
   {
     id: "comments",
     label: "Comments",
     icon: MessageSquare,
     Component: CommentPanel,
-    roles: ["MANGAKA", "ASSISTANT"],
+    roles: ["MANGAKA", "ASSISTANT", "TANTOU_EDITOR"],
   },
 ];
 
@@ -116,16 +116,16 @@ const toolDefs = [
     id: "select",
     icon: MousePointer2,
     label: "Select (V)",
-    roles: ["MANGAKA"],
+    roles: ["MANGAKA", "TANTOU_EDITOR"],
   },
   {
     id: "hand",
     icon: Hand,
     label: "Hand (H)",
-    roles: ["MANGAKA", "ASSISTANT"],
+    roles: ["MANGAKA", "ASSISTANT", "TANTOU_EDITOR"],
   },
   { id: "draw", icon: Square, label: "Region (R)", roles: ["MANGAKA"] },
-  { id: "comment", icon: MessageSquare, label: "Comment (C)", roles: ["MANGAKA", "ASSISTANT"] },
+  { id: "comment", icon: MessageSquare, label: "Comment (C)", roles: ["MANGAKA", "ASSISTANT", "TANTOU_EDITOR"] },
 ];
 
 /* Tools cho review mode (TANTOU_EDITOR / EDITORIAL_BOARD) */
@@ -154,6 +154,7 @@ export function WorkspacePage() {
   const activeTab = useWorkspaceStore((s) => s.activeTab);
   const isLoading = useWorkspaceStore((s) => s.isLoading);
   const isLoadingPage = useWorkspaceStore((s) => s.isLoadingPage);
+  const isLayerUploading = useWorkspaceStore((s) => s.isLayerUploading);
   const mergeResult = useWorkspaceStore((s) => s.mergeResult);
   const loadChapter = useWorkspaceStore((s) => s.loadChapter);
   const loadPage = useWorkspaceStore((s) => s.loadPage);
@@ -232,6 +233,19 @@ export function WorkspacePage() {
       setActiveTab("regions");
     }
   }, [taskCreationFlow, isReviewMode, setActiveTab]);
+
+  useEffect(() => {
+    if (user?.role === "ASSISTANT" && !isReviewMode) {
+      setActiveTab("tasks");
+    }
+  }, [user?.role, isReviewMode, setActiveTab]);
+
+  useEffect(() => {
+    if (user?.role === "TANTOU_EDITOR" && !isReviewMode) {
+      setMode("comment");
+      setActiveTab("comments");
+    }
+  }, [user?.role, isReviewMode, setMode, setActiveTab]);
 
   /* Navigation giữa các pages (prev/next) */
   const sortedPages = [...pages].sort((a, b) => a.pageNumber - b.pageNumber);
@@ -331,7 +345,7 @@ export function WorkspacePage() {
       } else {
         addToast({
           title: "Merge failed",
-          description: "No result returned",
+          description: "Could not complete the operation",
           variant: "error",
         });
       }
@@ -525,9 +539,9 @@ export function WorkspacePage() {
               {isMangaka && (
                 <span className="text-xs text-on-surface-variant/60">
                   {chapterStatus === "IN_REVIEW"
-                    ? "Awaiting Tantou review"
+                    ? "Awaiting lead editor review"
                     : chapterStatus === "PENDING_BOARD_APPROVAL"
-                      ? "Submitted to Board"
+                      ? "Under Review"
                       : ""}
                 </span>
               )}
@@ -540,13 +554,13 @@ export function WorkspacePage() {
                         updateChapterStatus(id, "PENDING_BOARD_APPROVAL");
                         addToast({
                           type: "success",
-                          title: "Submitted to Board",
-                          message: `Ch.${chapter.chapterNumber} has been submitted for Editorial Board approval.`,
+                          title: "Submitted for Review",
+                          message: `Ch.${chapter.chapterNumber} has been submitted for editorial review.`,
                         });
                       }}
                       className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-status-success border border-status-success/30 hover:bg-status-success/5 rounded-lg transition-all"
                     >
-                      <Send size={14} /> Submit to Board
+                      <Send size={14} /> Submit for Review
                     </button>
                     <button
                       onClick={() => {
@@ -724,7 +738,7 @@ export function WorkspacePage() {
             )}
 
             {/* Layers tab */}
-            {leftPanelTab === "layers" && isMangaka && (
+            {leftPanelTab === "layers" && (isMangaka || isTantou) && (
               <div className="flex-1 overflow-y-auto">
                 <LayerPanel
                   flattening={flattening}
@@ -760,6 +774,12 @@ export function WorkspacePage() {
               <p className="text-sm text-on-surface-variant/60">
                 Select a page
               </p>
+            </div>
+          )}
+
+          {isLayerUploading && (
+            <div className="absolute inset-0 bg-surface/60 flex items-center justify-center z-20">
+              <Loader2 size={32} className="animate-spin text-primary" />
             </div>
           )}
 
@@ -949,7 +969,7 @@ export function WorkspacePage() {
         open={showFlattenDialog}
         onClose={() => setShowFlattenDialog(false)}
         title="Flatten Layers"
-        description="Gộp tất cả layers vào ảnh nền và xoá toàn bộ layers. Hành động này không thể hoàn tác."
+        description="Merge all layers into the background image and delete all layers. This action cannot be undone."
       >
         <div className="flex items-center justify-end gap-2 pt-4">
           <Button
