@@ -104,7 +104,7 @@ export function CommentPanel() {
         addToast({ title: 'Reply added', variant: 'success' })
       }
     } else {
-      const created = await addComment({ content: text.trim(), posX: 0, posY: 0 })
+      const created = await addComment({ content: text.trim(), posX: null, posY: null })
       if (created) {
         addToast({
           title: 'Comment added',

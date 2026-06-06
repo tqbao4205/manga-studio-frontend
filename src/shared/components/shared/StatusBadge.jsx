@@ -23,7 +23,7 @@ import { cn, getStatusColor } from "../../utils";
 
 const labels = {
   DRAFT: "Draft",
-  PENDING_BOARD_APPROVAL: "Pending Board",
+  PENDING_BOARD_APPROVAL: "Under Editorial Review",
   APPROVED: "Approved",
   PUBLISHED: "Published",
   CANCELLED: "Cancelled",
@@ -34,7 +34,7 @@ const labels = {
   REJECTED: "Rejected",
   PENDING: "Pending",
   SUBMITTED: "Submitted",
-  REVISION_REQUIRED: "Revision",
+  REVISION_REQUIRED: "Revision Needed",
   SCHEDULED: "Scheduled",
   IN_PRESS: "In Press",
   UPLOADED: "Uploaded",
@@ -42,6 +42,11 @@ const labels = {
   IN_PRODUCTION: "In Production",
   TODO: "Todo",
   DONE: "Done",
+  PENDING_TANTOU: "Under Review",
+  PENDING_BOARD_VOTE: "Under Editorial Review",
+  ONGOING: "Ongoing",
+  HIATUS: "Hiatus",
+  AT_RISK: "At Risk",
 };
 
 export function StatusBadge({ status, className, size = "md" }) {

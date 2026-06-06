@@ -89,6 +89,8 @@ export const useWorkspaceStore = create((set, get) => ({
   isLoading: false,
   /** Loading page data (loadPage đang chạy) */
   isLoadingPage: false,
+  /** Upload layer đang diễn ra */
+  isLayerUploading: false,
   /** Kết quả merge layers (finalImageUrl từ POST /pages/{id}/merge) */
   mergeResult: null,
 
@@ -312,11 +314,15 @@ export const useWorkspaceStore = create((set, get) => ({
    * @param {FormData} formData - FormData chứa file + label + opacity + sortOrder
    */
   addLayer: async (pageId, formData) => {
+    set({ isLayerUploading: true });
     try {
       const created = await layerService.create(pageId, formData);
-      set((s) => ({ layers: [...s.layers, created] }));
+      set((s) => ({ layers: [...s.layers, created], isLayerUploading: false }));
+      return created;
     } catch (err) {
+      set({ isLayerUploading: false });
       console.error('[workspaceStore] addLayer failed:', err);
+      throw err;
     }
   },
 

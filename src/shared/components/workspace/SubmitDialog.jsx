@@ -11,7 +11,7 @@
  */
 
 import { useRef, useState } from 'react'
-import { Upload, X } from 'lucide-react'
+import { Upload, X, Loader2 } from 'lucide-react'
 import { Dialog } from '../ui/dialog'
 import { Button } from '../ui/button'
 
@@ -20,9 +20,10 @@ import { Button } from '../ui/button'
  * @param {boolean} props.open
  * @param {Function} props.onClose
  * @param {string} props.regionLabel - Tên region (hiển thị title)
+ * @param {boolean} props.isSubmitting - Đang submit (disable nút + spinner)
  * @param {Function} props.onConfirm - Callback: ({ file, note }) => void
  */
-export function SubmitDialog({ open, onClose, regionLabel, onConfirm }) {
+export function SubmitDialog({ open, onClose, regionLabel, isSubmitting = false, onConfirm }) {
   const fileInputRef = useRef(null)
   const [preview, setPreview] = useState(null)
   const [selectedFile, setSelectedFile] = useState(null)
@@ -46,9 +47,6 @@ export function SubmitDialog({ open, onClose, regionLabel, onConfirm }) {
   const handleConfirm = () => {
     if (!selectedFile) return
     onConfirm({ file: selectedFile, note: note.trim() })
-    setPreview(null)
-    setSelectedFile(null)
-    setNote('')
   }
 
   /**
@@ -117,9 +115,13 @@ export function SubmitDialog({ open, onClose, regionLabel, onConfirm }) {
 
         {/* Footer */}
         <div className="flex items-center justify-end gap-2 pt-2 border-t border-outline-variant">
-          <Button variant="ghost" size="sm" onClick={handleClose}>Cancel</Button>
-          <Button size="sm" onClick={handleConfirm} disabled={!selectedFile}>
-            Submit
+          <Button variant="ghost" size="sm" onClick={handleClose} disabled={isSubmitting}>Cancel</Button>
+          <Button size="sm" onClick={handleConfirm} disabled={!selectedFile || isSubmitting}>
+            {isSubmitting ? (
+              <><Loader2 size={14} className="animate-spin" /> Submitting...</>
+            ) : (
+              'Submit'
+            )}
           </Button>
         </div>
       </div>

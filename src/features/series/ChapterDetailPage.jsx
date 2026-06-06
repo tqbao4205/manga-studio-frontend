@@ -224,7 +224,7 @@ export function ChapterDetailPage() {
                         ? 'bg-red-500/20 text-red-400'
                         : 'bg-primary/20 text-primary',
               )}>
-                {chapter.status?.replace(/_/g, ' ')}
+                {{DRAFT:'Draft',PLANNED:'Planned',IN_PROGRESS:'In Progress',IN_REVIEW:'In Review',SUBMITTED:'Submitted',PENDING_BOARD_APPROVAL:'Under Editorial Review',PENDING_BOARD_VOTE:'Pending Editorial Review',APPROVED:'Approved',REVISION_REQUIRED:'Revision Needed',REJECTED:'Rejected',PUBLISHED:'Published'}[chapter.status] || chapter.status?.replace(/_/g, ' ')}
               </span>
             </div>
             <div className="flex items-center gap-3">

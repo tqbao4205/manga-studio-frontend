@@ -872,6 +872,20 @@ export function WorkspaceCanvas() {
               </Group>
             );
           })}
+
+          {/* Temporary pin marker while typing new comment */}
+          {commentPos && (
+            <Circle
+              x={commentPos.x}
+              y={commentPos.y}
+              radius={10 / scale}
+              fill="#f59e0b"
+              stroke="#fff"
+              strokeWidth={1.5 / scale}
+              offsetX={10 / scale}
+              offsetY={10 / scale}
+            />
+          )}
         </Layer>
       </Stage>
 
@@ -953,7 +967,7 @@ export function WorkspaceCanvas() {
           );
         })()}
 
-      {/* Overlay nhập comment (xuất hiện khi click ở comment mode) */}
+      {/* Overlay nhập comment — xuất hiện khi click ở comment mode, style đồng bộ với popup xem comment */}
       {commentPos &&
         (() => {
           const s = stageRef.current;
@@ -961,35 +975,49 @@ export function WorkspaceCanvas() {
           const sy = s ? s.y() : (containerSize.h - stageH) / 2;
           return (
             <div
-              className="absolute z-10"
+              className="absolute z-20"
               style={{
-                left: sx + commentPos.x * scale,
-                top: sy + commentPos.y * scale - 120,
+                left: sx + commentPos.x * scale + 20,
+                top: sy + commentPos.y * scale - 40,
               }}
             >
-              <div className="bg-workspace-surface border border-workspace-border px-3 py-2 shadow-lg w-56 rounded">
+              <div className="bg-surface border border-outline-variant/30 px-3.5 py-2.5 shadow-xl w-64 rounded-xl">
+                {/* Header hint */}
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center text-[10px] font-bold text-primary flex-shrink-0">
+                    {user?.displayName?.[0] || '?'}
+                  </div>
+                  <span className="text-xs font-semibold text-on-surface truncate">
+                    {user?.displayName || 'You'}
+                  </span>
+                  <span className="ml-auto text-[9px] font-semibold uppercase px-1.5 py-0.5 rounded-full bg-status-warning/15 text-status-warning">
+                    New
+                  </span>
+                </div>
+
+                {/* Input */}
                 <textarea
                   autoFocus
                   value={commentText}
                   onChange={(e) => setCommentText(e.target.value)}
                   placeholder="Write a comment..."
                   rows={3}
-                  className="w-full bg-transparent text-xs text-workspace-text placeholder:text-workspace-text-secondary/40 outline-none resize-none border-b border-workspace-border/20 pb-1 mb-2 focus:border-workspace-accent transition-colors"
+                  className="w-full bg-surface-container-high text-xs text-on-surface placeholder:text-on-surface-variant/40 outline-none resize-none rounded-lg px-2.5 py-1.5 border border-outline-variant/20 focus:border-primary/50 transition-colors"
                 />
-                <div className="flex items-center justify-end gap-2">
+                <div className="flex items-center justify-end gap-2 mt-1.5">
                   <button
                     onClick={() => {
                       setCommentPos(null);
                       setCommentText("");
                     }}
-                    className="text-[10px] text-workspace-text-secondary hover:text-workspace-text transition-colors"
+                    className="text-[10px] text-on-surface-variant/60 hover:text-on-surface-variant transition-colors"
                   >
                     Cancel
                   </button>
                   <button
                     onClick={submitComment}
                     disabled={!commentText.trim()}
-                    className="text-[10px] font-semibold text-workspace-accent disabled:opacity-30"
+                    className="text-[10px] font-semibold text-primary disabled:opacity-30 disabled:cursor-not-allowed hover:text-primary/80 transition-colors"
                   >
                     Add Comment
                   </button>

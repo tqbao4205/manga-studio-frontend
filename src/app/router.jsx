@@ -34,6 +34,7 @@ import { PublishingPage } from "../features/publishing/PublishingPage";
 import { VoteEntryPage } from "../features/publishing/VoteEntryPage";
 import { ProfilePage } from "../features/profile/ProfilePage";
 import { InvitationsPage } from "../features/invitations/InvitationsPage";
+import { TantouInvitationsPage } from "../features/invitations/TantouInvitationsPage";
 import { NotFoundPage } from "../features/not-found/NotFoundPage";
 import { ProtectedRoute, RoleGuard } from "./guards";
 
@@ -53,7 +54,7 @@ export default function App() {
           path="/workspace/:chapterId/:pageId?"
           element={
             <ProtectedRoute>
-              <RoleGuard allowedRoles={["MANGAKA", "ASSISTANT"]}>
+              <RoleGuard allowedRoles={["MANGAKA", "ASSISTANT", "TANTOU_EDITOR"]}>
                 <WorkspacePage />
               </RoleGuard>
             </ProtectedRoute>
@@ -150,6 +151,16 @@ export default function App() {
             element={
               <RoleGuard allowedRoles={["ASSISTANT"]}>
                 <InvitationsPage />
+              </RoleGuard>
+            }
+          />
+
+          {/* Tantou Invitations — lời mời tantou editor */}
+          <Route
+            path="/tantou-invitations"
+            element={
+              <RoleGuard allowedRoles={["TANTOU_EDITOR"]}>
+                <TantouInvitationsPage />
               </RoleGuard>
             }
           />

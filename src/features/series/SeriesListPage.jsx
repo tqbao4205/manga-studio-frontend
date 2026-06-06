@@ -41,7 +41,7 @@ import { seriesPlaceholder } from '../../shared/constants/mock-data'
 //   Genre.java: ACTION, FANTASY, ROMANCE, COMEDY, DRAMA
 //   SeriesStatus.java: DRAFT, PENDING_APPROVAL, APPROVED, ONGOING, HIATUS, ...
 const genres = ['ACTION', 'FANTASY', 'ROMANCE', 'COMEDY', 'DRAMA']
-const statuses = ['DRAFT', 'PENDING_APPROVAL', 'APPROVED', 'ONGOING', 'HIATUS', 'CANCELLED', 'COMPLETED', 'AT_RISK']
+const statuses = ['DRAFT', 'PENDING_APPROVAL', 'APPROVED', 'ONGOING', 'HIATUS', 'CANCELLED', 'COMPLETED', 'AT_RISK', 'PENDING_TANTOU', 'PENDING_BOARD_VOTE']
 
 // Labels hiển thị cho người dùng (tiếng Anh để đồng bộ UI)
 const genreLabels = { ACTION: 'Action', FANTASY: 'Fantasy', ROMANCE: 'Romance', COMEDY: 'Comedy', DRAMA: 'Drama' }
@@ -55,6 +55,8 @@ const statusLabels = {
   COMPLETED: 'Completed',
   REJECTED: 'Rejected',
   AT_RISK: 'At Risk',
+  PENDING_TANTOU: 'Pending Lead Editor',
+  PENDING_BOARD_VOTE: 'Pending Editorial Review',
 }
 
 // Màu sắc cho mỗi status badge (dùng Tailwind classes)
@@ -68,6 +70,8 @@ const statusColorMap = {
   REJECTED: 'bg-red-500/10 text-red-400 border-red-500/20',
   COMPLETED: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
   AT_RISK: 'bg-red-500/10 text-red-400 border-red-500/20',
+  PENDING_TANTOU: 'bg-purple-500/10 text-purple-400 border-purple-500/20',
+  PENDING_BOARD_VOTE: 'bg-orange-500/10 text-orange-400 border-orange-500/20',
 }
 
 // Options cho sort dropdown
@@ -121,7 +125,7 @@ export function SeriesListPage() {
         <div className="space-y-3">
           <h1 className="text-4xl font-bold tracking-tight text-white">Manga Series</h1>
           <p className="text-on-surface-variant text-lg max-w-xl leading-relaxed">
-            Manage and track your active manga production pipeline from draft to final publication.
+            Manage and track your manga series from draft to final publication.
           </p>
         </div>
         {/* Tab "All Series" — giữ lại cho UI, bỏ tab Favorites/Archived vì backend chưa hỗ trợ */}
@@ -328,7 +332,7 @@ export function SeriesListPage() {
               </div>
               <span className="text-lg font-bold text-white mb-2">Create New Series</span>
               <p className="text-on-surface-variant text-sm text-center max-w-[200px]">
-                Launch a new production pipeline for your next masterpiece.
+                Start creating your next masterpiece.
               </p>
             </div>
           )}

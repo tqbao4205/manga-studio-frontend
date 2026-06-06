@@ -13,8 +13,9 @@ const extraNav = [
   { label: 'Reviews', icon: 'rate_review', path: '/reviews', roles: ['TANTOU_EDITOR', 'EDITORIAL_BOARD'] },
   { label: 'Tasks', icon: 'checklist', path: '/tasks', roles: ['MANGAKA', 'ASSISTANT'] },
   { label: 'Invitations', icon: 'mail', path: '/invitations', roles: ['ASSISTANT'] },
+  { label: 'Lead Editor Invitations', icon: 'mail', path: '/tantou-invitations', roles: ['TANTOU_EDITOR'] },
   { label: 'Publishing', icon: 'calendar_month', path: '/publishing', roles: ['EDITORIAL_BOARD'] },
-  { label: 'Vote Entry', icon: 'how_to_vote', path: '/publishing/votes', roles: ['EDITORIAL_BOARD'] },
+  { label: 'Editorial Vote', icon: 'how_to_vote', path: '/publishing/votes', roles: ['EDITORIAL_BOARD'] },
   { label: 'Rankings', icon: 'trending_up', path: '/rankings', roles: ['ALL'] },
 ]
 

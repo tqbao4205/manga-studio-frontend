@@ -135,6 +135,84 @@ const seriesService = {
   updateStatus: async (id, request) => {
     return api.patch(`/series/${id}/status`, request);
   },
+
+  // ═══════════════════════════════════════════════
+  //  TANTOU — Mời / Xem / Xoá / Phản hồi
+  // ═══════════════════════════════════════════════
+
+  /**
+   * MANGAKA gửi lời mời TANTOU_EDITOR vào series.
+   * POST /api/series/{seriesId}/tantou/invite
+   * Body: { tantouId }
+   */
+  inviteTantou: async (seriesId, tantouId) => {
+    return api.post(`/series/${seriesId}/tantou/invite`, { tantouId });
+  },
+
+  /**
+   * Xem danh sách lời mời tantou của series.
+   * GET /api/series/{seriesId}/tantou/invitations
+   */
+  getTantouInvitations: async (seriesId) => {
+    return api.get(`/series/${seriesId}/tantou/invitations`);
+  },
+
+  /**
+   * MANGAKA / EB xoá l?i m?i tantou kh?i series.
+   * DELETE /api/series/{seriesId}/tantou/{tantouId}
+   */
+  removeTantouInvitation: async (seriesId, tantouId) => {
+    return api.delete(`/series/${seriesId}/tantou/${tantouId}`);
+  },
+
+  /**
+   * TANTOU_EDITOR xem danh sách l?i m?i PENDING c?a mình.
+   * GET /api/tantou/invitations
+   */
+  getMyTantouInvitations: async () => {
+    return api.get('/tantou/invitations');
+  },
+
+  /**
+   * TANTOU_EDITOR ph?n h?i l?i m?i (ACCEPTED / REJECTED).
+   * PATCH /api/tantou/invitations/{invitationId}
+   * Body: { status }
+   */
+  respondTantouInvitation: async (invitationId, status) => {
+    return api.patch(`/tantou/invitations/${invitationId}`, { status });
+  },
+
+  // ═══════════════════════════════════════════════
+  //  SERIES WORKFLOW — Submit / Approve / Reject
+  // ═══════════════════════════════════════════════
+
+  /**
+   * MANGAKA submit series cho tantou review.
+   * DRAFT → PENDING_TANTOU
+   * POST /api/series/{seriesId}/submit
+   */
+  submitTantou: async (seriesId) => {
+    return api.post(`/series/${seriesId}/submit`);
+  },
+
+  /**
+   * TANTOU_EDITOR duy?t series.
+   * PENDING_TANTOU → PENDING_BOARD_VOTE
+   * POST /api/series/{seriesId}/tantou/approve
+   */
+  tantouApprove: async (seriesId) => {
+    return api.post(`/series/${seriesId}/tantou/approve`);
+  },
+
+  /**
+   * TANTOU_EDITOR từ chối series.
+   * PENDING_TANTOU → DRAFT
+   * POST /api/series/{seriesId}/tantou/reject
+   * Body: { reason }
+   */
+  tantouReject: async (seriesId) => {
+    return api.post(`/series/${seriesId}/tantou/reject`);
+  },
 };
 
 export default seriesService;

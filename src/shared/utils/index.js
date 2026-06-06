@@ -103,6 +103,8 @@ export function getStatusColor(status) {
     PUBLISHED: '#16a34a',
     COMPLETED: '#16a34a',
     PENDING_BOARD_APPROVAL: '#ea580c',
+    PENDING_BOARD_VOTE: '#ea580c',
+    PENDING_TANTOU: '#9333EA',
     PENDING: '#ea580c',
     IN_PROGRESS: '#2563eb',
     IN_REVIEW: '#7c3aed',
@@ -111,6 +113,9 @@ export function getStatusColor(status) {
     DRAFT: '#6b7280',
     CANCELLED: '#dc2626',
     REJECTED: '#dc2626',
+    ONGOING: '#16a34a',
+    HIATUS: '#ea580c',
+    AT_RISK: '#dc2626',
 
     SCHEDULED: '#2563eb',
     IN_PRESS: '#7c3aed',

@@ -119,7 +119,7 @@ export function NewSeriesPage() {
         <p className="text-base text-on-surface-variant">
           {isEdit
             ? 'Update your series details and manage production settings.'
-            : 'Launch your next masterpiece into the production pipeline.'}
+            : 'Start creating your next masterpiece.'}
         </p>
       </div>
 
