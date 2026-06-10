@@ -93,6 +93,8 @@ export const useWorkspaceStore = create((set, get) => ({
   isLayerUploading: false,
   /** Kết quả merge layers (finalImageUrl từ POST /pages/{id}/merge) */
   mergeResult: null,
+  /** Đánh dấu merge thất bại (để canvas fallback về ảnh gốc) */
+  mergeError: false,
 
   // ═══════════════════════════════════════════
   //  CHAPTER & PAGE — ASYNC ACTIONS
@@ -526,17 +528,23 @@ export const useWorkspaceStore = create((set, get) => ({
   mergePage: async (pageId) => {
     try {
       const result = await pageService.merge(pageId);
-      const finalImageUrl = result?.finalImageUrl || result?.imageUrl || '';
+      const finalImageUrl = result?.finalImageUrl || result?.imageUrl;
+      if (!finalImageUrl) {
+        console.error('[workspaceStore] mergePage: no finalImageUrl in response');
+        set({ mergeResult: null, mergeError: true });
+        return null;
+      }
       set((s) => ({
         pages: s.pages.map((p) =>
           p.id === pageId ? { ...p, finalImageUrl } : p
         ),
         mergeResult: finalImageUrl,
+        mergeError: false,
       }));
       return finalImageUrl;
     } catch (err) {
       console.error('[workspaceStore] mergePage failed:', err);
-      set({ mergeResult: null });
+      set({ mergeResult: null, mergeError: true });
       return null;
     }
   },
@@ -544,7 +552,7 @@ export const useWorkspaceStore = create((set, get) => ({
   /**
    * Xoá kết quả merge (đóng dialog preview).
    */
-  clearMergeResult: () => set({ mergeResult: null }),
+  clearMergeResult: () => set({ mergeResult: null, mergeError: false }),
 
   /**
    * Flatten page: merge layers vào ảnh nền, ghi đè originalImageUrl, xoá toàn bộ layers.
