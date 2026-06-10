@@ -46,8 +46,8 @@ export function TasksPageView() {
   };
 
   const handleOpenWorkspace = (task) => {
-    const workspaceSeriesId = task?.seriesId || 1;
-    navigate(`/workspace/${workspaceSeriesId}`, {
+    const chapterId = task?.chapterId || 1;
+    navigate(`/workspace/${chapterId}`, {
       state: {
         focusTaskId: task?.id || null,
         returnTo: "/tasks",
@@ -224,6 +224,7 @@ export function TasksPageView() {
         loading={detailLoading}
         onClose={closeTaskDetail}
         onOpenWorkspace={handleOpenWorkspace}
+        onTaskUpdated={reloadTasks}
       />
 
       <TaskEditModal

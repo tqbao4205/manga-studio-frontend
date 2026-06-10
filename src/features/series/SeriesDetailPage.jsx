@@ -20,7 +20,7 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
-  ArrowLeft, Plus, Check, X, RotateCcw, Send, Edit,
+  ArrowLeft, Plus, Check, X, RotateCcw, Send, Edit, Lock,
   Star, Trophy, ArrowUp, Filter, SortAsc,
   Users, UserPlus, UserMinus, Search, Mail, Loader,
 } from 'lucide-react'
@@ -74,7 +74,7 @@ export function SeriesDetailPage() {
   const tantouTrigger = useAuthStore((s) => s.tantouTrigger) // 👈 watch trigger tantou để refetch realtime
   const addToast = useUIStore((s) => s.addToast)
 
-  const { currentSeries, seriesLoading, seriesError, fetchById } = useSeriesStore()
+  const { currentSeries, seriesLoading, seriesError, fetchById, updateChapterStatus } = useSeriesStore()
   const { chapters, chaptersLoading, fetchChapters } = useSeriesStore()
 
   useEffect(() => {
@@ -342,13 +342,11 @@ export function SeriesDetailPage() {
   // ── Chapter status update handler ──
   const handleChapterStatusUpdate = async (chapterId, newStatus) => {
     try {
-      await chapterService.update(chapterId, { status: newStatus })
-      fetchChapters(id)
+      await updateChapterStatus(chapterId, newStatus)
+      await fetchChapters(id)
       const labelMap = {
-        PENDING_BOARD_APPROVAL: 'submitted for review',
         APPROVED: 'approved',
         REVISION_REQUIRED: 'requested revision',
-        REJECTED: 'rejected',
         PUBLISHED: 'published',
         IN_REVIEW: 'submitted for review',
         SUBMITTED: 'resubmitted',
@@ -404,13 +402,20 @@ export function SeriesDetailPage() {
 
   // ── Chapter action button theo role ──
   const renderChapterAction = (ch) => {
-    if (isOwner && (ch.status === 'PLANNED' || ch.status === 'IN_PROGRESS')) {
+    if (isOwner && (ch.status === 'DRAFT' || ch.status === 'PLANNED' || ch.status === 'IN_PROGRESS')) {
+      const canSubmit = ch.progressPercent === 100
       return (
         <button
-          onClick={(e) => { e.stopPropagation(); handleChapterStatusUpdate(ch.id, 'IN_REVIEW') }}
-          className="bg-primary-container text-on-primary-container px-4 py-2 rounded-lg text-xs font-medium font-bold whitespace-nowrap active:scale-95 transition-all"
+          onClick={(e) => { e.stopPropagation(); canSubmit && handleChapterStatusUpdate(ch.id, 'IN_REVIEW') }}
+          disabled={!canSubmit}
+          className={`px-4 py-2 rounded-lg text-xs font-medium font-bold whitespace-nowrap transition-all ${
+            canSubmit
+              ? 'bg-primary-container text-on-primary-container active:scale-95'
+              : 'bg-surface-container-highest text-on-surface-variant/50 cursor-not-allowed'
+          }`}
+          title={canSubmit ? 'Submit for review' : 'Complete all pages first'}
         >
-          Submit
+          {canSubmit ? 'Submit' : <><Lock size={12} className="inline mr-1" /> Incomplete</>}
         </button>
       )
     }
@@ -421,53 +426,41 @@ export function SeriesDetailPage() {
       return <span className="text-xs text-purple-400 font-medium px-2">In Review</span>
     }
     if (isOwner && ch.status === 'REVISION_REQUIRED') {
+      const canSubmit = ch.progressPercent === 100
       return (
         <button
-          onClick={(e) => { e.stopPropagation(); handleChapterStatusUpdate(ch.id, 'SUBMITTED') }}
-          className="bg-primary-container text-on-primary-container px-4 py-2 rounded-lg text-xs font-medium font-bold whitespace-nowrap active:scale-95 transition-all"
+          onClick={(e) => { e.stopPropagation(); canSubmit && handleChapterStatusUpdate(ch.id, 'SUBMITTED') }}
+          disabled={!canSubmit}
+          className={`px-4 py-2 rounded-lg text-xs font-medium font-bold whitespace-nowrap transition-all ${
+            canSubmit
+              ? 'bg-primary-container text-on-primary-container active:scale-95'
+              : 'bg-surface-container-highest text-on-surface-variant/50 cursor-not-allowed'
+          }`}
+          title={canSubmit ? 'Resubmit for review' : 'Complete all pages first'}
         >
-          Resubmit
+          {canSubmit ? 'Resubmit' : <><Lock size={12} className="inline mr-1" /> Incomplete</>}
         </button>
       )
     }
     if (isTantou && (ch.status === 'IN_REVIEW' || ch.status === 'SUBMITTED')) {
       return (
-        <div className="flex items-center gap-1">
-          <button
-            onClick={(e) => { e.stopPropagation(); handleChapterStatusUpdate(ch.id, 'PENDING_BOARD_APPROVAL') }}
-            className="p-1.5 rounded-lg text-emerald-400 hover:bg-emerald-500/10 transition-colors"
-            title="Submit for Review"
-          ><Send size={14} /></button>
-          <button
-            onClick={(e) => { e.stopPropagation(); handleChapterStatusUpdate(ch.id, 'REVISION_REQUIRED') }}
-            className="p-1.5 rounded-lg text-yellow-400 hover:bg-yellow-500/10 transition-colors"
-            title="Request revision"
-          ><RotateCcw size={14} /></button>
-          <button
-            onClick={(e) => { e.stopPropagation(); handleChapterStatusUpdate(ch.id, 'REJECTED') }}
-            className="p-1.5 rounded-lg text-red-400 hover:bg-red-500/10 transition-colors"
-            title="Reject"
-          ><X size={14} /></button>
-        </div>
-      )
-    }
-    if (isEb && ch.status === 'PENDING_BOARD_APPROVAL') {
-      return (
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-2">
           <button
             onClick={(e) => { e.stopPropagation(); handleChapterStatusUpdate(ch.id, 'APPROVED') }}
-            className="p-1.5 rounded-lg text-emerald-400 hover:bg-emerald-500/10 transition-colors"
-            title="Approve"
-          ><Check size={14} /></button>
+            className="px-4 py-2 rounded-lg text-xs font-medium font-bold whitespace-nowrap transition-all bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20 active:scale-95"
+          >
+            <Check size={12} className="inline mr-1" /> Approve
+          </button>
           <button
-            onClick={(e) => { e.stopPropagation(); handleChapterStatusUpdate(ch.id, 'REJECTED') }}
-            className="p-1.5 rounded-lg text-red-400 hover:bg-red-500/10 transition-colors"
-            title="Reject"
-          ><X size={14} /></button>
+            onClick={(e) => { e.stopPropagation(); handleChapterStatusUpdate(ch.id, 'REVISION_REQUIRED') }}
+            className="px-4 py-2 rounded-lg text-xs font-medium font-bold whitespace-nowrap transition-all bg-yellow-500/10 text-yellow-400 border border-yellow-500/20 hover:bg-yellow-500/20 active:scale-95"
+          >
+            <RotateCcw size={12} className="inline mr-1" /> Revise
+          </button>
         </div>
       )
     }
-    if (isTantou && ch.status === 'APPROVED') {
+    if (isEb && ch.status === 'APPROVED') {
       return (
         <button
           onClick={(e) => { e.stopPropagation(); handleChapterStatusUpdate(ch.id, 'PUBLISHED') }}
@@ -475,6 +468,11 @@ export function SeriesDetailPage() {
         >
           Publish
         </button>
+      )
+    }
+    if (isTantou && ch.status === 'APPROVED') {
+      return (
+        <span className="text-xs text-emerald-400 font-medium px-2">Approved</span>
       )
     }
     if (ch.status === 'PUBLISHED' || ch.status === 'APPROVED') {
@@ -487,14 +485,7 @@ export function SeriesDetailPage() {
         </button>
       )
     }
-    return (
-      <button
-        onClick={(e) => { e.stopPropagation(); navigate(`/workspace/${ch.id}`) }}
-        className="bg-primary-container text-on-primary-container px-4 py-2 rounded-lg text-xs font-medium font-bold whitespace-nowrap active:scale-95 transition-all"
-      >
-        Open Workspace
-      </button>
-    )
+    return null
   }
 
   // ── Deadline urgency class ──
@@ -785,7 +776,7 @@ export function SeriesDetailPage() {
                             <td className="px-6 py-4 text-xs font-medium text-on-surface-variant">
                               {formatDate(ch.deadline) || '—'}
                             </td>
-                            <td className="px-6 py-4 text-right opacity-0 group-hover:opacity-100 transition-opacity">
+                            <td className="px-6 py-4 text-right">
                               {renderChapterAction(ch)}
                             </td>
                           </tr>

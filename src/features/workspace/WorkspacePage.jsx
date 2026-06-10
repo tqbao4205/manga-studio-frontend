@@ -145,6 +145,7 @@ export function WorkspacePage() {
   const isReviewMode = location.pathname.startsWith("/review/");
   const taskCreationFlow = Boolean(location.state?.taskCreationFlow);
   const taskFlowReturnTo = location.state?.returnTo || "/tasks";
+  const focusTaskId = location.state?.focusTaskId;
 
   // ─── WorkspaceStore ───
   const currentPageId = useWorkspaceStore((s) => s.currentPageId);
@@ -172,6 +173,7 @@ export function WorkspacePage() {
   const flattenPage = useWorkspaceStore((s) => s.flattenPage);
   const reset = useWorkspaceStore((s) => s.reset);
   const setSeriesId = useWorkspaceStore((s) => s.setSeriesId);
+  const setPageStatus = useWorkspaceStore((s) => s.setPageStatus);
 
   // ─── Other stores ───
   const user = useAuthStore((s) => s.user);
@@ -233,6 +235,12 @@ export function WorkspacePage() {
       setActiveTab("regions");
     }
   }, [taskCreationFlow, isReviewMode, setActiveTab]);
+
+  useEffect(() => {
+    if (focusTaskId && !isReviewMode) {
+      setActiveTab("tasks");
+    }
+  }, [focusTaskId, isReviewMode, setActiveTab]);
 
   useEffect(() => {
     if (user?.role === "ASSISTANT" && !isReviewMode) {
@@ -545,81 +553,7 @@ export function WorkspacePage() {
                       : ""}
                 </span>
               )}
-              {isTantou &&
-                (chapterStatus === "IN_REVIEW" ||
-                  chapterStatus === "SUBMITTED") && (
-                  <div className="flex items-center gap-1">
-                    <button
-                      onClick={() => {
-                        updateChapterStatus(id, "PENDING_BOARD_APPROVAL");
-                        addToast({
-                          type: "success",
-                          title: "Submitted for Review",
-                          message: `Ch.${chapter.chapterNumber} has been submitted for editorial review.`,
-                        });
-                      }}
-                      className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-status-success border border-status-success/30 hover:bg-status-success/5 rounded-lg transition-all"
-                    >
-                      <Send size={14} /> Submit for Review
-                    </button>
-                    <button
-                      onClick={() => {
-                        updateChapterStatus(id, "REVISION_REQUIRED");
-                        addToast({
-                          type: "success",
-                          title: "Revision requested",
-                          message: `Changes requested for Ch.${chapter.chapterNumber}.`,
-                        });
-                      }}
-                      className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-status-warning border border-status-warning/30 hover:bg-status-warning/5 rounded-lg transition-all"
-                    >
-                      <RotateCcw size={14} /> Revise
-                    </button>
-                    <button
-                      onClick={() => {
-                        updateChapterStatus(id, "REJECTED");
-                        addToast({
-                          type: "success",
-                          title: "Chapter rejected",
-                          message: `Ch.${chapter.chapterNumber} has been rejected.`,
-                        });
-                      }}
-                      className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-status-danger border border-status-danger/30 hover:bg-status-danger/5 rounded-lg transition-all"
-                    >
-                      <X size={14} /> Reject
-                    </button>
-                  </div>
-                )}
-              {isEb && chapterStatus === "PENDING_BOARD_APPROVAL" && (
-                <div className="flex items-center gap-1">
-                  <button
-                    onClick={() => {
-                      updateChapterStatus(id, "APPROVED");
-                      addToast({
-                        type: "success",
-                        title: "Chapter approved",
-                        message: `Ch.${chapter.chapterNumber} has been approved.`,
-                      });
-                    }}
-                    className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-status-success border border-status-success/30 hover:bg-status-success/5 rounded-lg transition-all"
-                  >
-                    <Check size={14} /> Approve
-                  </button>
-                  <button
-                    onClick={() => {
-                      updateChapterStatus(id, "REJECTED");
-                      addToast({
-                        type: "success",
-                        title: "Chapter rejected",
-                        message: `Ch.${chapter.chapterNumber} has been rejected.`,
-                      });
-                    }}
-                    className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-status-danger border border-status-danger/30 hover:bg-status-danger/5 rounded-lg transition-all"
-                  >
-                    <X size={14} /> Reject
-                  </button>
-                </div>
-              )}
+
             </>
           )}
         </div>
@@ -687,6 +621,14 @@ export function WorkspacePage() {
                         isActive={p.id === currentPageId}
                         onClick={() => loadPage(p.id)}
                         isMangaka={isMangaka}
+                        onMarkDone={async () => {
+                          await setPageStatus(p.id, p.status === 'COMPLETED' ? 'UPLOADED' : 'COMPLETED');
+                          const data = await chapterService.getById(id);
+                          if (data) {
+                            setChapter(data);
+                            if (data?.seriesId) setSeriesId(data.seriesId);
+                          }
+                        }}
                       />
                     ))}
                   </SortableContext>
@@ -997,7 +939,7 @@ export function WorkspacePage() {
   );
 }
 
-function SortablePageCard({ page, isActive, onClick, isMangaka }) {
+function SortablePageCard({ page, isActive, onClick, isMangaka, onMarkDone }) {
   const {
     attributes,
     listeners,
@@ -1041,6 +983,21 @@ function SortablePageCard({ page, isActive, onClick, isMangaka }) {
           {page.label || `Page ${String(page.pageNumber).padStart(2, "0")}`}
         </span>
       </div>
+      {isMangaka && page.status === 'COMPLETED' ? (
+        <button
+          onClick={(e) => { e.stopPropagation(); onMarkDone?.() }}
+          className="absolute top-2 left-2 bg-yellow-500/90 text-white text-[10px] px-2 py-0.5 rounded-full font-bold hover:bg-yellow-600 transition-colors z-10"
+        >
+          Undo
+        </button>
+      ) : isMangaka && (
+        <button
+          onClick={(e) => { e.stopPropagation(); onMarkDone?.() }}
+          className="absolute top-2 left-2 bg-emerald-500/90 text-white text-[10px] px-2 py-0.5 rounded-full font-bold hover:bg-emerald-600 transition-colors z-10"
+        >
+          Mark Done
+        </button>
+      )}
       {isActive && (
         <div className="absolute top-2 right-2 bg-primary text-white text-[10px] px-2 py-0.5 rounded-full font-bold">
           ACTIVE

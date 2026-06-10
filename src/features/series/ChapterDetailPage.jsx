@@ -334,6 +334,25 @@ export function ChapterDetailPage() {
                       chapterId={chapterId}
                       isMangaka={isMangaka}
                       onDelete={handleDeletePage}
+                      onMarkDone={async () => {
+                        const newStatus = page.status === 'COMPLETED' ? 'UPLOADED' : 'COMPLETED';
+                        try {
+                          await pageService.updateStatus(page.id, newStatus);
+                          const [freshPages, freshChapter] = await Promise.all([
+                            pageService.getByChapter(Number(chapterId)),
+                            chapterService.getById(Number(chapterId)),
+                          ]);
+                          setPages(Array.isArray(freshPages) ? freshPages : []);
+                          setChapter(freshChapter);
+                          addToast({
+                            type: 'success',
+                            title: newStatus === 'COMPLETED' ? 'Page completed' : 'Page reopened',
+                            message: `Page ${page.pageNumber} ${newStatus === 'COMPLETED' ? 'marked as done' : 'reopened'}.`
+                          });
+                        } catch {
+                          addToast({ type: 'error', title: 'Error', message: 'Failed to update page status.' });
+                        }
+                      }}
                     />
                   ))}
 
@@ -452,7 +471,7 @@ function cn(...classes) {
 }
 
 // ── SortablePageCard: page card có thể kéo thả ──
-function SortablePageCard({ page, chapterId, isMangaka, onDelete }) {
+function SortablePageCard({ page, chapterId, isMangaka, onDelete, onMarkDone }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: page.id })
   const navigate = useNavigate()
   const cfg = pageStatusConfig[page.status] || { label: page.status, dot: 'bg-outline-variant' }
@@ -499,6 +518,23 @@ function SortablePageCard({ page, chapterId, isMangaka, onDelete }) {
           <div className="w-full h-full flex items-center justify-center">
             <Image size={32} className="text-on-surface-variant/20" />
           </div>
+        )}
+
+        {/* Mark Done / Undo button */}
+        {isMangaka && page.status === 'COMPLETED' ? (
+          <button
+            onClick={(e) => { e.stopPropagation(); onMarkDone?.() }}
+            className="absolute top-2 left-2 bg-yellow-500/90 text-white text-[10px] px-2 py-0.5 rounded-full font-bold hover:bg-yellow-600 transition-colors z-20 opacity-0 group-hover:opacity-100"
+          >
+            Undo
+          </button>
+        ) : isMangaka && (
+          <button
+            onClick={(e) => { e.stopPropagation(); onMarkDone?.() }}
+            className="absolute top-2 left-2 bg-emerald-500/90 text-white text-[10px] px-2 py-0.5 rounded-full font-bold hover:bg-emerald-600 transition-colors z-20 opacity-0 group-hover:opacity-100"
+          >
+            Mark Done
+          </button>
         )}
 
         {/* Gradient overlay + Open Workspace */}

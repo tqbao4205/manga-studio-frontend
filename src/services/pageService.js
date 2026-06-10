@@ -12,6 +12,7 @@
  *   POST  /api/v1/pages/{id}/merge                   — Merge layers thành 1 ảnh
  *   POST  /api/v1/pages/{id}/flatten                 — Flatten: merge + replace + xoá layers
  *   PUT   /api/v1/chapters/{chapterId}/pages/reorder — Sắp xếp pages
+ *   PUT   /api/v1/pages/{id}/status                  — Cập nhật trạng thái page
  */
 
 import api from './api';
@@ -86,6 +87,18 @@ const pageService = {
    */
   reorder: async (chapterId, pageIds) => {
     return api.put(`/v1/chapters/${chapterId}/pages/reorder`, { pageIds });
+  },
+
+  /**
+   * Cập nhật trạng thái page (VD: đánh dấu COMPLETED).
+   * Endpoint: PUT /api/v1/pages/{id}/status
+   *
+   * @param {number} pageId - ID của page
+   * @param {string} status - Trạng thái mới (VD: 'COMPLETED')
+   * @returns {Promise<Object>} PageResponse
+   */
+  updateStatus: async (pageId, status) => {
+    return api.put(`/v1/pages/${pageId}/status`, { status });
   },
 };
 

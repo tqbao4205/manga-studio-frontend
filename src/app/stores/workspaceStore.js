@@ -496,6 +496,27 @@ export const useWorkspaceStore = create((set, get) => ({
   // ═══════════════════════════════════════════
 
   /**
+   * Cập nhật trạng thái page (VD: đánh dấu COMPLETED).
+   * Endpoint: PUT /api/v1/pages/{id}/status
+   *
+   * @param {number} pageId - ID của page
+   * @param {string} status - Trạng thái mới (VD: 'COMPLETED')
+   */
+  setPageStatus: async (pageId, status) => {
+    const { chapterId } = get();
+    try {
+      await pageService.updateStatus(pageId, status);
+      // Reload pages để cập nhật progressPercent
+      if (chapterId) {
+        const pages = await pageService.getByChapter(chapterId);
+        set({ pages: pages || [] });
+      }
+    } catch (err) {
+      console.error('[workspaceStore] setPageStatus failed:', err);
+    }
+  },
+
+  /**
    * Merge tất cả visible layers thành 1 ảnh cuối cùng.
    * Endpoint: POST /api/v1/pages/{id}/merge
    *

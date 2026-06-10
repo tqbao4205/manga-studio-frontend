@@ -10,6 +10,7 @@ import {
   FileText,
 } from "lucide-react";
 import { useNotificationStore } from "../../../app/stores/notificationStore";
+import chapterService from "../../../services/chapterService";
 import { cn, formatRelativeTime } from "../../utils";
 
 /**
@@ -85,12 +86,25 @@ export function NotificationsPanel({ onClose }) {
   const handleNotificationClick = (n) => {
     if (!n.isRead) markAsRead(n.id)
     handleClose()
+
+    // Override: chưa accept series → navigate đến trang lời mời
+    if (n.type === 'INVITATION_SENT') {
+      navigate('/invitations')
+      return
+    }
+    if (n.type === 'TANTOU_INVITATION_SENT') {
+      navigate('/tantou-invitations')
+      return
+    }
+
     switch (n.referenceType) {
       case 'TASK':
         navigate('/tasks')
         break
       case 'CHAPTER':
-        navigate(`/workspace/${n.referenceId}`)
+        chapterService.getById(n.referenceId)
+          .then(chapter => navigate(`/series/${chapter.seriesId}`))
+          .catch(() => navigate(`/series`))
         break
       case 'SERIES':
         navigate(`/series/${n.referenceId}`)

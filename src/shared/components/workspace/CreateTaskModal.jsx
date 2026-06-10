@@ -1,10 +1,10 @@
 import { useState, useEffect } from "react";
-import { X, CalendarDays, ChevronDown, Loader2 } from "lucide-react";
+import { X, CalendarDays, ChevronDown, Loader2, Eye, Upload } from "lucide-react";
 import { useWorkspaceStore } from "../../../app/stores/workspaceStore";
 import assistantService from "../../../services/assistantService";
 
 const PRIORITIES = ["LOW", "MEDIUM", "HIGH", "URGENT"];
-const REGION_TYPES = ["BACKGROUND", "CHARACTER", "TEXT", "EFFECT", "TONE", "OTHER"];
+const DIFFICULTIES = ["LOW", "MEDIUM", "HIGH"];
 
 const PRIORITY_COLORS = {
   LOW: "bg-status-success/15 text-status-success border-status-success/30",
@@ -23,11 +23,11 @@ export function CreateTaskModal({ open, region, page, seriesId: propSeriesId, on
   const [title, setTitle] = useState("");
   const [assistantId, setAssistantId] = useState(null);
   const [priority, setPriority] = useState("MEDIUM");
-  const [regionType, setRegionType] = useState("");
+  const [difficulty, setDifficulty] = useState("MEDIUM");
   const [dueDate, setDueDate] = useState("");
   const [description, setDescription] = useState("");
   const [notes, setNotes] = useState("");
-  const [referenceImageUrl, setReferenceImageUrl] = useState("");
+  const [attachments, setAttachments] = useState([]);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -71,10 +71,9 @@ export function CreateTaskModal({ open, region, page, seriesId: propSeriesId, on
       title: title.trim(),
       assistantId,
       priority,
-      ...(regionType && { regionType }),
+      difficulty,
       description: description.trim() || undefined,
       notes: notes.trim() || undefined,
-      referenceImageUrl: referenceImageUrl.trim() || undefined,
     };
 
     if (dueDate) {
@@ -102,8 +101,9 @@ export function CreateTaskModal({ open, region, page, seriesId: propSeriesId, on
               ) : (
                 <div className="flex items-center justify-center h-full text-on-surface-variant/40 text-sm">No preview</div>
               )}
-              <div className="absolute top-2 left-2 bg-primary/90 text-on-primary text-[10px] font-bold px-2 py-0.5 rounded">
-                {region.regionType || "REGION"}
+              <div className="absolute top-[35%] left-[25%] border-2 border-primary-container bg-primary-container/10 ring-4 ring-primary/20 flex items-center justify-center"
+                style={{ width: Math.max(region.width * 0.15, 80), height: Math.max(region.height * 0.15, 80) }}>
+                <div className="absolute -top-2.5 -left-2.5 bg-primary-container text-white px-2 py-0.5 rounded text-[10px] font-bold">{region.regionType || "FOCUS"}</div>
               </div>
             </div>
 
@@ -185,20 +185,16 @@ export function CreateTaskModal({ open, region, page, seriesId: propSeriesId, on
                 </select>
               </div>
               <div className="space-y-1.5">
-                <label className="text-[11px] font-semibold uppercase tracking-wider text-on-surface-variant/60">Region Type</label>
-                <div className="relative">
-                  <select
-                    value={regionType}
-                    onChange={(e) => setRegionType(e.target.value)}
-                    className="w-full h-10 px-3.5 text-sm bg-surface-container-high border border-outline-variant/20 rounded-lg outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/30 text-on-surface appearance-none cursor-pointer transition-all"
-                  >
-                    <option value="">— Default —</option>
-                    {REGION_TYPES.map((t) => (
-                      <option key={t} value={t}>{t}</option>
-                    ))}
-                  </select>
-                  <ChevronDown size={14} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant/40" />
-                </div>
+                <label className="text-[11px] font-semibold uppercase tracking-wider text-on-surface-variant/60">Difficulty</label>
+                <select
+                  value={difficulty}
+                  onChange={(e) => setDifficulty(e.target.value)}
+                  className="w-full h-10 px-3.5 text-sm bg-surface-container-high border border-outline-variant/20 rounded-lg outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/30 text-on-surface appearance-none cursor-pointer transition-all"
+                >
+                  {DIFFICULTIES.map((d) => (
+                    <option key={d} value={d}>{d}</option>
+                  ))}
+                </select>
               </div>
               <div className="space-y-1.5">
                 <label className="text-[11px] font-semibold uppercase tracking-wider text-on-surface-variant/60">Due Date</label>
@@ -226,35 +222,59 @@ export function CreateTaskModal({ open, region, page, seriesId: propSeriesId, on
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-[11px] font-semibold uppercase tracking-wider text-on-surface-variant/60">Notes</label>
+              <label className="text-[11px] font-semibold uppercase tracking-wider text-on-surface-variant/60">Production Notes</label>
               <input
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 className="w-full h-10 px-3.5 text-sm bg-surface-container-high border border-outline-variant/20 rounded-lg outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/30 text-on-surface transition-all"
-                placeholder="Internal notes / references"
+                placeholder="Add metadata tags or internal notes..."
               />
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-[11px] font-semibold uppercase tracking-wider text-on-surface-variant/60">Reference Image URL</label>
-              <input
-                value={referenceImageUrl}
-                onChange={(e) => setReferenceImageUrl(e.target.value)}
-                className="w-full h-10 px-3.5 text-sm bg-surface-container-high border border-outline-variant/20 rounded-lg outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/30 text-on-surface transition-all"
-                placeholder="https://example.com/reference.png"
-              />
+              <label className="text-[11px] font-semibold uppercase tracking-wider text-on-surface-variant/60">Attachments &amp; References</label>
+              <div className="border-2 border-dashed border-outline-variant/20 rounded-xl p-5 flex flex-col items-center justify-center gap-3 bg-surface-container-low hover:bg-surface-container-high hover:border-primary/50 transition-all cursor-pointer">
+                <div className="flex gap-4 items-center">
+                  {attachments.length > 0 ? (
+                    <div className="w-16 h-16 rounded border border-outline-variant/20 bg-surface-container overflow-hidden group relative">
+                      <img src={URL.createObjectURL(attachments[0])} alt="" className="w-full h-full object-cover" />
+                      <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Eye size={18} className="text-white" />
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="w-16 h-16 rounded-lg border border-outline-variant/20 bg-surface-container flex items-center justify-center">
+                      <Upload size={20} className="text-on-surface-variant/40" />
+                    </div>
+                  )}
+                  <div>
+                    <p className="text-sm font-medium text-on-surface">Drag and drop assets</p>
+                    <p className="text-[11px] text-on-surface-variant/50">Max 50MB per file (JPG, PNG, TIFF)</p>
+                  </div>
+                </div>
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/tiff"
+                  className="hidden"
+                  id="attachment-input"
+                  onChange={(e) => {
+                    if (e.target.files) setAttachments(Array.from(e.target.files));
+                  }}
+                />
+              </div>
+              <label htmlFor="attachment-input" className="cursor-pointer" />
             </div>
           </div>
         </div>
 
-        <div className="px-6 py-4 border-t border-outline-variant/20 bg-surface-container-low flex items-center justify-between">
-          <button onClick={onClose} className="h-10 px-5 rounded-lg text-sm font-medium text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-colors">
+        <div className="p-5 border-t border-outline-variant/20 bg-surface-container-low flex items-center justify-between">
+          <button onClick={onClose} className="h-10 px-5 rounded-lg text-sm font-medium text-on-surface-variant hover:text-on-surface transition-colors">
             Cancel
           </button>
           <button
             onClick={handleSubmit}
             disabled={(() => { const d = !title.trim() || !assistantId || submitting; return d; })()}
-            className="h-10 px-6 rounded-lg bg-primary text-sm font-semibold text-on-primary hover:brightness-110 disabled:opacity-40 disabled:cursor-not-allowed transition-all active:scale-[0.98] inline-flex items-center gap-2"
+            className="h-10 px-7 rounded-lg bg-primary-container text-on-primary-container text-sm font-bold hover:brightness-110 disabled:opacity-40 disabled:cursor-not-allowed transition-all active:scale-[0.98] inline-flex items-center gap-2 shadow-[0_0_20px_rgba(139,92,246,0.15)]"
           >
             {submitting && <Loader2 size={14} className="animate-spin" />}
             {submitting ? 'Creating...' : 'Create & Assign Task'}

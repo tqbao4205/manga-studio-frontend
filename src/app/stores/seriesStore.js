@@ -50,7 +50,7 @@ import chapterService from '../../services/chapterService'
  *   3. set({ data, isLoading: false }) — thành công
  *   4. catch → set({ error, isLoading: false }) — thất bại
  */
-export const useSeriesStore = create((set) => ({
+export const useSeriesStore = create((set, get) => ({
 
   // ────────────────────────────────────────────
   //  STATE — Dữ liệu
@@ -159,6 +159,50 @@ export const useSeriesStore = create((set) => ({
       })
     } catch (err) {
       set({ chaptersError: err.message, chaptersLoading: false })
+    }
+  },
+
+  /**
+   * updateChapterStatus: Cập nhật trạng thái chapter qua workflow API.
+   * Map status → đúng API method dựa vào state machine.
+   *
+   * @param {number} chapterId - ID của chapter
+   * @param {string} status - Trạng thái đích (IN_REVIEW, APPROVED, REJECTED, ...)
+   */
+  updateChapterStatus: async (chapterId, status) => {
+    const { chapters } = get()
+    const chapter = Array.isArray(chapters)
+      ? chapters.find((c) => c.id === chapterId)
+      : null
+    const seriesId = chapter?.seriesId
+
+    try {
+      const actionMap = {
+        IN_REVIEW: () => chapterService.submitForReview(chapterId),
+        SUBMITTED: () => chapterService.submitForReview(chapterId),
+        APPROVED: () => chapterService.tantouApprove(chapterId),
+        REVISION_REQUIRED: () => chapterService.tantouRequestRevision(chapterId),
+        PUBLISHED: () => chapterService.publish(chapterId),
+      }
+
+      const apiCall = actionMap[status]
+      if (!apiCall) {
+        console.error(`[seriesStore] Unknown status: ${status}`)
+        return
+      }
+
+      await apiCall()
+
+      // Refetch chapters nếu biết seriesId
+      if (seriesId) {
+        const data = await chapterService.getBySeries(seriesId)
+        set({
+          chapters: Array.isArray(data) ? data : data.content || [],
+        })
+      }
+    } catch (err) {
+      console.error('[seriesStore] updateChapterStatus failed:', err)
+      throw err
     }
   },
 }))

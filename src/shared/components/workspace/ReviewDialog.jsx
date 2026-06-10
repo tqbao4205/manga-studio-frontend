@@ -12,9 +12,10 @@
  */
 
 import { useState } from 'react'
-import { Check, RotateCcw, X, FileImage, Loader2 } from 'lucide-react'
+import { Check, RotateCcw, X, FileImage, Loader2, MoveHorizontal } from 'lucide-react'
 import { Dialog } from '../ui/dialog'
 import { Button } from '../ui/button'
+import { ComparisonSlider } from './ComparisonSlider'
 import { cn } from '../../utils'
 
 /**
@@ -29,6 +30,7 @@ import { cn } from '../../utils'
 export function ReviewDialog({ open, onClose, submission, taskLabel, onReview, isReviewing, originalUrl }) {
   const [status, setStatus] = useState(null) // 'APPROVED' | 'REVISION_REQUIRED'
   const [note, setNote] = useState('')
+  const [compareOpen, setCompareOpen] = useState(false)
 
   /**
    * Reset state khi đóng dialog
@@ -59,19 +61,29 @@ export function ReviewDialog({ open, onClose, submission, taskLabel, onReview, i
       <div className="space-y-4">
         {/* Ảnh submission */}
         {submission?.resultImageUrl ? (
-          <div className="border border-outline-variant rounded-lg overflow-hidden bg-surface-variant/20 relative">
-            {originalUrl && (
+          <div>
+            <div className="border border-outline-variant rounded-lg overflow-hidden bg-surface-variant/20 relative">
+              {originalUrl && (
+                <img
+                  src={originalUrl}
+                  alt="Original page"
+                  className="absolute inset-0 w-full h-full object-contain"
+                />
+              )}
               <img
-                src={originalUrl}
-                alt="Original page"
-                className="absolute inset-0 w-full h-full object-contain"
+                src={submission.resultImageUrl}
+                alt="Submission preview"
+                className="relative w-full h-auto max-h-[300px] object-contain mx-auto"
               />
+            </div>
+            {originalUrl && (
+              <button
+                onClick={() => setCompareOpen(true)}
+                className="mt-2 flex items-center gap-1 text-xs font-medium text-primary hover:text-primary/80 transition-colors mx-auto"
+              >
+                <MoveHorizontal size={14} /> Compare with slider
+              </button>
             )}
-            <img
-              src={submission.resultImageUrl}
-              alt="Submission preview"
-              className="relative w-full h-auto max-h-[300px] object-contain mx-auto"
-            />
           </div>
         ) : (
           <div className="h-32 flex items-center justify-center border border-dashed border-outline-variant/40 rounded-lg">
@@ -162,6 +174,17 @@ export function ReviewDialog({ open, onClose, submission, taskLabel, onReview, i
           </Button>
         </div>
       </div>
+
+      {/* ComparisonSlider dialog */}
+      <ComparisonSlider
+        open={compareOpen}
+        onClose={() => setCompareOpen(false)}
+        originalUrl={originalUrl}
+        submissionUrl={submission?.resultImageUrl}
+        originalLabel="Original Page"
+        submissionLabel={submission?.note || 'Submission'}
+        label={taskLabel}
+      />
     </Dialog>
   )
 }

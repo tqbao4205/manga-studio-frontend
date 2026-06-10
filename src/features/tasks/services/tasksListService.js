@@ -77,8 +77,11 @@ export const tasksListService = {
             lookup.set(regionId, {
               seriesId: series.id,
               seriesTitle: series.title || `Series #${series.id}`,
+              chapterId: chapter.id,
               chapterNumber: chapter.chapterNumber,
               pageNumber: page.pageNumber,
+              pageWidth: page.width,
+              pageHeight: page.height,
             })
             neededRegionIds.delete(regionId)
 

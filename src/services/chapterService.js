@@ -11,6 +11,11 @@
  *   POST   /api/series/{seriesId}/chapters — Tạo chapter mới
  *   PUT    /api/chapters/{id}              — Cập nhật chapter
  *   DELETE /api/chapters/{id}              — Xoá chapter
+ *   POST   /api/chapters/{id}/submit                  — Submit cho tantou review
+ *   POST   /api/chapters/{id}/tantou/approve          — Tantou approve
+ *   POST   /api/chapters/{id}/tantou/reject           — Tantou reject
+ *   POST   /api/chapters/{id}/tantou/request-revision — Tantou yêu cầu revision
+ *   POST   /api/chapters/{id}/publish                 — Tantou publish
  */
 
 import api from './api';
@@ -72,6 +77,26 @@ const chapterService = {
    */
   delete: async (id) => {
     return api.delete(`/chapters/${id}`);
+  },
+
+  // ════════════════════════════════════════════
+  //  WORKFLOW — State machine transitions
+  // ════════════════════════════════════════════
+
+  submitForReview: async (id) => {
+    return api.post(`/chapters/${id}/submit`);
+  },
+
+  tantouApprove: async (id) => {
+    return api.post(`/chapters/${id}/tantou/approve`);
+  },
+
+  tantouRequestRevision: async (id) => {
+    return api.post(`/chapters/${id}/tantou/request-revision`);
+  },
+
+  publish: async (id) => {
+    return api.post(`/chapters/${id}/publish`);
   },
 };
 
