@@ -128,6 +128,7 @@ export function WorkspaceCanvas() {
   const deleteAnnotation = useWorkspaceStore((s) => s.deleteAnnotation);
   const hiddenRegionIds = useWorkspaceStore((s) => s.hiddenRegionIds);
   const mergeResult = useWorkspaceStore((s) => s.mergeResult);
+  const mergeError = useWorkspaceStore((s) => s.mergeError);
 
   const visibleRegions = regions.filter((r) => !hiddenRegionIds.includes(r.id));
   const user = useAuthStore((s) => s.user);
@@ -154,8 +155,8 @@ export function WorkspaceCanvas() {
 
   const page = pages.find((p) => p.id === currentPageId);
   const [mergeFallback, setMergeFallback] = useState(false);
-  useEffect(() => { setMergeFallback(false); }, [mergeResult]);
-  const pageImageUrl = (!mergeFallback && mergeResult) || (!mergeFallback && page?.finalImageUrl) || page?.originalImageUrl || page?.webImageUrl || undefined;
+  useEffect(() => { setMergeFallback(false); }, [mergeResult, currentPageId]);
+  const pageImageUrl = (!mergeFallback && mergeResult) || (!mergeFallback && !mergeError && page?.finalImageUrl) || page?.originalImageUrl || page?.webImageUrl || undefined;
   const { image: pageImage, error: pageImageError } = usePageImage(pageImageUrl);
   const pw = page?.width || pageImage?.naturalWidth || 4200;
   const ph = page?.height || pageImage?.naturalHeight || 6000;
@@ -210,12 +211,12 @@ export function WorkspaceCanvas() {
     tr.getLayer()?.batchDraw();
   }, [selectedRegionId, regions, mode]);
 
-  // Fallback: nếu merge image load lỗi (404), quay về originalImageUrl
+  // Fallback: nếu merge/final image load lỗi (404), quay về originalImageUrl
   useEffect(() => {
-    if (pageImageError && mergeResult && !mergeFallback) {
+    if (pageImageError && !mergeFallback) {
       setMergeFallback(true);
     }
-  }, [pageImageError, mergeResult, mergeFallback]);
+  }, [pageImageError, mergeFallback]);
 
   /**
    * Lấy tọa độ chuột tương đối so với Stage (đã tính scale)
