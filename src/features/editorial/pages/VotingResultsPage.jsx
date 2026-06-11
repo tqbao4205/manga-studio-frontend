@@ -4,11 +4,11 @@
   ROUTE: /editorial/:meetingId/results
   MỤC ĐÍCH: Dashboard kết quả vote — biểu đồ YES/NO, từng phiếu
   bầu chi tiết, và panel phê duyệt cuối cho Chief Editor.
-  QUYỀN TRUY CẬP: EDITORIAL_BOARD
+  QUYỀN TRUY CẬP: EDITORIAL_BOARD + CHIEF_EDITOR
   ============================================================
 */
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuthStore } from "../../../app/stores/authStore";
 import { useUIStore } from "../../../app/stores/uiStore";
@@ -17,7 +17,6 @@ import {
   isChiefEditor,
 } from "../../../app/stores/editorialStore";
 import { ConfirmDecisionModal } from "../components/ConfirmDecisionModal";
-import { mockUsers, mockSeries } from "../../../shared/constants/mock-data";
 
 // ── Score progress bar ──
 function ScoreBar({ label, value }) {
@@ -37,13 +36,14 @@ function ScoreBar({ label, value }) {
   );
 }
 
-// ── Individual voter card ──
-function VoterCard({ userId, voteData }) {
-  const member = mockUsers.find((u) => u.id === Number(userId));
-  if (!member || !voteData) return null;
+// ── Individual voter card (dùng vote summary detail từ API) ──
+function VoterCard({ detail, participants }) {
+  // Tìm thông tin participant từ danh sách
+  const participant = participants?.find((p) => p.userId === detail.voterId);
+  const name = participant?.displayName || participant?.username || detail.voterName || "?";
+  const initials = name[0].toUpperCase();
 
-  const isYes = voteData.choice === "YES";
-  const initials = (member.displayName || "?")[0].toUpperCase();
+  const isYes = detail.vote === "YES";
 
   return (
     <div className="border border-outline-variant/25 bg-[rgba(27,27,29,0.7)] backdrop-blur-md p-5 rounded-2xl flex flex-col gap-4 hover:shadow-[0_0_20px_rgba(208,188,255,0.05)] transition-all">
@@ -55,11 +55,8 @@ function VoterCard({ userId, voteData }) {
           </div>
           <div>
             <h4 className="text-lg font-semibold text-on-surface">
-              {member.displayName}
+              {name}
             </h4>
-            <span className="bg-surface-container-high text-on-surface-variant text-[11px] font-medium px-2 py-0.5 rounded border border-outline-variant/30">
-              {member.role.replace("_", " ")}
-            </span>
           </div>
         </div>
         {/* Vote badge */}
@@ -70,29 +67,23 @@ function VoterCard({ userId, voteData }) {
               : "bg-red-400/10 border-red-400/30 text-red-400"
           }`}
         >
-          {voteData.choice}
+          {detail.vote}
         </div>
       </div>
 
       {/* Comment */}
-      {voteData.comment && (
+      {detail.comment && (
         <div className="bg-surface-container-lowest/50 p-3 rounded-xl border border-outline-variant/20 italic text-on-surface-variant text-sm leading-relaxed">
-          "{voteData.comment}"
+          "{detail.comment}"
         </div>
       )}
 
       {/* Score bars */}
-      {voteData.scores && (
+      {detail.scores && detail.scores.length > 0 && (
         <div className="space-y-3 mt-1">
-          <ScoreBar
-            label="Nội dung (Content)"
-            value={voteData.scores.content || 0}
-          />
-          <ScoreBar label="Vẽ (Art)" value={voteData.scores.art || 0} />
-          <ScoreBar
-            label="Sáng tạo (Creativity)"
-            value={voteData.scores.creativity || 0}
-          />
+            {detail.scores.map((s) => (
+            <ScoreBar key={s.criterionId} label={s.criterionName} value={s.score} />
+          ))}
         </div>
       )}
     </div>
@@ -131,16 +122,43 @@ export function VotingResultsPage() {
   const user = useAuthStore((s) => s.user);
   const addToast = useUIStore((s) => s.addToast);
   const getMeetingById = useEditorialStore((s) => s.getMeetingById);
-  const getVoteSummary = useEditorialStore((s) => s.getVoteSummary);
+  const fetchMeetingById = useEditorialStore((s) => s.fetchMeetingById);
   const finalizeDecision = useEditorialStore((s) => s.finalizeDecision);
 
   const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch meeting từ API khi mount
+  useEffect(() => {
+    const load = async () => {
+      setLoading(true);
+      try {
+        await fetchMeetingById(meetingId);
+      } catch (err) {
+        console.error('Failed to load meeting results:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, [meetingId, fetchMeetingById]);
 
   const meeting = getMeetingById(meetingId);
-  const summary = getVoteSummary(meetingId);
   const isChief = isChiefEditor(user);
 
-  if (!meeting) {
+  // Tính summary từ voteSummary của backend
+  const vs = meeting?.voteSummary;
+  const total = vs?.totalVotes || 0;
+  const yes = vs?.yesCount || 0;
+  const no = vs?.noCount || 0;
+  const approval = total > 0 ? Math.round((yes / total) * 100) : 0;
+  const details = vs?.details || [];
+  const participants = meeting?.participants || [];
+
+  // Tổng số EB (không tính Tantou) — lấy từ backend hoặc fallback
+  const totalEB = vs?.totalBoardMembers || participants.length || 0;
+
+  if (!meeting && !loading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[50vh] gap-4 text-on-surface-variant">
         <span className="material-symbols-outlined text-5xl opacity-30">
@@ -157,20 +175,35 @@ export function VotingResultsPage() {
     );
   }
 
-  const series = mockSeries.find((s) => s.id === meeting.seriesId);
-  const voteEntries = Object.entries(meeting.votes || {});
+  if (loading || !meeting) {
+    return (
+      <div className="flex items-center justify-center min-h-[50vh] text-on-surface-variant">
+        <span className="material-symbols-outlined text-4xl opacity-50 animate-spin">
+          progress_activity
+        </span>
+      </div>
+    );
+  }
 
   const handleFinalizeDecision = async (decision) => {
-    finalizeDecision(meetingId, decision);
-    addToast({
-      title: `Series ${decision === "APPROVED" ? "Approved" : "Rejected"}`,
-      description:
-        decision === "APPROVED"
-          ? `"${meeting.seriesTitle}" đã được phê duyệt và sẽ chuyển sang ONGOING.`
-          : `"${meeting.seriesTitle}" đã bị từ chối và trả về trạng thái DRAFT.`,
-      variant: decision === "APPROVED" ? "success" : "error",
-    });
-    setShowConfirmModal(false);
+    try {
+      await finalizeDecision(meetingId, decision);
+      addToast({
+        title: `Series ${decision === "APPROVED" ? "Approved" : "Rejected"}`,
+        description:
+          decision === "APPROVED"
+            ? `"${meeting.seriesTitle}" đã được phê duyệt và sẽ chuyển sang ONGOING.`
+            : `"${meeting.seriesTitle}" đã bị từ chối và trả về trạng thái DRAFT.`,
+        variant: decision === "APPROVED" ? "success" : "error",
+      });
+      setShowConfirmModal(false);
+    } catch (err) {
+      addToast({
+        title: "Decision failed",
+        description: err.message || "Không thể ghi nhận quyết định.",
+        variant: "error",
+      });
+    }
   };
 
   return (
@@ -236,10 +269,10 @@ export function VotingResultsPage() {
             <span className="text-on-surface-variant text-xs font-medium mb-1">
               Total Participation
             </span>
-            <span className="text-4xl font-bold text-on-surface">
-              {summary.total}{" "}
+              <span className="text-4xl font-bold text-on-surface">
+              {total}{" "}
               <span className="text-base font-normal text-on-surface-variant">
-                / {(meeting.participants || []).length} Editors
+                / {totalEB} Board Members
               </span>
             </span>
           </div>
@@ -249,10 +282,10 @@ export function VotingResultsPage() {
             </span>
             <span
               className={`text-4xl font-bold ${
-                summary.approval >= 60 ? "text-green-400" : "text-red-400"
+                approval >= 60 ? "text-green-400" : "text-red-400"
               }`}
             >
-              {summary.approval}%
+              {approval}%
             </span>
           </div>
           <div className="flex flex-col items-start md:items-end">
@@ -266,7 +299,7 @@ export function VotingResultsPage() {
               <span className="text-sm font-medium">YES</span>
             </div>
             <span className="text-4xl font-bold text-on-surface">
-              {String(summary.yes).padStart(2, "0")}
+              {String(yes).padStart(2, "0")}
             </span>
           </div>
           <div className="flex flex-col items-start md:items-end">
@@ -280,27 +313,32 @@ export function VotingResultsPage() {
               <span className="text-sm font-medium">NO</span>
             </div>
             <span className="text-4xl font-bold text-on-surface">
-              {String(summary.no).padStart(2, "0")}
+              {String(no).padStart(2, "0")}
             </span>
           </div>
         </div>
 
-        {/* Bi-color vote bar */}
+        {/* Bi-color vote bar (theo tỉ lệ trên tổng EB, không chỉ trên vote) */}
         <div className="w-full h-12 bg-surface-container-highest rounded-xl flex overflow-hidden border border-outline-variant/30">
-          {summary.total > 0 ? (
+          {totalEB > 0 ? (
             <>
               <div
                 className="h-full bg-gradient-to-r from-green-500 to-green-400 transition-all duration-1000 ease-out flex items-center justify-center text-white font-bold text-sm"
-                style={{ width: `${summary.approval}%` }}
+                style={{ width: `${(yes / totalEB) * 100}%` }}
               >
-                {summary.approval > 15 && `${summary.yes} YES`}
+                {(yes / totalEB) * 100 > 15 && `${yes} YES`}
               </div>
               <div
                 className="h-full bg-gradient-to-r from-red-500 to-red-400 transition-all duration-1000 ease-out flex items-center justify-center text-white font-bold text-sm"
-                style={{ width: `${100 - summary.approval}%` }}
+                style={{ width: `${(no / totalEB) * 100}%` }}
               >
-                {100 - summary.approval > 15 && `${summary.no} NO`}
+                {(no / totalEB) * 100 > 15 && `${no} NO`}
               </div>
+              {/* Phần chưa vote → xám */}
+              <div
+                className="h-full bg-surface-container-high transition-all duration-1000"
+                style={{ width: `${((totalEB - total) / totalEB) * 100}%` }}
+              />
             </>
           ) : (
             <div className="h-full w-full flex items-center justify-center text-on-surface-variant text-sm">
@@ -314,7 +352,7 @@ export function VotingResultsPage() {
       </section>
 
       {/* ── Chief Editor: Finalize button ── */}
-      {isChief && !meeting.decision && summary.total > 0 && (
+      {isChief && !meeting.decision && total > 0 && (
         <div className="flex justify-end">
           <button
             className="bg-gradient-to-r from-[#7c3aed] to-[#d0bcff] text-on-primary py-3 px-8 rounded-xl font-bold active:scale-95 transition-all flex items-center gap-2 shadow-lg shadow-primary/10"
@@ -332,10 +370,14 @@ export function VotingResultsPage() {
       )}
 
       {/* ── Individual Vote Breakdown ── */}
-      {voteEntries.length > 0 ? (
+      {details.length > 0 ? (
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
-          {voteEntries.map(([userId, voteData]) => (
-            <VoterCard key={userId} userId={userId} voteData={voteData} />
+          {details.map((d) => (
+            <VoterCard
+              key={d.voterId}
+              detail={d}
+              participants={participants}
+            />
           ))}
         </div>
       ) : (
@@ -352,7 +394,7 @@ export function VotingResultsPage() {
         <ConfirmDecisionModal
           meeting={meeting}
           seriesTitle={meeting.seriesTitle}
-          summary={summary}
+          summary={{ yes, no, total, approval }}
           onConfirm={handleFinalizeDecision}
           onClose={() => setShowConfirmModal(false)}
         />

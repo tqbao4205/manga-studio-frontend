@@ -181,16 +181,16 @@ export default function App() {
           />
 
           {/* ─── Editorial Board Meetings ─── */}
-          {/* Danh sách cuộc họp — EDITORIAL_BOARD */}
+          {/* Danh sách cuộc họp — EDITORIAL_BOARD + CHIEF_EDITOR (Chief tạo + kết thúc) */}
           <Route
             path="/editorial"
             element={
-              <RoleGuard allowedRoles={["EDITORIAL_BOARD"]}>
+              <RoleGuard allowedRoles={["EDITORIAL_BOARD", "CHIEF_EDITOR"]}>
                 <EditorialBoardPage />
               </RoleGuard>
             }
           />
-          {/* Trang bỏ phiếu — EDITORIAL_BOARD, meeting phải ở trạng thái PENDING */}
+          {/* Trang bỏ phiếu — EDITORIAL_BOARD (chỉ EB mới vote) */}
           <Route
             path="/editorial/:meetingId/vote"
             element={
@@ -199,11 +199,11 @@ export default function App() {
               </RoleGuard>
             }
           />
-          {/* Trang kết quả vote — EDITORIAL_BOARD, meeting phải ở trạng thái COMPLETED */}
+          {/* Trang kết quả vote — EDITORIAL_BOARD + CHIEF_EDITOR (Chief mới được Finalize) */}
           <Route
             path="/editorial/:meetingId/results"
             element={
-              <RoleGuard allowedRoles={["EDITORIAL_BOARD"]}>
+              <RoleGuard allowedRoles={["EDITORIAL_BOARD", "CHIEF_EDITOR"]}>
                 <VotingResultsPage />
               </RoleGuard>
             }

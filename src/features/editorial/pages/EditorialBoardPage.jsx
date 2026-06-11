@@ -7,16 +7,14 @@
   QUYỀN TRUY CẬP: EDITORIAL_BOARD
   ============================================================
 
-  STATE MACHINE (xem editorialStore.js để biết chi tiết):
-    IN_PROGRESS → hiển thị badge xanh + nút [Join Now] + nút [End Meeting]
+  STATE MACHINE (backend-driven):
     PENDING     → hiển thị badge vàng, click row → /editorial/:id/vote
     COMPLETED   → hiển thị badge xanh lá, click row → /editorial/:id/results
 */
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "../../../app/stores/authStore";
-import { useUIStore } from "../../../app/stores/uiStore";
 import {
   useEditorialStore,
   isChiefEditor,
@@ -25,11 +23,6 @@ import { CreateMeetingModal } from "../components/CreateMeetingModal";
 
 // ── Màu sắc badge theo trạng thái meeting ──
 const STATUS_CONFIG = {
-  IN_PROGRESS: {
-    label: "In Progress",
-    badgeClass: "bg-blue-900/30 text-blue-400 border-blue-500/30",
-    dotClass: "bg-blue-400",
-  },
   PENDING: {
     label: "Pending Vote",
     badgeClass: "bg-amber-900/30 text-amber-400 border-amber-500/30",
@@ -71,28 +64,30 @@ function CoverPlaceholder({ seriesId, seriesTitle }) {
 }
 
 // ── Single Meeting Row Card ──
-function MeetingCard({ meeting, onEndMeeting, isChief }) {
+function MeetingCard({ meeting, isChief }) {
   const navigate = useNavigate();
   const statusCfg = STATUS_CONFIG[meeting.status] || STATUS_CONFIG.PENDING;
 
-  // Tính tổng vote YES/NO từ object votes
-  const voteList = Object.values(meeting.votes || {});
-  const yesCount = voteList.filter((v) => v.choice === "YES").length;
-  const noCount = voteList.filter((v) => v.choice === "NO").length;
-  const totalVotes = yesCount + noCount;
-  const yesPct = totalVotes > 0 ? (yesCount / totalVotes) * 100 : 0;
-  const noPct = totalVotes > 0 ? (noCount / totalVotes) * 100 : 0;
+  // Lấy vote summary từ MeetingResponse.voteSummary (backend trả về structured data)
+  const vs = meeting.voteSummary;
+  const yesCount = vs?.yesCount || 0;
+  const noCount = vs?.noCount || 0;
+  const totalBoard = vs?.totalBoardMembers || 0;
+  // Thanh process hiển thị theo tỉ lệ trên tổng EB (không phải tỉ lệ YES/NO)
+  const yesPct = totalBoard > 0 ? (yesCount / totalBoard) * 100 : 0;
+  const noPct = totalBoard > 0 ? (noCount / totalBoard) * 100 : 0;
+  const emptyPct = totalBoard > 0 ? Math.max(0, 100 - yesPct - noPct) : 100;
 
   const decision = meeting.decision ? DECISION_CONFIG[meeting.decision] : null;
 
   // Xử lý click vào card
   const handleCardClick = () => {
-    if (meeting.status === "PENDING") {
-      navigate(`/editorial/${meeting.id}/vote`);
-    } else if (meeting.status === "COMPLETED") {
+    if (meeting.status === "COMPLETED") {
       navigate(`/editorial/${meeting.id}/results`);
+    } else if (meeting.status === "PENDING") {
+      // Chief không có quyền vote, chỉ xem kết quả
+      navigate(isChief ? `/editorial/${meeting.id}/results` : `/editorial/${meeting.id}/vote`);
     }
-    // IN_PROGRESS: không điều hướng tự động
   };
 
   const isClickable =
@@ -172,24 +167,22 @@ function MeetingCard({ meeting, onEndMeeting, isChief }) {
             <span>NO ({noCount})</span>
           </div>
           <div className="h-2 w-full bg-surface-container-highest rounded-full overflow-hidden flex">
-            {totalVotes > 0 ? (
-              <>
+            <>
+              <div
+                className="h-full bg-green-500 transition-all duration-700"
+                style={{ width: `${yesPct}%` }}
+              />
+              <div
+                className="h-full bg-red-500 transition-all duration-700"
+                style={{ width: `${noPct}%` }}
+              />
+              {emptyPct > 0 && (
                 <div
-                  className={`h-full transition-all duration-700 ${
-                    meeting.status === "IN_PROGRESS"
-                      ? "bg-blue-500"
-                      : "bg-green-500"
-                  }`}
-                  style={{ width: `${yesPct}%` }}
+                  className="h-full bg-surface-container-high transition-all duration-700"
+                  style={{ width: `${emptyPct}%` }}
                 />
-                <div
-                  className="h-full bg-red-500 transition-all duration-700"
-                  style={{ width: `${noPct}%` }}
-                />
-              </>
-            ) : (
-              <div className="h-full w-full bg-surface-container-high" />
-            )}
+              )}
+            </>
           </div>
         </div>
 
@@ -198,39 +191,6 @@ function MeetingCard({ meeting, onEndMeeting, isChief }) {
           className="flex gap-2 items-center"
           onClick={(e) => e.stopPropagation()}
         >
-          {meeting.status === "IN_PROGRESS" && (
-            <>
-              <button
-                className="bg-primary text-on-primary py-2 px-4 rounded-lg font-bold text-sm active:scale-95 transition-all hover:brightness-110 flex items-center gap-1.5"
-                onClick={() => {
-                  const link = meeting.meetingLink;
-                  if (!link) return;
-                  const url = link.startsWith("http")
-                    ? link
-                    : `https://${link}`;
-                  window.open(url, "_blank", "noopener,noreferrer");
-                }}
-              >
-                <span className="material-symbols-outlined text-base">
-                  video_call
-                </span>
-                Join Now
-              </button>
-              {/* Mock trigger: Chief Editor kết thúc họp → IN_PROGRESS → PENDING */}
-              {isChief && (
-                <button
-                  className="bg-amber-600/20 border border-amber-500/40 text-amber-400 py-2 px-3 rounded-lg font-bold text-xs active:scale-95 transition-all hover:bg-amber-600/30"
-                  title="Mock: Kết thúc cuộc họp"
-                  onClick={() => onEndMeeting(meeting.id)}
-                >
-                  <span className="material-symbols-outlined text-base align-middle">
-                    stop_circle
-                  </span>
-                  <span className="ml-1">End</span>
-                </button>
-              )}
-            </>
-          )}
           {meeting.status === "PENDING" && (
             <button
               className="w-10 h-10 flex items-center justify-center rounded-xl bg-surface-container hover:bg-surface-bright transition-colors border border-primary/30 text-primary"
@@ -256,14 +216,19 @@ function MeetingCard({ meeting, onEndMeeting, isChief }) {
 // ── Main Page ──
 export function EditorialBoardPage() {
   const user = useAuthStore((s) => s.user);
-  const addToast = useUIStore((s) => s.addToast);
   const meetings = useEditorialStore((s) => s.meetings);
-  const endMeeting = useEditorialStore((s) => s.endMeeting);
+  const loading = useEditorialStore((s) => s.loading);
+  const fetchMeetings = useEditorialStore((s) => s.fetchMeetings);
 
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [activeFilter, setActiveFilter] = useState("ALL");
 
   const isChief = isChiefEditor(user);
+
+  // Fetch meetings từ API khi mount component
+  useEffect(() => {
+    fetchMeetings()
+  }, [fetchMeetings])
 
   // Lọc meetings theo tab
   const filteredMeetings = meetings.filter((m) => {
@@ -271,20 +236,9 @@ export function EditorialBoardPage() {
     return m.status === activeFilter;
   });
 
-  const handleEndMeeting = (meetingId) => {
-    endMeeting(meetingId);
-    addToast({
-      title: "Meeting ended",
-      description:
-        "Cuộc họp đã kết thúc. Các thành viên có thể bắt đầu bỏ phiếu.",
-      variant: "success",
-    });
-  };
-
   const filters = [
     { key: "ALL", label: "All" },
     { key: "PENDING", label: "Pending" },
-    { key: "IN_PROGRESS", label: "In Progress" },
     { key: "COMPLETED", label: "Completed" },
   ];
 
@@ -362,14 +316,22 @@ export function EditorialBoardPage() {
             )}
           </div>
         ) : (
-          filteredMeetings.map((meeting) => (
-            <MeetingCard
-              key={meeting.id}
-              meeting={meeting}
-              onEndMeeting={handleEndMeeting}
-              isChief={isChief}
-            />
-          ))
+          loading ? (
+            <div className="flex flex-col items-center justify-center py-20 text-on-surface-variant gap-3">
+              <span className="material-symbols-outlined text-5xl opacity-30 animate-spin">
+                progress_activity
+              </span>
+              <p className="text-sm">Đang tải cuộc họp...</p>
+            </div>
+          ) : (
+            filteredMeetings.map((meeting) => (
+              <MeetingCard
+                key={meeting.id}
+                meeting={meeting}
+                isChief={isChief}
+              />
+            ))
+          )
         )}
       </div>
 

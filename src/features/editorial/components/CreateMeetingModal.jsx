@@ -11,13 +11,9 @@ import { useState, useEffect } from "react";
 import { useAuthStore } from "../../../app/stores/authStore";
 import { useUIStore } from "../../../app/stores/uiStore";
 import { useEditorialStore } from "../../../app/stores/editorialStore";
-import { mockUsers } from "../../../shared/constants/mock-data";
 import seriesService from "../../../services/seriesService";
-
-// Các thành viên EDITORIAL_BOARD có thể được mời
-const boardMembers = mockUsers.filter(
-  (u) => u.role === "EDITORIAL_BOARD" || u.role === "TANTOU_EDITOR",
-);
+import meetingService from "../../../services/meetingService";
+import api from "../../../services/api";
 
 // ── Avatar placeholder ──
 function Avatar({ user, size = 10 }) {
@@ -60,8 +56,14 @@ export function CreateMeetingModal({ onClose }) {
   const [pendingSeries, setPendingSeries] = useState([]);
   const [seriesLoading, setSeriesLoading] = useState(true);
 
+  // Danh sách user có thể mời (EDITORIAL_BOARD + TANTOU_EDITOR)
+  const [availableUsers, setAvailableUsers] = useState([]);
+  const [usersLoading, setUsersLoading] = useState(true);
+
   useEffect(() => {
     let cancelled = false;
+
+    // Fetch series PENDING_BOARD_VOTE
     setSeriesLoading(true);
     seriesService
       .getAll({ status: "PENDING_BOARD_VOTE", size: 100 })
@@ -74,6 +76,30 @@ export function CreateMeetingModal({ onClose }) {
       .finally(() => {
         if (!cancelled) setSeriesLoading(false);
       });
+
+    // Fetch EDITORIAL_BOARD + TANTOU_EDITOR để chọn participant
+    setUsersLoading(true);
+    Promise.all([
+      api.get('/users/board-members'),
+      api.get('/users/tantou-editors'),
+    ])
+      .then(([boardMembers, tantouEditors]) => {
+        if (!cancelled) {
+          // Gộp 2 danh sách, loại bỏ trùng lặp (nếu có)
+          const all = [...(boardMembers || []), ...(tantouEditors || [])];
+          const unique = Array.from(
+            new Map(all.map((u) => [u.id, u])).values()
+          );
+          setAvailableUsers(unique);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setAvailableUsers([]);
+      })
+      .finally(() => {
+        if (!cancelled) setUsersLoading(false);
+      });
+
     return () => {
       cancelled = true;
     };
@@ -89,6 +115,7 @@ export function CreateMeetingModal({ onClose }) {
   const [selectedParticipants, setSelectedParticipants] = useState(
     user ? [user.id] : [],
   );
+  const [submitting, setSubmitting] = useState(false);
 
   const isValid = form.seriesId && form.title.trim() && form.scheduledAt;
 
@@ -106,27 +133,36 @@ export function CreateMeetingModal({ onClose }) {
     );
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!isValid) return;
+    if (!isValid || submitting) return;
+    setSubmitting(true);
 
-    addMeeting({
-      title: form.title.trim(),
-      seriesId: Number(form.seriesId),
-      seriesTitle: selectedSeries?.title || "Unknown Series",
-      description: form.description.trim(),
-      meetingLink: form.meetingLink.trim(),
-      scheduledAt: form.scheduledAt,
-      participants: selectedParticipants,
-      createdBy: user?.id,
-    });
+    try {
+      // Gọi API tạo meeting (không cần seriesTitle, createdBy — backend tự xử lý)
+      await addMeeting({
+        title: form.title.trim(),
+        seriesId: Number(form.seriesId),
+        description: form.description.trim(),
+        meetingLink: form.meetingLink.trim(),
+        startedAt: form.scheduledAt,
+        participantIds: selectedParticipants,
+      });
 
-    addToast({
-      title: "Meeting created",
-      description: `"${form.title}" đã được tạo và đang diễn ra.`,
-      variant: "success",
-    });
-    onClose();
+      addToast({
+        title: "Meeting created",
+        description: `"${form.title}" đã được tạo.`,
+        variant: "success",
+      });
+      onClose();
+    } catch (err) {
+      addToast({
+        title: "Failed to create meeting",
+        description: err.message || "Không thể tạo cuộc họp.",
+        variant: "error",
+      });
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -324,54 +360,67 @@ export function CreateMeetingModal({ onClose }) {
             </label>
             <div className="bg-surface-container-lowest border border-outline-variant/30 rounded-lg overflow-hidden">
               <div className="max-h-52 overflow-y-auto">
-                {boardMembers.map((member) => {
-                  const isSelected = selectedParticipants.includes(member.id);
-                  const isSelf = member.id === user?.id;
-                  return (
-                    <div
-                      key={member.id}
-                      className={`flex items-center gap-4 px-4 py-3 border-b border-outline-variant/10 transition-colors ${
-                        isSelf
-                          ? "opacity-60 cursor-default"
-                          : "hover:bg-surface-variant/20 cursor-pointer"
-                      }`}
-                      onClick={() => toggleParticipant(member.id)}
-                    >
-                      {/* Avatar with online dot */}
-                      <div className="relative">
-                        <Avatar user={member} size={10} />
-                        <div
-                          className={`absolute bottom-0 right-0 w-3 h-3 border-2 border-surface-container-lowest rounded-full ${
-                            isSelected
-                              ? "bg-primary"
-                              : "bg-on-surface-variant/40"
-                          }`}
-                        />
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-base text-on-surface">
-                          {member.displayName}
-                          {isSelf && (
-                            <span className="text-xs text-on-surface-variant ml-1">
-                              (you)
-                            </span>
-                          )}
-                        </p>
-                        <RoleBadge role={member.role} />
-                      </div>
-                      {/* Checkbox */}
-                      {isSelected ? (
-                        <div className="w-6 h-6 rounded border-2 border-primary bg-primary flex items-center justify-center shrink-0">
-                          <span className="material-symbols-outlined text-on-primary text-sm font-bold">
-                            check
-                          </span>
+                {usersLoading ? (
+                  <div className="flex items-center justify-center py-6 text-on-surface-variant gap-2">
+                    <span className="material-symbols-outlined text-base animate-spin">
+                      progress_activity
+                    </span>
+                    <span className="text-sm">Đang tải danh sách...</span>
+                  </div>
+                ) : availableUsers.length === 0 ? (
+                  <div className="py-6 text-center text-on-surface-variant text-sm">
+                    Không có thành viên nào.
+                  </div>
+                ) : (
+                  availableUsers.map((member) => {
+                    const isSelected = selectedParticipants.includes(member.id);
+                    const isSelf = member.id === user?.id;
+                    return (
+                      <div
+                        key={member.id}
+                        className={`flex items-center gap-4 px-4 py-3 border-b border-outline-variant/10 transition-colors ${
+                          isSelf
+                            ? "opacity-60 cursor-default"
+                            : "hover:bg-surface-variant/20 cursor-pointer"
+                        }`}
+                        onClick={() => toggleParticipant(member.id)}
+                      >
+                        {/* Avatar with online dot */}
+                        <div className="relative">
+                          <Avatar user={member} size={10} />
+                          <div
+                            className={`absolute bottom-0 right-0 w-3 h-3 border-2 border-surface-container-lowest rounded-full ${
+                              isSelected
+                                ? "bg-primary"
+                                : "bg-on-surface-variant/40"
+                            }`}
+                          />
                         </div>
-                      ) : (
-                        <div className="w-6 h-6 rounded border-2 border-outline-variant/50 shrink-0" />
-                      )}
-                    </div>
-                  );
-                })}
+                        <div className="flex-1">
+                          <p className="text-base text-on-surface">
+                            {member.displayName}
+                            {isSelf && (
+                              <span className="text-xs text-on-surface-variant ml-1">
+                                (you)
+                              </span>
+                            )}
+                          </p>
+                          <RoleBadge role={member.role} />
+                        </div>
+                        {/* Checkbox */}
+                        {isSelected ? (
+                          <div className="w-6 h-6 rounded border-2 border-primary bg-primary flex items-center justify-center shrink-0">
+                            <span className="material-symbols-outlined text-on-primary text-sm font-bold">
+                              check
+                            </span>
+                          </div>
+                        ) : (
+                          <div className="w-6 h-6 rounded border-2 border-outline-variant/50 shrink-0" />
+                        )}
+                      </div>
+                    );
+                  })
+                )}
               </div>
             </div>
             <p className="text-xs text-on-surface-variant">
@@ -396,7 +445,7 @@ export function CreateMeetingModal({ onClose }) {
               <span className="material-symbols-outlined text-base">
                 add_circle
               </span>
-              Create &amp; Start Meeting
+              Create Meeting
             </button>
           </div>
         </form>

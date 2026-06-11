@@ -1062,7 +1062,7 @@ export function DashboardPage() {
         <MangakaDashboard />
       ) : user.role === "ASSISTANT" ? (
         <AssistantDashboard />
-      ) : user.role === "EDITORIAL_BOARD" ? (
+      ) : user.role === "EDITORIAL_BOARD" || user.role === "CHIEF_EDITOR" ? (
         <EditorialBoardDashboard />
       ) : (
         <EditorDashboard />

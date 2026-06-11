@@ -38,7 +38,7 @@ const extraNav = [
     label: "Editorial Reviews",
     icon: "groups",
     path: "/editorial",
-    roles: ["EDITORIAL_BOARD"],
+    roles: ["EDITORIAL_BOARD", "CHIEF_EDITOR"],
   },
   {
     label: "Publishing",

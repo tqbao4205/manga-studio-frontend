@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import meetingService from '../../services/meetingService'
 
 /**
  * ─────────────────────────────────────────────────────────────────
@@ -6,181 +7,193 @@ import { create } from 'zustand'
  * ─────────────────────────────────────────────────────────────────
  *
  * 🎯 Mục đích:
- *   - Quản lý vòng đời (state machine) của các cuộc họp biên tập
- *   - Lưu trữ danh sách meetings và các phiếu bầu của từng thành viên EB
+ *   - Quản lý danh sách meetings + criteria từ backend API
+ *   - Cung cấp actions: fetch, create, vote, finalize
+ *   - Tính toán vote summary local (derived state)
  *
- * 📊 State Machine của Meeting:
+ * 🔄 State machine của Meeting (backend-driven):
  *
- *   ┌────────────────────────────────────────────────────────────┐
- *   │                    MEETING STATUS FLOW                     │
- *   │                                                            │
- *   │   [Chief Editor tạo meeting]                               │
- *   │           │                                                │
- *   │           ▼                                                │
- *   │      IN_PROGRESS  ◄──── Cuộc họp đang diễn ra             │
- *   │           │              (hiện nút "Join Now")             │
- *   │           │                                                │
- *   │   [endMeeting() được gọi]                                  │
- *   │           │                                                │
- *   │           ▼                                                │
- *   │        PENDING    ◄──── Chờ các EB bỏ phiếu               │
- *   │           │              (click vào row → VotingPage)      │
- *   │           │                                                │
- *   │   [submitVote() được gọi với tất cả phiếu]                 │
- *   │           │                                                │
- *   │           ▼                                                │
- *   │       COMPLETED   ◄──── Bỏ phiếu xong                     │
- *   │                          (click vào row → ResultsPage)     │
- *   │                          (Chief Editor: approve/reject)    │
- *   └────────────────────────────────────────────────────────────┘
+ *   PENDING  ──►  (EB vote đủ)  ──►  COMPLETED  ──►  (Chief quyết định)
+ *     │                                                        │
+ *     │                                              APPROVED / REJECTED
+ *     └─── (Chief Editor tạo) ────────────────────────┘
+ *
+ *   - PENDING:    Vừa tạo, EB có thể vote (không cần End Meeting)
+ *   - COMPLETED:  Tất cả EB đã vote (auto-complete backend)
+ *   - decision:   Chief Editor ra quyết định cuối (không làm thay đổi status)
  *
  * 🔑 Phân quyền:
- *   - CHIEF_EDITOR (id=7): Tạo meeting, kết thúc meeting, phê duyệt cuối cùng
- *   - EDITORIAL_BOARD: Tham gia meeting, bỏ phiếu
+ *   - CHIEF_EDITOR:  Tạo meeting, ra quyết định cuối
+ *   - EDITORIAL_BOARD: Bỏ phiếu
  */
 
 /**
- * ID của Chief Editor (Kimura – Head of editorial board) trong mock data.
- * Đây là người duy nhất có quyền tạo meeting và approve/reject series.
- */
-export const CHIEF_EDITOR_ID = 7
-
-/**
- * Helper kiểm tra user có phải Chief Editor không.
+ * Kiểm tra user có phải Chief Editor không dựa trên role (không hardcode ID).
  * @param {Object|null} user
  * @returns {boolean}
  */
-export const isChiefEditor = (user) => user?.id === CHIEF_EDITOR_ID
-
-/** Dữ liệu seed: 1 cuộc họp mẫu để demo flow ngay lập tức */
-const seedMeetings = [
-  {
-    id: 'mtg-001',
-    title: 'Series Evaluation — Shadow Monarch Ch. 52',
-    seriesId: 2,
-    seriesTitle: 'Shadow Monarch',
-    description: 'Đánh giá chất lượng chapter 52 trước khi xuất bản. Tập trung vào độ hoàn thiện nội dung và phong cách nghệ thuật.',
-    meetingLink: 'meet.google.com/shadow-monarch-eval',
-    scheduledAt: '2026-06-15T14:00',
-    participants: [7, 8],
-    status: 'COMPLETED',
-    votes: {
-      7: { choice: 'YES', comment: 'Nội dung xuất sắc, art style nhất quán.', scores: { content: 9, art: 8, creativity: 9 } },
-      8: { choice: 'YES', comment: 'Chapter rất tốt, đáng được xuất bản.', scores: { content: 8, art: 9, creativity: 8 } },
-    },
-    decision: 'APPROVED',
-    createdBy: 7,
-    createdAt: '2026-06-10T10:00:00Z',
-  },
-]
+export const isChiefEditor = (user) => user?.role === 'CHIEF_EDITOR'
 
 export const useEditorialStore = create((set, get) => ({
-  /** Danh sách tất cả cuộc họp biên tập */
-  meetings: seedMeetings,
+  /** Danh sách meetings load từ API */
+  meetings: [],
+
+  /** Danh sách tiêu chí chấm điểm (cho form vote) */
+  criteria: [],
+
+  /** Loading state */
+  loading: false,
+
+  /** Error state */
+  error: null,
 
   // ─────────────────────────────────────────────────────────
-  //  BƯỚC 1: Tạo cuộc họp mới (chỉ Chief Editor)
-  //  Trạng thái ban đầu: IN_PROGRESS
+  //  FETCH: Lấy danh sách meetings của user hiện tại
   // ─────────────────────────────────────────────────────────
   /**
-   * Thêm một cuộc họp mới vào store.
-   * Status mặc định: 'IN_PROGRESS' (cuộc họp bắt đầu ngay).
-   *
-   * @param {Object} meetingData - { title, seriesId, seriesTitle, description, meetingLink, scheduledAt, participants, createdBy }
-   * @returns {Object} Meeting mới vừa tạo
+   * Gọi GET /api/meetings/user để lấy tất cả meetings của user.
+   * Gọi khi mount EditorialBoardPage.
    */
-  addMeeting: (meetingData) => {
-    const newMeeting = {
-      ...meetingData,
-      id: `mtg-${Date.now()}`,
-      status: 'IN_PROGRESS',
-      votes: {},
-      decision: null,
-      createdAt: new Date().toISOString(),
+  fetchMeetings: async () => {
+    set({ loading: true, error: null })
+    try {
+      const data = await meetingService.getForUser()
+      set({ meetings: data, loading: false })
+    } catch (err) {
+      set({ error: err.message, loading: false })
     }
-    set((s) => ({ meetings: [newMeeting, ...s.meetings] }))
-    return newMeeting
   },
 
   // ─────────────────────────────────────────────────────────
-  //  BƯỚC 2 → BƯỚC 3: Kết thúc cuộc họp (mock trigger)
-  //  IN_PROGRESS → PENDING
+  //  FETCH BY ID: Lấy chi tiết 1 meeting (update vào store)
   // ─────────────────────────────────────────────────────────
   /**
-   * Kết thúc cuộc họp — chuyển trạng thái từ IN_PROGRESS sang PENDING.
-   * Sau bước này, các EB có thể click vào row để vào trang bỏ phiếu.
+   * Gọi GET /api/meetings/{id} và cập nhật meeting tương ứng trong store.
+   * Dùng khi vào trang vote / results để có dữ liệu mới nhất.
    *
-   * @param {string} meetingId
+   * @param {number} meetingId
    */
-  endMeeting: (meetingId) => {
-    set((s) => ({
-      meetings: s.meetings.map((m) =>
-        m.id === meetingId ? { ...m, status: 'PENDING' } : m,
-      ),
-    }))
+  fetchMeetingById: async (meetingId) => {
+    try {
+      const data = await meetingService.getById(meetingId)
+      set((s) => {
+        // Kiểm tra meeting đã có trong store chưa
+        const exists = s.meetings.some((m) => m.id === meetingId)
+        if (exists) {
+          // Đã có → update
+          return {
+            meetings: s.meetings.map((m) =>
+              m.id === meetingId ? data : m,
+            ),
+          }
+        } else {
+          // Chưa có → thêm vào (trường hợp refresh page trực tiếp ở vote/results)
+          return { meetings: [...s.meetings, data] }
+        }
+      })
+    } catch (err) {
+      set({ error: err.message })
+    }
   },
 
   // ─────────────────────────────────────────────────────────
-  //  BƯỚC 3 → BƯỚC 4: Nộp phiếu bầu
-  //  PENDING → COMPLETED (khi submit)
+  //  FETCH CRITERIA: Lấy danh sách tiêu chí chấm điểm
   // ─────────────────────────────────────────────────────────
   /**
-   * Lưu phiếu bầu của một thành viên EB và chuyển meeting sang COMPLETED.
-   * Một lần submit = kết thúc quá trình vote (simplified flow cho demo).
+   * Gọi GET /api/criteria để lấy danh sách tiêu chí active.
+   * Gọi khi mount VotingPage.
+   */
+  fetchCriteria: async () => {
+    try {
+      const data = await meetingService.getCriteria()
+      set({ criteria: data })
+    } catch (err) {
+      set({ error: err.message })
+    }
+  },
+
+  // ─────────────────────────────────────────────────────────
+  //  CREATE: Chief Editor tạo meeting mới
+  // ─────────────────────────────────────────────────────────
+  /**
+   * Gọi POST /api/meetings để tạo meeting mới trên backend.
+   * Sau khi tạo thành công, thêm vào đầu danh sách store.
    *
-   * @param {string} meetingId
+   * @param {Object} meetingData - { seriesId, title, description, meetingLink, startedAt, participantIds }
+   * @returns {Promise<Object>} MeetingResponse từ backend
+   */
+  addMeeting: async (meetingData) => {
+    try {
+      const newMeeting = await meetingService.create(meetingData)
+      set((s) => ({ meetings: [newMeeting, ...s.meetings] }))
+      return newMeeting
+    } catch (err) {
+      throw err
+    }
+  },
+
+  // ─────────────────────────────────────────────────────────
+  //  SUBMIT VOTE: EB bỏ phiếu
+  // ─────────────────────────────────────────────────────────
+  /**
+   * Gọi POST /api/meetings/{id}/vote.
+   * Backend tự upsert + auto-complete khi đủ EB vote.
+   * Sau vote, fetch lại meeting để cập nhật status + vote data.
+   *
+   * @param {number} meetingId
    * @param {number} userId    - ID của người bỏ phiếu
-   * @param {Object} voteData  - { choice: 'YES'|'NO', comment: string, scores: { content, art, creativity } }
+   * @param {Object} voteData  - { vote: 'YES'|'NO', comment: string, scores: [{ criterionId, score }] }
    */
-  submitVote: (meetingId, userId, voteData) => {
-    set((s) => {
-      const meeting = s.meetings.find((m) => m.id === meetingId)
-      if (!meeting) return s
-
-      const updatedVotes = { ...meeting.votes, [userId]: voteData }
-
-      return {
-        meetings: s.meetings.map((m) =>
-          m.id === meetingId
-            ? { ...m, votes: updatedVotes, status: 'COMPLETED' }
-            : m,
-        ),
-      }
-    })
+  submitVote: async (meetingId, userId, voteData) => {
+    try {
+      await meetingService.castVote(meetingId, voteData)
+      // Fetch lại meeting để lấy status + vote summary mới nhất
+      await get().fetchMeetingById(meetingId)
+    } catch (err) {
+      throw err
+    }
   },
 
   // ─────────────────────────────────────────────────────────
-  //  BƯỚC 4: Quyết định cuối (chỉ Chief Editor)
-  //  Ghi nhận decision: 'APPROVED' | 'REJECTED'
+  //  FINALIZE DECISION: Chief Editor ra quyết định cuối
   // ─────────────────────────────────────────────────────────
   /**
-   * Lưu quyết định phê duyệt cuối cùng của Chief Editor.
-   * Chỉ có thể gọi sau khi meeting ở trạng thái COMPLETED.
+   * Gọi POST /api/meetings/{id}/decision.
+   * Backend sẽ update series status (ONGOING / DRAFT).
+   * Sau đó fetch lại meeting để cập nhật decision + status.
    *
-   * @param {string} meetingId
+   * @param {number} meetingId
    * @param {'APPROVED'|'REJECTED'} decision
    */
-  finalizeDecision: (meetingId, decision) => {
-    set((s) => ({
-      meetings: s.meetings.map((m) =>
-        m.id === meetingId ? { ...m, decision } : m,
-      ),
-    }))
+  finalizeDecision: async (meetingId, decision) => {
+    try {
+      await meetingService.makeDecision(meetingId, { decision })
+      // Fetch lại meeting để lấy decision + series status mới
+      await get().fetchMeetingById(meetingId)
+    } catch (err) {
+      throw err
+    }
   },
 
-  /** Lấy một meeting theo ID */
+  // ─────────────────────────────────────────────────────────
+  //  HELPERS: Derived state (tính local, không gọi API)
+  // ─────────────────────────────────────────────────────────
+
+  /** Lấy một meeting theo ID từ store local (không gọi API) */
   getMeetingById: (meetingId) =>
-    get().meetings.find((m) => m.id === meetingId),
+    get().meetings.find((m) => m.id === Number(meetingId)),
 
-  /** Tổng hợp kết quả vote của một meeting */
+  /** Tổng hợp kết quả vote của một meeting từ store local */
   getVoteSummary: (meetingId) => {
-    const meeting = get().meetings.find((m) => m.id === meetingId)
-    if (!meeting) return { yes: 0, no: 0, total: 0, approval: 0 }
+    const meeting = get().meetings.find((m) => m.id === Number(meetingId))
+    if (!meeting || !meeting.voteSummary) {
+      return { yes: 0, no: 0, total: 0, approval: 0 }
+    }
 
-    const voteList = Object.values(meeting.votes)
-    const yes = voteList.filter((v) => v.choice === 'YES').length
-    const no = voteList.filter((v) => v.choice === 'NO').length
-    const total = voteList.length
+    const { totalVotes, yesCount, noCount } = meeting.voteSummary
+    const total = totalVotes || 0
+    const yes = yesCount || 0
+    const no = noCount || 0
     const approval = total > 0 ? Math.round((yes / total) * 100) : 0
 
     return { yes, no, total, approval }

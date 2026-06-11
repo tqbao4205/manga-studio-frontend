@@ -1,0 +1,380 @@
+<!DOCTYPE html><html class="dark" lang="en" style=""><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>MangaFlow Pro - Create Task</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<style>
+        @import url('https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap');
+        
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+
+        .glass-panel {
+            background: rgba(30, 30, 32, 0.8);
+            backdrop-filter: blur(12px);
+            border: 1px solid #3f3f46;
+        }
+
+        .manga-grid-overlay {
+            background-image: radial-gradient(circle, #3f3f46 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+
+        .active-glow {
+            box-shadow: 0 0 20px rgba(139, 92, 246, 0.15);
+        }
+
+        /* Hide scrollbar but keep functionality */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-glass": "#1e1e20",
+                        "secondary-container": "#49494b",
+                        "error": "#ffb4ab",
+                        "on-tertiary-fixed": "#2c1700",
+                        "warning-amber": "#fbbf24",
+                        "on-tertiary": "#492900",
+                        "on-tertiary-fixed-variant": "#683d00",
+                        "on-error": "#690005",
+                        "on-tertiary-container": "#3f2300",
+                        "tertiary-fixed-dim": "#ffb86a",
+                        "secondary-fixed": "#e4e2e4",
+                        "inverse-on-surface": "#303032",
+                        "success-emerald": "#10b981",
+                        "primary": "#d0bcff",
+                        "primary-container": "#a078ff",
+                        "surface-tint": "#d0bcff",
+                        "tertiary-container": "#c2833a",
+                        "primary-fixed-dim": "#d0bcff",
+                        "error-rose": "#f87171",
+                        "surface-container-lowest": "#0e0e10",
+                        "on-surface-variant": "#cbc3d7",
+                        "secondary-fixed-dim": "#c8c6c8",
+                        "outline": "#958ea0",
+                        "tertiary": "#ffb86a",
+                        "on-secondary-fixed": "#1b1b1d",
+                        "primary-fixed": "#e9ddff",
+                        "on-secondary-fixed-variant": "#474648",
+                        "on-primary-fixed": "#23005c",
+                        "on-primary-container": "#340080",
+                        "surface-container-high": "#2a2a2c",
+                        "on-secondary-container": "#b9b8ba",
+                        "on-secondary": "#303032",
+                        "on-primary-fixed-variant": "#5516be",
+                        "surface-bright": "#39393b",
+                        "surface": "#131315",
+                        "surface-dim": "#131315",
+                        "inverse-surface": "#e5e1e4",
+                        "surface-container-highest": "#353437",
+                        "border-subtle": "#3f3f46",
+                        "error-container": "#93000a",
+                        "surface-container": "#1f1f21",
+                        "secondary": "#c8c6c8",
+                        "surface-variant": "#353437",
+                        "on-error-container": "#ffdad6",
+                        "on-surface": "#e5e1e4",
+                        "on-primary": "#3c0091",
+                        "outline-variant": "#494454",
+                        "tertiary-fixed": "#ffdcbc",
+                        "on-background": "#e5e1e4",
+                        "background": "#131315",
+                        "inverse-primary": "#6d3bd7",
+                        "surface-container-low": "#1b1b1d"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "sidebar-width": "240px",
+                        "base": "8px",
+                        "container-padding": "24px",
+                        "panel-gap": "20px",
+                        "gutter": "16px"
+                    },
+                    "fontFamily": {
+                        "label-md": ["Geist"],
+                        "body-lg": ["Geist"],
+                        "headline-lg": ["Geist"],
+                        "display-lg": ["Geist"],
+                        "label-sm": ["Geist"],
+                        "caption-xs": ["Geist"],
+                        "headline-lg-mobile": ["Geist"],
+                        "headline-md": ["Geist"],
+                        "body-md": ["Geist"]
+                    },
+                    "fontSize": {
+                        "label-md": ["14px", {"lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "500"}],
+                        "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                        "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                        "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "label-sm": ["12px", {"lineHeight": "16px", "letterSpacing": "0.02em", "fontWeight": "500"}],
+                        "caption-xs": ["10px", {"lineHeight": "12px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                        "headline-lg-mobile": ["28px", {"lineHeight": "36px", "fontWeight": "600"}],
+                        "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                        "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}]
+                    }
+                },
+            },
+        }
+    </script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&amp;display=swap" data-snapdom="injected-import"></head>
+<body class="bg-background text-on-surface font-body-md overflow-hidden h-screen w-screen flex">
+<!-- Sidebar Navigation -->
+<aside class="fixed left-0 top-0 h-full w-[240px] bg-surface-container-lowest flex flex-col py-base shadow-sm z-50">
+<div class="px-container-padding py-base flex flex-col gap-1">
+<h1 class="font-headline-md text-headline-md text-primary font-bold">MangaFlow</h1>
+<p class="font-label-sm text-label-sm text-outline opacity-70">Creative Precision</p>
+</div>
+<nav class="mt-8 flex flex-col px-base gap-1">
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-primary font-bold bg-surface-container-high transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="font-body-md text-body-md">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-primary transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">description</span>
+<span class="font-body-md text-body-md">Manuscripts</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-primary transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">auto_stories</span>
+<span class="font-body-md text-body-md">Storyboard</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-primary transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">library_books</span>
+<span class="font-body-md text-body-md">Series</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-primary transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">group</span>
+<span class="font-body-md text-body-md">Team</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-primary transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">assignment</span>
+<span class="font-body-md text-body-md">Tasks</span>
+</a>
+</nav>
+<div class="mt-auto px-base flex flex-col gap-1">
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-primary transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="font-body-md text-body-md">Settings</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-primary transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">help</span>
+<span class="font-body-md text-body-md">Support</span>
+</a>
+</div>
+</aside>
+<!-- Main Content (Workspace Background) -->
+<main class="ml-[240px] flex-1 relative bg-surface-container overflow-hidden p-container-padding">
+<header class="flex justify-between items-center mb-6">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-outline">search</span>
+<input class="bg-surface-container-low border-none rounded-full px-6 py-2 w-96 font-label-md text-label-md focus:ring-1 focus:ring-primary outline-none" placeholder="Search project files..." type="text">
+</div>
+<div class="flex items-center gap-4">
+<button class="material-symbols-outlined p-2 text-on-surface-variant">notifications</button>
+<img alt="User Profile" class="w-8 h-8 rounded-full border border-outline-variant" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDaHW7trdXlh7V8ACTBMLCmr_lCytvh9Q0_7nJCFbZHakfAR1ZBnPZKB9tGL9uLx5NLnDQKBQnjgEZVP6bM2cVndzOhHfBTHl5C68oYBDvxqgKJGg6Zfk8A9V1vkuPa_5cdCxfc3xCz7tWToIhq_IQoUXyvhzgprPy0337u8MWK-ECFSaOPHtxW9aGDg74YwwrsaRBpbWMsqLeuwj4Qaj62HDGBKZSbfTbTzyhUhWYiHZ82Y39nT59W9kXwVQh5UWqWsE03oPLR7WHS">
+</div>
+</header>
+<!-- Dummy Workspace Content for Atmosphere -->
+<div class="grid grid-cols-12 gap-panel-gap opacity-30 pointer-events-none">
+<div class="col-span-8 h-96 bg-surface-container-high rounded-xl border border-border-subtle p-6"></div>
+<div class="col-span-4 h-96 bg-surface-container-high rounded-xl border border-border-subtle p-6"></div>
+<div class="col-span-12 h-64 bg-surface-container-high rounded-xl border border-border-subtle p-6"></div>
+</div>
+<!-- Create Task Modal Overlay -->
+<div class="fixed inset-0 z-[60] flex items-center justify-center p-8 bg-black/60 backdrop-blur-sm">
+<div class="glass-panel w-full max-w-6xl h-full max-h-[850px] rounded-xl shadow-2xl overflow-hidden flex flex-col">
+<!-- Main Modal Content (Scrollable Area) -->
+<div class="flex-1 flex overflow-hidden">
+<!-- Left Panel: Region Preview -->
+<div class="w-2/5 border-r border-border-subtle bg-surface-container-lowest/50 p-6 flex flex-col gap-6 overflow-y-auto no-scrollbar">
+<div class="flex-1 relative bg-surface-container-high rounded-lg overflow-hidden border border-border-subtle group">
+<img class="w-full h-full object-cover" data-alt="A highly detailed black and white manga page manuscript displaying dynamic action lines and screen tones. The scene depicts a character in a dramatic close-up, with a glowing translucent purple selection box highlighting the character's eye and facial features. The aesthetic is clean and professional, resembling a digital studio interface in dark mode with violet accents." src="https://lh3.googleusercontent.com/aida-public/AB6AXuA_61TdTUkRXMVKebBcuDrtAEh4aPE1nGdolSoIRetbpsIvc1yQdM9BfF5rGPN6GjkSfUOc4sXpCTdd5Y9eRXAusYgMfByixhDo7c1Z0QEjJpYzsC0UHJgjrm_lpFqL5fpY1VFRXV4a7BI36c5G-1uXfdfTBjdG37QFnXxeDZnSKSX3lJ1U0tB-UJEEeRxZYtlVufuBTQrwzVdUvAHGPoNaL7xWCfGpn55PZ9Av317Y2Douoi-eyBr_1zmzmQHje3wMl8gkadd0ovC8">
+<!-- Bounding Box Overlay -->
+<div class="absolute top-[35%] left-[25%] w-32 h-32 border-2 border-primary-container bg-primary-container/10 ring-4 ring-primary/20 flex items-center justify-center">
+<div class="absolute -top-3 -left-3 bg-primary-container text-white px-2 py-0.5 rounded text-[10px] font-bold">FOCUS</div>
+</div>
+<!-- Manga Grid Pattern -->
+<div class="absolute inset-0 manga-grid-overlay opacity-20 pointer-events-none"></div>
+</div>
+<!-- Region Info Card -->
+<div class="bg-surface-container rounded-lg p-5 border border-border-subtle">
+<h3 class="font-label-md text-label-md text-primary mb-4 flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]">info</span> Region Information
+                            </h3>
+<div class="grid grid-cols-2 gap-4">
+<div>
+<p class="text-outline font-caption-xs uppercase">Type</p>
+<p class="font-body-md text-body-md">Character Detail</p>
+</div>
+<div>
+<p class="text-outline font-caption-xs uppercase">Label</p>
+<p class="font-body-md text-body-md">PROTAG_FACE_DETAIL</p>
+</div>
+<div>
+<p class="text-outline font-caption-xs uppercase">Location</p>
+<p class="font-body-md text-body-md">Ch. 45, Page 01</p>
+</div>
+<div>
+<p class="text-outline font-caption-xs uppercase">Size</p>
+<p class="font-body-md text-body-md">450 x 320 px</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Right Panel: Task Form -->
+<div class="flex-1 p-8 flex flex-col gap-8 overflow-y-auto no-scrollbar bg-surface-container">
+<div class="flex justify-between items-start">
+<div>
+<h2 class="font-headline-md text-headline-md text-on-surface mb-1">Create New Task</h2>
+<p class="text-outline font-label-sm">Assigning studio resources for Manuscript P01_C45</p>
+</div>
+<button class="material-symbols-outlined text-outline hover:text-on-surface transition-colors">close</button>
+</div>
+<!-- Section 1: Basic Info -->
+<div class="grid grid-cols-2 gap-gutter">
+<div class="flex flex-col gap-2">
+<label class="text-outline font-label-md">Task Title</label>
+<input class="bg-surface-container-high border border-border-subtle rounded-lg px-4 py-3 focus:border-primary focus:ring-1 focus:ring-primary outline-none font-body-md transition-all" type="text" value="Refine Lineart">
+</div>
+<div class="flex flex-col gap-2">
+<label class="text-outline font-label-md">Assign Assistant</label>
+<div class="flex items-center gap-3 bg-surface-container-high border border-border-subtle rounded-lg px-4 py-2 hover:border-outline transition-colors cursor-pointer">
+<img alt="Akira K." class="w-8 h-8 rounded-full ring-1 ring-primary-container" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCZXakd7i64pVDtnxzSbCZjZzOyQadP_5L7j7GNS-MGPAO6ALSWtCkleipcL0sDlVqtbe1oIx2K95eRF8EgT-OhpN2pdMXiiCDEahOdl2wOxT7UV7G-QnSfci1vRGslWhwPLc5djpWmhAaJXzQdXAL3idv-ToLgLD8imuZu20bX19A_5sPkeQrWqmT9drpJBGmjdmfWRbyvAuwtrDSevwR393VbRFL_LseZrKsR-wYd_bETuOjuAjC3z5C1QWZQejVHDwUzDCiBclUf"><span class="font-label-md text-on-surface ml-2">Kenji Sato</span>
+
+<span class="material-symbols-outlined text-outline">expand_more</span>
+</div>
+</div>
+</div>
+<!-- Section 2: Settings -->
+<div class="grid grid-cols-3 gap-gutter">
+<div class="flex flex-col gap-2">
+<label class="text-outline font-label-md">Priority</label>
+<div class="flex items-center gap-2 bg-error-container/20 border border-error-rose/30 rounded-lg px-4 py-2.5">
+<span class="w-2 h-2 rounded-full bg-error-rose"></span>
+<span class="text-error-rose font-label-md">High</span>
+<span class="material-symbols-outlined text-outline text-[16px] ml-auto">priority_high</span>
+</div>
+</div>
+<div class="flex flex-col gap-2">
+<label class="text-outline font-label-md">Difficulty</label>
+<div class="flex items-center gap-2 bg-surface-container-high border border-border-subtle rounded-lg px-4 py-2.5">
+<span class="text-on-surface font-label-md">Medium</span>
+<span class="material-symbols-outlined text-outline text-[16px] ml-auto">equalizer</span>
+</div>
+</div>
+<div class="flex flex-col gap-2">
+<label class="text-outline font-label-md">Due Date</label>
+<div class="flex items-center gap-2 bg-surface-container-high border border-border-subtle rounded-lg px-4 py-2.5">
+<span class="text-on-surface font-label-md">Oct 12, 2023</span>
+<span class="material-symbols-outlined text-outline text-[16px] ml-auto">calendar_today</span>
+</div>
+</div>
+</div>
+<!-- Section 3: Payment Estimation -->
+
+<!-- Section 4: Description -->
+<div class="flex flex-col gap-4">
+<div class="flex flex-col gap-2">
+<label class="text-outline font-label-md">Task Description</label>
+<textarea class="bg-surface-container-high border border-border-subtle rounded-lg p-4 focus:border-primary focus:ring-1 focus:ring-primary outline-none font-body-md transition-all resize-none" placeholder="Enter specific instructions for the lineart refinement..." rows="3">Ensure the stroke width matches the established character profile (3pt for outer contours, 1pt for internal details).</textarea>
+</div>
+<div class="flex flex-col gap-2">
+<label class="text-outline font-label-md">Production Notes</label>
+<input class="bg-surface-container-high border border-border-subtle rounded-lg px-4 py-3 focus:border-primary focus:ring-1 focus:ring-primary outline-none font-body-md transition-all" placeholder="Add metadata tags or internal notes..." type="text">
+</div>
+</div>
+<!-- Section 5: Attachments -->
+<div class="flex flex-col gap-2">
+<label class="text-outline font-label-md">Attachments &amp; References</label>
+<div class="border-2 border-dashed border-border-subtle rounded-xl p-6 flex flex-col items-center justify-center gap-3 bg-surface-container-low hover:bg-surface-container-high hover:border-primary/50 transition-all cursor-pointer">
+<div class="flex gap-4 items-center">
+<div class="w-16 h-16 rounded border border-border-subtle bg-surface-container overflow-hidden group relative">
+<img class="w-full h-full object-cover" data-alt="A small thumbnail reference image of a character design sheet with detailed clothing folds and hair textures. The style is consistent with high-end manga production, displayed within a digital UI frame with dark background and purple accent highlights." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBIiiy16RvHBBynfV-ACbcQxDW3gcDFaqK0BH3ZWYTf-ckPN2j2F315iJObHTSdMQlZH6VWvfPxPofzS82ePrW38CSSGWquSsowF7z1r1LGEb4_20CKR6WVA85iCfjG96saxeBSpW7BS1WVfLzjpXDxA2-0njCaO_5QhN3C7HIDQnqPg3C-2YKMvK8KRTD2wJgT_l72cXdJ5QnsgwxbwCHD4aSCoDNjw0mvHaeAERVZ4h0e48mgwY0zMkx1x4_l7VrVdrBeIPh4jb_i">
+<div class="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-white text-[20px]">visibility</span>
+</div>
+</div>
+<div class="text-center md:text-left">
+<p class="font-label-md text-on-surface">Drag and drop assets</p>
+<p class="text-outline font-caption-xs">Max 50MB per file (JPG, PNG, TIFF)</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Section 6: Workflow Timeline -->
+<div class="flex flex-col gap-4 pt-4 border-t border-border-subtle">
+<label class="text-outline font-label-md">Projected Workflow</label>
+<div class="flex items-center w-full px-4">
+<div class="flex flex-col items-center gap-2 flex-1 relative">
+<div class="w-6 h-6 rounded-full bg-primary flex items-center justify-center z-10">
+<span class="material-symbols-outlined text-[14px] text-on-primary font-bold">check</span>
+</div>
+<span class="font-caption-xs text-primary font-bold">Assigned</span>
+<div class="absolute top-3 left-1/2 w-full h-[2px] bg-primary"></div>
+</div>
+<div class="flex flex-col items-center gap-2 flex-1 relative">
+<div class="w-6 h-6 rounded-full bg-surface-container-highest border border-primary z-10 flex items-center justify-center">
+<div class="w-2 h-2 rounded-full bg-primary animate-pulse"></div>
+</div>
+<span class="font-caption-xs text-on-surface">In Progress</span>
+<div class="absolute top-3 left-1/2 w-full h-[2px] bg-border-subtle"></div>
+</div>
+<div class="flex flex-col items-center gap-2 flex-1 relative">
+<div class="w-6 h-6 rounded-full bg-surface-container-highest border border-border-subtle z-10"></div>
+<span class="font-caption-xs text-outline">Submitted</span>
+<div class="absolute top-3 left-1/2 w-full h-[2px] bg-border-subtle"></div>
+</div>
+<div class="flex flex-col items-center gap-2 flex-1 relative">
+<div class="w-6 h-6 rounded-full bg-surface-container-highest border border-border-subtle z-10"></div>
+<span class="font-caption-xs text-outline">Reviewed</span>
+<div class="absolute top-3 left-1/2 w-full h-[2px] bg-border-subtle"></div>
+</div>
+<div class="flex flex-col items-center gap-2">
+<div class="w-6 h-6 rounded-full bg-surface-container-highest border border-border-subtle z-10"></div>
+<span class="font-caption-xs text-outline">Approved</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Modal Footer -->
+<div class="p-6 border-t border-border-subtle bg-surface-container-low flex justify-between items-center">
+<button class="px-6 py-2.5 rounded-lg font-label-md text-outline hover:text-on-surface transition-colors">Cancel</button>
+<div class="flex items-center gap-4">
+
+<button class="px-8 py-2.5 rounded-lg bg-primary-container text-on-primary-container font-label-md font-bold active:scale-95 transition-all active-glow">
+                            Create &amp; Assign Task
+                        </button>
+</div>
+</div>
+</div>
+</div>
+</main>
+<script>
+        // Simple micro-interactions
+        document.querySelectorAll('.active-glow').forEach(button => {
+            button.addEventListener('mousedown', () => {
+                button.style.transform = 'scale(0.98)';
+            });
+            button.addEventListener('mouseup', () => {
+                button.style.transform = 'scale(1)';
+            });
+        });
+    </script>
+
+
+
+
+</body></html>

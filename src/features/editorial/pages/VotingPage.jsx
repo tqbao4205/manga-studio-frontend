@@ -7,18 +7,19 @@
   ============================================================
 
   STATE TRANSITION:
-    Khi submit vote → editorialStore.submitVote()
-    → Meeting status: PENDING → COMPLETED
-    → Tự động navigate về /editorial
+    Khi submit vote → meetingService.castVote()
+    → Backend upsert vote + auto-complete nếu đủ EB vote
+    → Navigate về /editorial
 */
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuthStore } from "../../../app/stores/authStore";
 import { useUIStore } from "../../../app/stores/uiStore";
-import { useEditorialStore } from "../../../app/stores/editorialStore";
-import { mockUsers } from "../../../shared/constants/mock-data";
-import { mockSeries } from "../../../shared/constants/mock-data";
+import {
+  useEditorialStore,
+} from "../../../app/stores/editorialStore";
+import meetingService from "../../../services/meetingService";
 
 // ── Slider hiển thị điểm tiêu chí ──
 function ScoreSlider({ label, weight, value, onChange, id }) {
@@ -27,7 +28,9 @@ function ScoreSlider({ label, weight, value, onChange, id }) {
       <div className="flex justify-between items-center mb-4">
         <div>
           <p className="text-base text-on-surface">{label}</p>
-          <p className="text-xs text-on-surface-variant">Weight: {weight}</p>
+          {weight != null && (
+            <p className="text-xs text-on-surface-variant">Weight: {weight}</p>
+          )}
         </div>
         <span className="text-2xl font-semibold text-primary">{value}</span>
       </div>
@@ -48,11 +51,11 @@ function ScoreSlider({ label, weight, value, onChange, id }) {
   );
 }
 
-// ── Participant item ──
-function ParticipantItem({ userId }) {
-  const member = mockUsers.find((u) => u.id === userId);
-  if (!member) return null;
-  const initials = (member.displayName || "?")[0].toUpperCase();
+// ── Participant item (dùng participant info từ meeting response) ──
+function ParticipantItem({ participant }) {
+  if (!participant) return null;
+  const name = participant.displayName || participant.username || "?";
+  const initials = name[0].toUpperCase();
   return (
     <div className="flex items-center justify-between p-3 bg-surface-container-high/50 rounded-xl border border-outline-variant/20">
       <div className="flex items-center gap-3">
@@ -61,10 +64,10 @@ function ParticipantItem({ userId }) {
         </div>
         <div>
           <p className="text-sm font-medium text-on-surface">
-            {member.displayName}
+            {name}
           </p>
           <p className="text-[11px] text-on-surface-variant uppercase tracking-tighter">
-            {member.role.replace("_", " ")}
+            {participant.username}
           </p>
         </div>
       </div>
@@ -84,17 +87,57 @@ export function VotingPage() {
   const user = useAuthStore((s) => s.user);
   const addToast = useUIStore((s) => s.addToast);
   const getMeetingById = useEditorialStore((s) => s.getMeetingById);
-  const submitVote = useEditorialStore((s) => s.submitVote);
+  const fetchMeetingById = useEditorialStore((s) => s.fetchMeetingById);
+  const criteria = useEditorialStore((s) => s.criteria);
+  const fetchCriteria = useEditorialStore((s) => s.fetchCriteria);
 
-  const meeting = getMeetingById(meetingId);
+  const [meeting, setMeeting] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   // Vote state
   const [voteChoice, setVoteChoice] = useState(null); // 'YES' | 'NO'
   const [comment, setComment] = useState("");
-  const [scores, setScores] = useState({ content: 7, art: 7, creativity: 7 });
+  // scores lưu dưới dạng Map<criterionId, score>
+  const [scores, setScores] = useState({});
   const [submitting, setSubmitting] = useState(false);
 
-  if (!meeting) {
+  // Load meeting + criteria khi mount
+  useEffect(() => {
+    const loadData = async () => {
+      setLoading(true);
+      try {
+        // Fetch meeting detail từ API (đảm bảo có data mới nhất)
+        await fetchMeetingById(meetingId)
+        // Fetch criteria
+        await fetchCriteria()
+      } catch (err) {
+        console.error('Failed to load meeting:', err)
+      } finally {
+        setLoading(false)
+      }
+    }
+    loadData()
+  }, [meetingId, fetchMeetingById, fetchCriteria])
+
+  // Sync meeting từ store vào local state (để có thể render ngay cả khi chưa fetch xong)
+  useEffect(() => {
+    const m = getMeetingById(meetingId)
+    if (m) {
+      setMeeting(m)
+      // Khởi tạo scores với giá trị mặc định 7 cho mỗi criterion
+      if (criteria.length > 0) {
+        setScores((prev) => {
+          const initial = { ...prev }
+          criteria.forEach((c) => {
+            if (initial[c.id] == null) initial[c.id] = 7
+          })
+          return initial
+        })
+      }
+    }
+  }, [meetingId, getMeetingById, criteria])
+
+  if (!meeting && !loading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[50vh] gap-4 text-on-surface-variant">
         <span className="material-symbols-outlined text-5xl opacity-30">
@@ -111,32 +154,61 @@ export function VotingPage() {
     );
   }
 
-  // Series info
-  const series = mockSeries.find((s) => s.id === meeting.seriesId);
+  if (loading || !meeting) {
+    return (
+      <div className="flex items-center justify-center min-h-[50vh] text-on-surface-variant">
+        <span className="material-symbols-outlined text-4xl opacity-50 animate-spin">
+          progress_activity
+        </span>
+      </div>
+    );
+  }
 
+  const participants = meeting.participants || [];
   const isValid = voteChoice !== null;
 
-  // ── Submit vote → PENDING → COMPLETED ──
-  const handleSubmit = () => {
+  // ── Submit vote → gọi API ──
+  const handleSubmit = async () => {
     if (!isValid || submitting) return;
     setSubmitting(true);
 
-    submitVote(meetingId, user?.id, {
-      choice: voteChoice,
-      comment: comment.trim(),
-      scores: { ...scores },
-    });
+    try {
+      // Build scores array theo format backend yêu cầu
+      const scoresArray = criteria.map((c) => ({
+        criterionId: c.id,
+        score: scores[c.id] || 7,
+      }));
 
-    addToast({
-      title: "Vote submitted!",
-      description: `Phiếu bầu "${voteChoice}" của bạn đã được ghi nhận.`,
-      variant: "success",
-    });
+      const voteData = {
+        vote: voteChoice,
+        comment: comment.trim(),
+        scores: scoresArray,
+      };
 
-    // Tự động quay về trang danh sách sau 1 giây
-    setTimeout(() => {
-      navigate("/editorial");
-    }, 1000);
+      // Gọi API castVote (không cần userId — backend lấy từ JWT)
+      await meetingService.castVote(meetingId, voteData);
+
+      // Fetch lại meeting để cập nhật store
+      await fetchMeetingById(meetingId);
+
+      addToast({
+        title: "Vote submitted!",
+        description: `Phiếu bầu "${voteChoice}" của bạn đã được ghi nhận.`,
+        variant: "success",
+      });
+
+      // Tự động quay về trang danh sách sau 1 giây
+      setTimeout(() => {
+        navigate("/editorial");
+      }, 1000);
+    } catch (err) {
+      addToast({
+        title: "Vote failed",
+        description: err.message || "Không thể gửi phiếu bầu. Vui lòng thử lại.",
+        variant: "error",
+      });
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -230,9 +302,7 @@ export function VotingPage() {
               onClick={() => setVoteChoice("YES")}
             >
               <span
-                className={`material-symbols-outlined text-5xl mb-2 ${
-                  voteChoice === "YES" ? "" : ""
-                }`}
+                className="material-symbols-outlined text-5xl mb-2"
                 style={
                   voteChoice === "YES"
                     ? { fontVariationSettings: "'FILL' 1" }
@@ -288,33 +358,26 @@ export function VotingPage() {
           </div>
         </div>
 
-        {/* ── Criterion Scores ── */}
-        <div className="flex flex-col gap-3">
-          <h3 className="text-sm font-medium text-on-surface-variant uppercase tracking-widest px-1">
-            Criterion Scores
-          </h3>
-          <ScoreSlider
-            id="score-content"
-            label="Nội dung — Story"
-            weight="40%"
-            value={scores.content}
-            onChange={(v) => setScores((s) => ({ ...s, content: v }))}
-          />
-          <ScoreSlider
-            id="score-art"
-            label="Vẽ — Art"
-            weight="35%"
-            value={scores.art}
-            onChange={(v) => setScores((s) => ({ ...s, art: v }))}
-          />
-          <ScoreSlider
-            id="score-creativity"
-            label="Sáng tạo — Creativity"
-            weight="25%"
-            value={scores.creativity}
-            onChange={(v) => setScores((s) => ({ ...s, creativity: v }))}
-          />
-        </div>
+        {/* ── Criterion Scores (dynamic từ API) ── */}
+        {criteria.length > 0 && (
+          <div className="flex flex-col gap-3">
+            <h3 className="text-sm font-medium text-on-surface-variant uppercase tracking-widest px-1">
+              Criterion Scores
+            </h3>
+            {criteria.map((c) => (
+              <ScoreSlider
+                key={c.id}
+                id={`score-${c.id}`}
+                label={c.name}
+                weight={c.weight}
+                value={scores[c.id] || 7}
+                onChange={(v) =>
+                  setScores((s) => ({ ...s, [c.id]: v }))
+                }
+              />
+            ))}
+          </div>
+        )}
 
         {/* ── Submit Button ── */}
         <div className="mt-2">
@@ -334,41 +397,33 @@ export function VotingPage() {
 
       {/* ── Right Panel (40%) ── */}
       <aside className="lg:w-2/5 flex flex-col gap-5">
-        {/* Series cover/info */}
+        {/* Series cover/info (không dùng mock) */}
         <div className="border border-outline-variant/25 bg-[rgba(27,27,29,0.7)] backdrop-blur-md rounded-2xl overflow-hidden">
-          <div
-            className="w-full h-48 flex items-center justify-center relative"
-            style={{ backgroundColor: series?.coverColor || "#2a2a3c" }}
-          >
+          <div className="w-full h-48 flex items-center justify-center relative bg-surface-container-high">
             <span className="material-symbols-outlined text-white/20 text-8xl">
               auto_stories
             </span>
             <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-background to-transparent">
               <p className="text-sm font-medium text-on-surface">
-                {series?.title || meeting.seriesTitle}
+                {meeting.seriesTitle}
               </p>
-              {series?.genre && (
-                <p className="text-xs text-on-surface-variant mt-0.5 uppercase tracking-wider">
-                  {series.genre} · {series.targetDemographic}
-                </p>
-              )}
             </div>
           </div>
         </div>
 
-        {/* Participants List */}
+        {/* Participants List (dùng participant info từ API) */}
         <div className="border border-outline-variant/25 bg-[rgba(27,27,29,0.7)] backdrop-blur-md p-6 rounded-2xl flex flex-col gap-4">
           <div className="flex justify-between items-center">
             <h3 className="text-xl font-semibold text-on-surface">
               Participants
             </h3>
             <span className="text-sm text-on-surface-variant">
-              {(meeting.participants || []).length} invited
+              {participants.length} invited
             </span>
           </div>
           <div className="flex flex-col gap-3">
-            {(meeting.participants || []).map((userId) => (
-              <ParticipantItem key={userId} userId={userId} />
+            {participants.map((p) => (
+              <ParticipantItem key={p.userId} participant={p} />
             ))}
           </div>
         </div>

@@ -37,6 +37,7 @@ export const ROLES = {
   ASSISTANT: 'Assistant',
   TANTOU_EDITOR: 'Tantou Editor',
   EDITORIAL_BOARD: 'Editorial Board',
+  CHIEF_EDITOR: 'Chief Editor',
 }
 
 // ─── Điều hướng (Navigation) ───
