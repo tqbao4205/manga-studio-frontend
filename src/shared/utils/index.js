@@ -188,6 +188,44 @@ export function getRegionTypeColor(type) {
 }
 
 /**
+ * computeNextRelease — Tính ngày phát hành tiếp theo từ schedule pattern.
+ *
+ * Dùng cho SchedulePage và DashboardPage để hiển thị cột "Next Release".
+ *
+ * @param {Object} schedule - Schedule object từ API (ScheduleResponse)
+ * @returns {Date|null}      - Ngày phát hành tiếp theo, null nếu không xác định
+ *
+ * Logic:
+ *   WEEKLY  → Tìm thứ trong tuần (dayOfWeek) kể từ hôm nay
+ *   MONTHLY → Tìm ngày trong tháng (dayOfMonth) kể từ hôm nay
+ */
+export function computeNextRelease(schedule) {
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+
+  if (schedule.scheduleType === 'WEEKLY' && schedule.dayOfWeek != null) {
+    const targetDay = schedule.dayOfWeek % 7
+    const currentDay = today.getDay()
+    let diff = targetDay - currentDay
+    if (diff <= 0) diff += 7
+    const next = new Date(today)
+    next.setDate(today.getDate() + diff)
+    return next
+  }
+
+  if (schedule.scheduleType === 'MONTHLY' && schedule.dayOfMonth != null) {
+    const target = schedule.dayOfMonth
+    let next = new Date(today.getFullYear(), today.getMonth(), target)
+    if (next <= today) {
+      next = new Date(today.getFullYear(), today.getMonth() + 1, target)
+    }
+    return next
+  }
+
+  return null
+}
+
+/**
  * getRankColor — Trả về màu theo thứ hạng (tier) của series.
  *
  * @param {string} tier - 'S' | 'A' | 'B' | 'C' | 'D'

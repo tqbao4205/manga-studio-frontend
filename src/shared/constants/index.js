@@ -56,9 +56,6 @@ export const NAV_ITEMS = [
   { label: 'Dashboard', icon: 'LayoutDashboard', path: '/dashboard', roles: ['ALL'] },
   { label: 'Series', icon: 'BookOpen', path: '/series', roles: ['ALL'] },
   { label: 'Workspace', icon: 'PenTool', path: '/workspace', roles: ['MANGAKA', 'ASSISTANT'] },
-  { label: 'Publishing', icon: 'Calendar', path: '/publishing', roles: ['EDITORIAL_BOARD'] },
-  { label: 'Editorial Vote', icon: 'Vote', path: '/publishing/votes', roles: ['EDITORIAL_BOARD'] },
-  { label: 'Rankings', icon: 'TrendingUp', path: '/rankings', roles: ['ALL'] },
 ]
 
 // ─── Màu vùng (Region Colors) ───

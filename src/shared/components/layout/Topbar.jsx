@@ -9,10 +9,7 @@ import { NotificationsPanel } from "./NotificationsPanel";
 const breadcrumbMap = {
   '/dashboard': 'Dashboard',
   '/series': 'Series List',
-  '/reviews': 'Reviews',
   '/tasks': 'Tasks',
-  '/rankings': 'Rankings',
-  '/publishing': 'Publishing',
   '/profile': 'Profile',
 }
 

@@ -28,11 +28,8 @@ import { NewChapterPage } from "../features/series/NewChapterPage";
 import { WorkspacePage } from "../features/workspace/WorkspacePage";
 import { TasksPage } from "../features/tasks/TasksPage";
 import { ChapterDetailPage } from "../features/series/ChapterDetailPage";
-import { RankingsPage } from "../features/rankings/RankingsPage";
-import { ReviewsPage } from "../features/reviews/ReviewsPage";
-import { PublishingPage } from "../features/publishing/PublishingPage";
-import { VoteEntryPage } from "../features/publishing/VoteEntryPage";
 import { ProfilePage } from "../features/profile/ProfilePage";
+import { SchedulePage } from "../features/schedule/SchedulePage";
 import { InvitationsPage } from "../features/invitations/InvitationsPage";
 import { TantouInvitationsPage } from "../features/invitations/TantouInvitationsPage";
 import { NotFoundPage } from "../features/not-found/NotFoundPage";
@@ -170,16 +167,6 @@ export default function App() {
             }
           />
 
-          {/* Reviews — phê duyệt chapter cho biên tập viên */}
-          <Route
-            path="/reviews"
-            element={
-              <RoleGuard allowedRoles={["TANTOU_EDITOR", "EDITORIAL_BOARD"]}>
-                <ReviewsPage />
-              </RoleGuard>
-            }
-          />
-
           {/* ─── Editorial Board Meetings ─── */}
           {/* Danh sách cuộc họp — EDITORIAL_BOARD + CHIEF_EDITOR (Chief tạo + kết thúc) */}
           <Route
@@ -209,27 +196,8 @@ export default function App() {
             }
           />
 
-          {/* Rankings — bảng xếp hạng tuần (mọi role đều xem được) */}
-          <Route path="/rankings" element={<RankingsPage />} />
-
-          {/* Publishing — lịch xuất bản, chỉ EDITORIAL_BOARD và CHIEF_EDITOR */}
-          <Route
-            path="/publishing"
-            element={
-              <RoleGuard allowedRoles={["EDITORIAL_BOARD", "CHIEF_EDITOR"]}>
-                <PublishingPage />
-              </RoleGuard>
-            }
-          />
-          {/* Vote Entry — nhập phiếu bầu xếp hạng, chỉ EDITORIAL_BOARD và CHIEF_EDITOR */}
-          <Route
-            path="/publishing/votes"
-            element={
-              <RoleGuard allowedRoles={["EDITORIAL_BOARD", "CHIEF_EDITOR"]}>
-                <VoteEntryPage />
-              </RoleGuard>
-            }
-          />
+          {/* Schedule — lịch xuất bản */}
+          <Route path="/schedule" element={<SchedulePage />} />
 
           {/* Route mặc định: / → redirect đến /dashboard */}
           <Route path="/" element={<Navigate to="/dashboard" replace />} />

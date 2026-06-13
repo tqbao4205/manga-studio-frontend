@@ -45,7 +45,7 @@ import { Button } from "../../shared/components/ui/button";
 import { StatusBadge } from "../../shared/components/shared/StatusBadge";
 import { PageLoading } from "../../shared/components/shared/LoadingSpinner";
 import { Dialog } from "../../shared/components/ui/dialog";
-import { formatRelativeTime, cn, getRankColor } from "../../shared/utils";
+import { formatRelativeTime, formatDate, cn, getRankColor, computeNextRelease } from "../../shared/utils";
 
 const quickActions = [
   {
@@ -57,12 +57,6 @@ const quickActions = [
   { label: "New Chapter", icon: Plus, path: "/series", roles: ["MANGAKA"] },
   { label: "My Tasks", icon: ListTodo, path: "/tasks", roles: ["ASSISTANT"] },
   { label: "View Series", icon: BookOpen, path: "/series", roles: ["ALL"] },
-  {
-    label: "Check Rankings",
-    icon: TrendingUp,
-    path: "/rankings",
-    roles: ["ALL"],
-  },
 ];
 
 function StatCard({ label, value, trend, icon: Icon, variant = "default" }) {
@@ -764,7 +758,7 @@ function EditorialBoardDashboard() {
     (s) => s.status === "APPROVED",
   );
   const upcomingSchedules =
-    (schedules || schedulesList).filter((s) => s.status === "SCHEDULED") || [];
+    (schedules || schedulesList).filter((s) => s.status === "ACTIVE") || [];
 
   const atRisk = rankings.filter((r) => r.tier === "C" || r.tier === "D").map(r => {
     const series = seriesListRef.find(s => s.id === r.seriesId);
@@ -1006,19 +1000,22 @@ function EditorialBoardDashboard() {
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
-                {upcomingSchedules.slice(0, 5).map((s) => (
-                  <div
-                    key={s.id}
-                    className="flex items-center justify-between text-sm"
-                  >
-                    <span className="text-on-surface">
-                      {s.seriesTitle} — Ch.{s.chapterNumber}
-                    </span>
-                    <span className="text-xs text-on-surface-variant">
-                      {s.scheduledDate}
-                    </span>
-                  </div>
-                ))}
+                {upcomingSchedules.slice(0, 5).map((s) => {
+                  const nextRelease = computeNextRelease(s);
+                  return (
+                    <div
+                      key={s.id}
+                      className="flex items-center justify-between text-sm"
+                    >
+                      <span className="text-on-surface">
+                        {s.seriesTitle} — Ch.{s.nextChapterNumber}
+                      </span>
+                      <span className="text-xs text-on-surface-variant">
+                        {nextRelease ? formatDate(nextRelease.toISOString().split('T')[0]) : '-'}
+                      </span>
+                    </div>
+                  );
+                })}
                 {upcomingSchedules.length === 0 && (
                   <p className="text-sm text-on-surface-variant text-center py-4">
                     No upcoming publications

@@ -11,12 +11,6 @@ const mainNav = [
 
 const extraNav = [
   {
-    label: "Reviews",
-    icon: "rate_review",
-    path: "/reviews",
-    roles: ["TANTOU_EDITOR", "EDITORIAL_BOARD"],
-  },
-  {
     label: "Tasks",
     icon: "checklist",
     path: "/tasks",
@@ -41,18 +35,12 @@ const extraNav = [
     roles: ["EDITORIAL_BOARD", "CHIEF_EDITOR"],
   },
   {
-    label: "Publishing",
+    label: "Schedule",
     icon: "calendar_month",
-    path: "/publishing",
-    roles: ["EDITORIAL_BOARD", "CHIEF_EDITOR"],
+    path: "/schedule",
+    roles: ["ALL"],
   },
-  {
-    label: "Editorial Vote",
-    icon: "how_to_vote",
-    path: "/publishing/votes",
-    roles: ["EDITORIAL_BOARD", "CHIEF_EDITOR"],
-  },
-  { label: "Rankings", icon: "trending_up", path: "/rankings", roles: ["ALL"] },
+
 ];
 
 export function Sidebar() {
