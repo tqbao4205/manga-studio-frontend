@@ -179,6 +179,19 @@ const scheduleService = {
   delete: async (id) => {
     return api.delete(`/schedules/${id}`);
   },
+
+  /**
+   * Chạy thủ công auto-publish (test/demo).
+   * Endpoint: POST /api/schedules/test-auto-publish
+   *
+   * Dùng để test không cần chờ cron job 8h sáng.
+   * Chỉ EDITORIAL_BOARD / CHIEF_EDITOR mới gọi được.
+   *
+   * @returns {Promise<Object>} { message: string }
+   */
+  triggerAutoPublish: async () => {
+    return api.post('/schedules/test-auto-publish');
+  },
 };
 
 export default scheduleService;

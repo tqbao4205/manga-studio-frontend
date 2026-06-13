@@ -196,8 +196,15 @@ export default function App() {
             }
           />
 
-          {/* Schedule — lịch xuất bản */}
-          <Route path="/schedule" element={<SchedulePage />} />
+          {/* Schedule — lịch xuất bản (chỉ EDITORIAL_BOARD + CHIEF_EDITOR) */}
+          <Route
+            path="/schedule"
+            element={
+              <RoleGuard allowedRoles={["EDITORIAL_BOARD", "CHIEF_EDITOR"]}>
+                <SchedulePage />
+              </RoleGuard>
+            }
+          />
 
           {/* Route mặc định: / → redirect đến /dashboard */}
           <Route path="/" element={<Navigate to="/dashboard" replace />} />

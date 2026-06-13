@@ -397,12 +397,16 @@ export function VotingPage() {
 
       {/* ── Right Panel (40%) ── */}
       <aside className="lg:w-2/5 flex flex-col gap-5">
-        {/* Series cover/info (không dùng mock) */}
+        {/* Series cover/info */}
         <div className="border border-outline-variant/25 bg-[rgba(27,27,29,0.7)] backdrop-blur-md rounded-2xl overflow-hidden">
           <div className="w-full h-48 flex items-center justify-center relative bg-surface-container-high">
-            <span className="material-symbols-outlined text-white/20 text-8xl">
-              auto_stories
-            </span>
+            {meeting.seriesCoverImageUrl ? (
+              <img src={meeting.seriesCoverImageUrl} alt={meeting.seriesTitle} className="w-full h-full object-cover" />
+            ) : (
+              <span className="material-symbols-outlined text-white/20 text-8xl">
+                auto_stories
+              </span>
+            )}
             <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-background to-transparent">
               <p className="text-sm font-medium text-on-surface">
                 {meeting.seriesTitle}

@@ -50,15 +50,19 @@ const COVER_COLORS = [
   "from-sky-900 to-cyan-900",
 ];
 
-function CoverPlaceholder({ seriesId, seriesTitle }) {
+function CoverPlaceholder({ seriesId, seriesTitle, coverImageUrl, coverColor }) {
   const gradient = COVER_COLORS[(seriesId || 0) % COVER_COLORS.length];
   return (
     <div
-      className={`w-20 h-28 rounded-lg bg-gradient-to-br ${gradient} flex items-center justify-center shrink-0 border border-outline-variant/20 shadow-md`}
+      className={`w-20 h-28 rounded-lg flex items-center justify-center shrink-0 border border-outline-variant/20 shadow-md overflow-hidden ${coverImageUrl ? '' : `bg-gradient-to-br ${gradient}`}`}
     >
-      <span className="material-symbols-outlined text-white/40 text-3xl">
-        auto_stories
-      </span>
+      {coverImageUrl ? (
+        <img src={coverImageUrl} alt={seriesTitle} className="w-full h-full object-cover" />
+      ) : (
+        <span className="material-symbols-outlined text-white/40 text-3xl">
+          auto_stories
+        </span>
+      )}
     </div>
   );
 }
@@ -107,6 +111,8 @@ function MeetingCard({ meeting, isChief }) {
         <CoverPlaceholder
           seriesId={meeting.seriesId}
           seriesTitle={meeting.seriesTitle}
+          coverImageUrl={meeting.seriesCoverImageUrl}
+          coverColor={meeting.seriesCoverColor}
         />
         <div className="flex-1 min-w-0">
           <span className="text-xs font-bold text-tertiary uppercase tracking-wider">

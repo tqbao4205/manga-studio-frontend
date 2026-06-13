@@ -237,6 +237,9 @@ export function VotingResultsPage() {
             </span>
           </div>
           <h2 className="text-3xl font-semibold text-on-surface flex items-center gap-3 flex-wrap">
+            {meeting.seriesCoverImageUrl && (
+              <img src={meeting.seriesCoverImageUrl} alt="" className="w-10 h-14 rounded-lg object-cover border border-outline-variant/30" />
+            )}
             {meeting.seriesTitle}
             <span className="text-on-surface-variant font-normal text-xl">
               —

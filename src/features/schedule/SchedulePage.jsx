@@ -25,8 +25,7 @@
 import { useState, useMemo, useEffect } from "react";
 import {
   Search, Plus, Edit, PauseCircle, PlayCircle,
-  RefreshCw, Trash2, Calendar, ChevronRight, X,
-  Film, Repeat, Check,
+  RefreshCw, Trash2, Calendar, ChevronRight, Film, Play,
 } from "lucide-react";
 import { useScheduleStore } from "../../app/stores/scheduleStore";
 import { useSeriesStore } from "../../app/stores/seriesStore";
@@ -34,8 +33,8 @@ import { useUIStore } from "../../app/stores/uiStore";
 import { Button } from "../../shared/components/ui/button";
 import { EmptyState } from "../../shared/components/shared/EmptyState";
 import { Pagination } from "../../shared/components/shared/Pagination";
-import { Dialog } from "../../shared/components/ui/dialog";
 import { formatDate, cn } from "../../shared/utils";
+import { ScheduleFormModal } from "./ScheduleFormModal";
 import scheduleService from "../../services/scheduleService";
 
 // ─── Cấu hình ────────────────────────────────────────────
@@ -116,216 +115,7 @@ function computeNextRelease(schedule) {
   return null;
 }
 
-// ─── CreateScheduleModal ─────────────────────────────────
-/**
- * Modal tạo lịch xuất bản mới.
- *
- * ⚙️ Gọi store.createSchedule(seriesId, data):
- *   POST /api/series/{seriesId}/schedule
- *   Body: { scheduleType, dayOfWeek?, dayOfMonth?, startDate }
- */
-function CreateScheduleModal({ open, onClose, onCreated }) {
-  const { schedules, createSchedule } = useScheduleStore();
-  const seriesList = useSeriesStore((s) => s.seriesList);
-  const addToast = useUIStore((s) => s.addToast);
-
-  const [selectedSeries, setSelectedSeries] = useState("");
-  const [scheduleType, setScheduleType] = useState("WEEKLY");
-  const [selectedDay, setSelectedDay] = useState(1);
-  const [dayOfMonth, setDayOfMonth] = useState(6);
-  const [startDate, setStartDate] = useState(
-    new Date().toISOString().split("T")[0]
-  );
-
-  const daysOfWeek = [
-    { label: "M", value: 1 },
-    { label: "T", value: 2 },
-    { label: "W", value: 3 },
-    { label: "T", value: 4 },
-    { label: "F", value: 5 },
-    { label: "S", value: 6 },
-    { label: "S", value: 7 },
-  ];
-
-  const seriesOptions = useMemo(() => {
-    const existing = new Set(schedules.filter((s) => s.status === "ACTIVE").map((s) => s.seriesId));
-    return seriesList
-      .filter((s) => !existing.has(s.id))
-      .map((s) => ({ value: String(s.id), label: s.title }));
-  }, [seriesList, schedules]);
-
-  const handleSubmit = async () => {
-    if (!selectedSeries) {
-      addToast({ type: "warning", title: "Please select a series" });
-      return;
-    }
-
-    const seriesId = Number(selectedSeries);
-
-    // Build request body theo CreateScheduleRequest (backend DTO)
-    const body = {
-      scheduleType,
-      startDate,
-    };
-
-    if (scheduleType === "WEEKLY") {
-      body.dayOfWeek = selectedDay;
-    } else {
-      body.dayOfMonth = dayOfMonth;
-    }
-
-    try {
-      await createSchedule(seriesId, body);
-
-      addToast({
-        type: "success",
-        title: "Schedule created",
-        message: `Schedule created for series #${seriesId}`,
-      });
-
-      onCreated();
-      resetForm();
-    } catch (err) {
-      addToast({
-        type: "error",
-        title: "Failed to create schedule",
-        message: err.message,
-      });
-    }
-  };
-
-  const resetForm = () => {
-    setSelectedSeries("");
-    setScheduleType("WEEKLY");
-    setSelectedDay(1);
-    setDayOfMonth(6);
-    setStartDate(new Date().toISOString().split("T")[0]);
-  };
-
-  return (
-    <Dialog open={open} onClose={onClose} title="Create New Schedule" size="md">
-      <div className="space-y-6">
-        <div className="space-y-2">
-          <label className="text-sm text-on-surface-variant block">Select Series</label>
-          <div className="relative ambient-glow rounded-xl overflow-hidden">
-            <Film className="absolute left-4 top-1/2 -translate-y-1/2 text-outline" size={18} />
-            <select
-              value={selectedSeries}
-              onChange={(e) => setSelectedSeries(e.target.value)}
-              className="w-full bg-surface-container-low border border-outline-variant/30 rounded-xl py-3.5 pl-12 pr-4 text-on-surface focus:border-primary focus:ring-0 transition-all appearance-none cursor-pointer text-sm"
-            >
-              <option value="">Search existing series...</option>
-              {seriesOptions.map((opt) => (
-                <option key={opt.value} value={opt.value}>{opt.label}</option>
-              ))}
-            </select>
-            <ChevronRight className="absolute right-4 top-1/2 -translate-y-1/2 text-outline pointer-events-none" size={18} />
-          </div>
-        </div>
-
-        <div className="space-y-2">
-          <label className="text-sm text-on-surface-variant block">Schedule Type</label>
-          <div className="flex bg-surface-container-low border border-outline-variant/30 p-1 rounded-xl">
-            <button
-              type="button"
-              onClick={() => setScheduleType("WEEKLY")}
-              className={cn(
-                "flex-1 py-2.5 rounded-lg text-sm font-medium transition-all",
-                scheduleType === "WEEKLY"
-                  ? "bg-primary-container text-on-primary-container shadow-sm"
-                  : "text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high"
-              )}
-            >
-              Weekly
-            </button>
-            <button
-              type="button"
-              onClick={() => setScheduleType("MONTHLY")}
-              className={cn(
-                "flex-1 py-2.5 rounded-lg text-sm font-medium transition-all",
-                scheduleType === "MONTHLY"
-                  ? "bg-primary-container text-on-primary-container shadow-sm"
-                  : "text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high"
-              )}
-            >
-              Monthly
-            </button>
-          </div>
-        </div>
-
-        {scheduleType === "WEEKLY" && (
-          <div className="space-y-2">
-            <label className="text-sm text-on-surface-variant block">Release Day</label>
-            <div className="grid grid-cols-7 gap-2">
-              {daysOfWeek.map((day) => (
-                <button
-                  key={day.value}
-                  type="button"
-                  onClick={() => setSelectedDay(day.value)}
-                  className={cn(
-                    "h-12 rounded-lg text-sm font-medium flex items-center justify-center transition-all",
-                    selectedDay === day.value
-                      ? "bg-primary-container/20 text-primary border-2 border-primary font-bold"
-                      : "border border-outline-variant/30 text-on-surface-variant hover:bg-surface-container-high"
-                  )}
-                >
-                  {day.label}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {scheduleType === "MONTHLY" && (
-          <div className="space-y-2">
-            <label className="text-sm text-on-surface-variant block">Day of Month</label>
-            <div className="relative ambient-glow rounded-xl overflow-hidden">
-              <Repeat className="absolute left-4 top-1/2 -translate-y-1/2 text-outline" size={18} />
-              <input
-                type="number"
-                min={1}
-                max={31}
-                value={dayOfMonth}
-                onChange={(e) => setDayOfMonth(Number(e.target.value))}
-                className="w-full bg-surface-container-low border border-outline-variant/30 rounded-xl py-3.5 pl-12 pr-4 text-on-surface focus:border-primary focus:ring-0 transition-all text-sm outline-none"
-              />
-            </div>
-          </div>
-        )}
-
-        <div className="space-y-2">
-          <label className="text-sm text-on-surface-variant block">Start Date</label>
-          <div className="relative ambient-glow rounded-xl overflow-hidden">
-            <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-outline" size={18} />
-            <input
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              className="w-full bg-surface-container-low border border-outline-variant/30 rounded-xl py-3.5 pl-12 pr-4 text-on-surface focus:border-primary focus:ring-0 transition-all text-sm outline-none"
-              style={{ colorScheme: "dark" }}
-            />
-          </div>
-        </div>
-
-        <div className="flex items-center gap-4 pt-4">
-          <button
-            onClick={onClose}
-            className="flex-1 py-3 rounded-xl text-sm font-medium text-on-surface hover:bg-surface-container-high transition-all border border-outline-variant/30"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleSubmit}
-            className="flex-[2] py-3 rounded-xl text-sm font-medium bg-primary text-on-primary hover:brightness-110 active:scale-95 shadow-lg shadow-primary/10 transition-all flex items-center justify-center gap-2"
-          >
-            <Check size={18} />
-            Confirm Schedule
-          </button>
-        </div>
-      </div>
-    </Dialog>
-  );
-}
+// ─── ScheduleFormModal được import từ file riêng ─────────
 
 // ─── SchedulePage (trang chính) ───────────────────────────
 export function SchedulePage() {
@@ -340,6 +130,8 @@ export function SchedulePage() {
   const [typeFilter, setTypeFilter] = useState("ALL");
   const [page, setPage] = useState(0);
   const [modalOpen, setModalOpen] = useState(false);
+  const [editingSchedule, setEditingSchedule] = useState(null);
+  const [triggering, setTriggering] = useState(false);
 
   useEffect(() => {
     fetchAll();
@@ -436,15 +228,40 @@ export function SchedulePage() {
     }
   };
 
+  const handleTriggerPublish = async () => {
+    setTriggering(true);
+    try {
+      await scheduleService.triggerAutoPublish();
+      addToast({
+        type: "success",
+        title: "Auto-publish triggered",
+        message: "Processing schedules...",
+      });
+      await fetchAll();
+    } catch (err) {
+      addToast({
+        type: "error",
+        title: "Failed to trigger auto-publish",
+        message: err.message,
+      });
+    } finally {
+      setTriggering(false);
+    }
+  };
+
   const columns = [
     {
       id: "series",
       header: "Series",
       cell: (row) => (
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-14 rounded-lg bg-surface-container overflow-hidden border border-outline-variant/30 group-hover:border-primary/50 transition-colors flex items-center justify-center text-on-surface-variant shrink-0">
-            <Film size={18} />
-          </div>
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-14 rounded-lg bg-surface-container overflow-hidden border border-outline-variant/30 group-hover:border-primary/50 transition-colors flex items-center justify-center text-on-surface-variant shrink-0">
+              {row.seriesThumbnail ? (
+                <img src={row.seriesThumbnail} alt="" className="w-full h-full object-cover" />
+              ) : (
+                <Film size={18} />
+              )}
+            </div>
           <div>
             <p className="font-medium text-on-surface text-sm">{row.seriesTitle}</p>
             <p className="text-xs text-on-surface-variant">Ch. {row.nextChapterNumber}</p>
@@ -500,7 +317,7 @@ export function SchedulePage() {
       cell: (row) => (
         <div className="flex items-center justify-end gap-1">
           <button
-            onClick={(e) => { e.stopPropagation(); }}
+            onClick={(e) => { e.stopPropagation(); setEditingSchedule(row); setModalOpen(true); }}
             className="p-2 hover:bg-surface-container-high rounded-lg text-on-surface-variant hover:text-primary transition-all"
             title="Edit"
           >
@@ -549,13 +366,23 @@ export function SchedulePage() {
             Publication Schedules
           </h1>
         </div>
-        <button
-          onClick={() => setModalOpen(true)}
-          className="bg-primary text-on-primary px-6 py-3 rounded-xl shadow-lg shadow-primary/10 hover:brightness-110 active:scale-95 transition-all flex items-center gap-2 font-medium text-sm"
-        >
-          <Plus size={18} />
-          Create Schedule
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={handleTriggerPublish}
+            disabled={triggering}
+            className="bg-surface-container-high text-on-surface border border-outline-variant/30 px-5 py-3 rounded-xl hover:bg-surface-container transition-all flex items-center gap-2 font-medium text-sm disabled:opacity-50"
+          >
+            <Play size={16} className={triggering ? "animate-spin" : ""} />
+            {triggering ? "Publishing..." : "Trigger Publish"}
+          </button>
+          <button
+            onClick={() => { setEditingSchedule(null); setModalOpen(true); }}
+            className="bg-primary text-on-primary px-6 py-3 rounded-xl shadow-lg shadow-primary/10 hover:brightness-110 active:scale-95 transition-all flex items-center gap-2 font-medium text-sm"
+          >
+            <Plus size={18} />
+            Create Schedule
+          </button>
+        </div>
       </div>
 
       <div className="rounded-2xl p-4 flex flex-wrap items-center gap-4"
@@ -684,10 +511,14 @@ export function SchedulePage() {
         )}
       </div>
 
-      <CreateScheduleModal
+      <ScheduleFormModal
+        mode={editingSchedule ? "edit" : "create"}
         open={modalOpen}
-        onClose={() => setModalOpen(false)}
-        onCreated={() => setModalOpen(false)}
+        onClose={() => { setModalOpen(false); setEditingSchedule(null); }}
+        onSuccess={fetchAll}
+        scheduleData={editingSchedule}
+        schedules={schedules}
+        seriesList={useSeriesStore.getState().seriesList}
       />
     </div>
   );
