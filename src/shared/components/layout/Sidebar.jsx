@@ -38,7 +38,7 @@ const extraNav = [
     label: "Schedule",
     icon: "calendar_month",
     path: "/schedule",
-    roles: ["ALL"],
+    roles: ["EDITORIAL_BOARD", "CHIEF_EDITOR"],
   },
 
 ];
@@ -106,7 +106,7 @@ export function Sidebar() {
               >
                 {({ isActive }) => (
                   <>
-                    {!isActive && (
+                    {!isActive && user?.role !== 'MANGAKA' && user?.role !== 'ASSISTANT' && user?.role !== 'TANTOU_EDITOR' && (
                       <div className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 bg-surface-container-high transition-all duration-300 scale-95 group-hover:scale-100" />
                     )}
                     <span className="relative z-10 material-symbols-outlined text-xl shrink-0">
@@ -147,7 +147,7 @@ export function Sidebar() {
               >
                 {({ isActive }) => (
                   <>
-                    {!isActive && (
+                    {!isActive && user?.role !== 'MANGAKA' && user?.role !== 'ASSISTANT' && user?.role !== 'TANTOU_EDITOR' && (
                       <div className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 bg-surface-container-high transition-all duration-300 scale-95 group-hover:scale-100" />
                     )}
                     <span className="relative z-10 material-symbols-outlined text-xl shrink-0">
@@ -187,7 +187,7 @@ export function Sidebar() {
           >
             {({ isActive }) => (
               <>
-                {!isActive && (
+                {!isActive && user?.role !== 'MANGAKA' && user?.role !== 'ASSISTANT' && user?.role !== 'TANTOU_EDITOR' && (
                   <div className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 bg-surface-container-high transition-all duration-300 scale-95 group-hover:scale-100" />
                 )}
                 <span className="relative z-10 material-symbols-outlined text-xl">
@@ -197,10 +197,6 @@ export function Sidebar() {
               </>
             )}
           </NavLink>
-          <button className="mt-2 w-full flex items-center gap-3 px-4 py-2.5 rounded-2xl transition-all duration-300 group text-on-surface-variant hover:text-white hover:bg-surface-container-high">
-            <span className="material-symbols-outlined text-xl">flag</span>
-            <span className="text-sm">Report</span>
-          </button>
         </div>
       </aside>
 

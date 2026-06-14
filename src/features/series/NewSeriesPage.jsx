@@ -7,7 +7,6 @@ import seriesService from '../../services/seriesService'
 
 const GENRES = ['ACTION', 'FANTASY', 'ROMANCE', 'COMEDY', 'DRAMA']
 const DEMOGRAPHICS = ['SHONEN', 'SHOJO', 'SEINEN', 'JOSEI']
-const FREQUENCIES = ['WEEKLY', 'BI_WEEKLY', 'MONTHLY', 'HIATUS']
 
 export function NewSeriesPage() {
   const navigate = useNavigate()
@@ -22,7 +21,7 @@ export function NewSeriesPage() {
   const [synopsis, setSynopsis] = useState('')
   const [genre, setGenre] = useState('')
   const [demographic, setDemographic] = useState('')
-  const [frequency, setFrequency] = useState('')
+
   const [coverImageUrl, setCoverImageUrl] = useState('')
   const [newCoverFile, setNewCoverFile] = useState(null)
   const [newCoverPreview, setNewCoverPreview] = useState('')
@@ -131,41 +130,41 @@ export function NewSeriesPage() {
             <Info size={20} className="text-primary" />
             <h2 className="text-xl font-semibold text-on-surface">Basic Information</h2>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-on-surface-variant mb-2">Series Title</label>
+              <label className="block text-sm font-medium text-on-surface-variant mb-3">Series Title</label>
               <input
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="e.g. Neon Horizon: Resonance"
-                className="w-full bg-surface-container-low border-0 border-b border-outline-variant focus:border-primary focus:ring-0 focus:shadow-[0_4px_12px_-2px_rgba(139,92,246,0.2)] text-on-surface py-3 transition-all placeholder:text-on-surface-variant/30"
+                className="w-full bg-surface-container-low border-0 border-b border-outline-variant focus:border-primary focus:ring-0 focus:shadow-[0_4px_12px_-2px_rgba(139,92,246,0.2)] text-on-surface py-4 px-4 transition-all placeholder:text-on-surface-variant/30"
               />
             </div>
             <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-on-surface-variant mb-2">Japanese Title (Optional)</label>
+              <label className="block text-sm font-medium text-on-surface-variant mb-3">Japanese Title (Optional)</label>
               <input
                 value={titleJp}
                 onChange={(e) => setTitleJp(e.target.value)}
                 placeholder="e.g. ネオン・ホライゾン：共鳴"
-                className="w-full bg-surface-container-low border-0 border-b border-outline-variant focus:border-primary focus:ring-0 focus:shadow-[0_4px_12px_-2px_rgba(139,92,246,0.2)] text-on-surface py-3 transition-all placeholder:text-on-surface-variant/30"
+                className="w-full bg-surface-container-low border-0 border-b border-outline-variant focus:border-primary focus:ring-0 focus:shadow-[0_4px_12px_-2px_rgba(139,92,246,0.2)] text-on-surface py-4 px-4 transition-all placeholder:text-on-surface-variant/30"
               />
             </div>
             <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-on-surface-variant mb-2">Synopsis</label>
+              <label className="block text-sm font-medium text-on-surface-variant mb-3">Synopsis</label>
               <textarea
                 value={synopsis}
                 onChange={(e) => setSynopsis(e.target.value)}
                 placeholder="Briefly describe the world, characters, and core conflict..."
                 rows={4}
-                className="w-full bg-surface-container-low border-0 border-b border-outline-variant focus:border-primary focus:ring-0 focus:shadow-[0_4px_12px_-2px_rgba(139,92,246,0.2)] text-on-surface py-3 transition-all resize-none placeholder:text-on-surface-variant/30"
+                className="w-full bg-surface-container-low border-0 border-b border-outline-variant focus:border-primary focus:ring-0 focus:shadow-[0_4px_12px_-2px_rgba(139,92,246,0.2)] text-on-surface py-4 px-4 transition-all resize-none placeholder:text-on-surface-variant/30"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-on-surface-variant mb-2">Genre</label>
+              <label className="block text-sm font-medium text-on-surface-variant mb-3">Genre</label>
               <select
                 value={genre}
                 onChange={(e) => setGenre(e.target.value)}
-                className="w-full bg-surface-container-low border-0 border-b border-outline-variant focus:border-primary focus:ring-0 focus:shadow-[0_4px_12px_-2px_rgba(139,92,246,0.2)] text-on-surface py-3 transition-all appearance-none"
+                className="w-full bg-surface-container-low border-0 border-b border-outline-variant focus:border-primary focus:ring-0 focus:shadow-[0_4px_12px_-2px_rgba(139,92,246,0.2)] text-on-surface py-4 px-4 transition-all appearance-none"
               >
                 <option value="">Select Genre...</option>
                 {GENRES.map((g) => (
@@ -174,11 +173,11 @@ export function NewSeriesPage() {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-on-surface-variant mb-2">Target Demographic</label>
+              <label className="block text-sm font-medium text-on-surface-variant mb-3">Target Demographic</label>
               <select
                 value={demographic}
                 onChange={(e) => setDemographic(e.target.value)}
-                className="w-full bg-surface-container-low border-0 border-b border-outline-variant focus:border-primary focus:ring-0 focus:shadow-[0_4px_12px_-2px_rgba(139,92,246,0.2)] text-on-surface py-3 transition-all appearance-none"
+                className="w-full bg-surface-container-low border-0 border-b border-outline-variant focus:border-primary focus:ring-0 focus:shadow-[0_4px_12px_-2px_rgba(139,92,246,0.2)] text-on-surface py-4 px-4 transition-all appearance-none"
               >
                 <option value="">Select Demographic...</option>
                 {DEMOGRAPHICS.map((d) => (
@@ -186,19 +185,7 @@ export function NewSeriesPage() {
                 ))}
               </select>
             </div>
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-on-surface-variant mb-2">Publish Frequency</label>
-              <select
-                value={frequency}
-                onChange={(e) => setFrequency(e.target.value)}
-                className="w-full bg-surface-container-low border-0 border-b border-outline-variant focus:border-primary focus:ring-0 focus:shadow-[0_4px_12px_-2px_rgba(139,92,246,0.2)] text-on-surface py-3 transition-all appearance-none"
-              >
-                <option value="">Select frequency...</option>
-                {FREQUENCIES.map((f) => (
-                  <option key={f} value={f}>{f.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase())}</option>
-                ))}
-              </select>
-            </div>
+
           </div>
         </div>
 
@@ -208,7 +195,7 @@ export function NewSeriesPage() {
             <Image size={20} className="text-primary" />
             <h2 className="text-xl font-semibold text-on-surface">Cover Artwork</h2>
           </div>
-          <div className="flex flex-col md:flex-row gap-8 items-start">
+          <div className="flex flex-col md:flex-row gap-10 items-start">
             {/* Cover preview / upload area */}
             {newCoverPreview ? (
               <div className="w-full md:w-48 aspect-[3/4] bg-surface-container-lowest rounded-lg overflow-hidden relative group border border-outline-variant/30">
@@ -245,7 +232,7 @@ export function NewSeriesPage() {
             <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileSelect} />
 
             {/* Requirements */}
-            <div className="flex-1 space-y-4">
+            <div className="flex-1 space-y-6">
               <div className="bg-surface-container-high/30 p-4 rounded-lg border border-outline-variant/20">
                 {showExistingCover ? (
                   <>
@@ -285,13 +272,13 @@ export function NewSeriesPage() {
               <Info size={20} className="text-primary" />
               <h2 className="text-xl font-semibold text-on-surface">Series Information</h2>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div>
-                <label className="block text-sm font-medium text-on-surface-variant mb-2">Status</label>
+                <label className="block text-sm font-medium text-on-surface-variant mb-3">Status</label>
                 <p className="text-base text-on-surface">{seriesInfo.status || '—'}</p>
               </div>
               <div>
-                <label className="block text-sm font-medium text-on-surface-variant mb-2">Created</label>
+                <label className="block text-sm font-medium text-on-surface-variant mb-3">Created</label>
                 <p className="text-base text-on-surface">
                   {seriesInfo.createdAt
                     ? new Date(seriesInfo.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
@@ -299,19 +286,19 @@ export function NewSeriesPage() {
                 </p>
               </div>
               <div>
-                <label className="block text-sm font-medium text-on-surface-variant mb-2">Total Chapters</label>
+                <label className="block text-sm font-medium text-on-surface-variant mb-3">Total Chapters</label>
                 <p className="text-base text-on-surface">{seriesInfo.chapterCount || 0}</p>
               </div>
               <div>
-                <label className="block text-sm font-medium text-on-surface-variant mb-2">Global Rank</label>
+                <label className="block text-sm font-medium text-on-surface-variant mb-3">Global Rank</label>
                 <p className="text-base text-on-surface">{seriesInfo.currentRank ? `#${seriesInfo.currentRank}` : '—'}</p>
               </div>
               <div>
-                <label className="block text-sm font-medium text-on-surface-variant mb-2">Mangaka</label>
+                <label className="block text-sm font-medium text-on-surface-variant mb-3">Mangaka</label>
                 <p className="text-base text-on-surface">{seriesInfo.mangaka?.displayName || '—'}</p>
               </div>
               <div>
-                <label className="block text-sm font-medium text-on-surface-variant mb-2">Tantou Editor</label>
+                <label className="block text-sm font-medium text-on-surface-variant mb-3">Tantou Editor</label>
                 <p className="text-base text-on-surface">{seriesInfo.tantouEditor?.displayName || 'Unassigned'}</p>
               </div>
             </div>

@@ -197,7 +197,7 @@ function MeetingCard({ meeting, isChief }) {
           className="flex gap-2 items-center"
           onClick={(e) => e.stopPropagation()}
         >
-          {meeting.status === "PENDING" && (
+          {meeting.status === "PENDING" && !isChief && (
             <button
               className="w-10 h-10 flex items-center justify-center rounded-xl bg-surface-container hover:bg-surface-bright transition-colors border border-primary/30 text-primary"
               onClick={() => navigate(`/editorial/${meeting.id}/vote`)}
@@ -264,7 +264,7 @@ export function EditorialBoardPage() {
         {/* Chỉ Chief Editor mới thấy nút Create Meeting */}
         {isChief && (
           <button
-            className="bg-gradient-to-r from-[#7c3aed] to-[#d0bcff] text-on-primary py-3 px-6 rounded-xl font-bold active:scale-95 transition-all flex items-center justify-center gap-2 shadow-lg shadow-primary/10 shrink-0"
+            className="bg-primary text-on-primary py-3 px-6 rounded-xl font-bold active:scale-95 hover:brightness-110 transition-all flex items-center justify-center gap-2 shadow-lg shadow-primary/10 shrink-0"
             onClick={() => setShowCreateModal(true)}
           >
             <span

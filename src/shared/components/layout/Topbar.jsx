@@ -23,6 +23,7 @@ export function Topbar() {
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [profileAnim, setProfileAnim] = useState(false);
   const profileRef = useRef(null);
+  const profileMenuRef = useRef(null);
   const notifRef = useRef(null);
 
   const openProfile = useCallback(() => {
@@ -43,7 +44,7 @@ export function Topbar() {
   useEffect(() => {
     if (!showProfileMenu && !showNotifications) return;
     const handleClick = (e) => {
-      if (showProfileMenu && profileRef.current && !profileRef.current.contains(e.target)) {
+      if (showProfileMenu && profileRef.current && !profileRef.current.contains(e.target) && profileMenuRef.current && !profileMenuRef.current.contains(e.target)) {
         closeProfile();
       }
       if (showNotifications && notifRef.current && !notifRef.current.contains(e.target)) {
@@ -58,7 +59,8 @@ export function Topbar() {
   const pageLabel = breadcrumbMap[basePath] || 'MangaFlow'
 
   return (
-    <header className="sticky top-0 z-30 flex items-center justify-between bg-surface/80 backdrop-blur-md px-10 py-4 border-b border-outline-variant/30 rounded-bl-3xl shadow-sm shadow-black/5">
+    <>
+      <header className="sticky top-0 z-30 flex items-center justify-between bg-surface/80 backdrop-blur-md px-10 py-4 border-b border-outline-variant/30 rounded-bl-3xl shadow-sm shadow-black/5">
       {/* Subtle glow matching sidebar */}
       <div className="absolute -top-20 left-60 w-80 h-40 bg-primary/5 rounded-full blur-3xl pointer-events-none" />
 
@@ -114,37 +116,38 @@ export function Topbar() {
                 </span>
               </div>
             </button>
-
-            {showProfileMenu && (
-              <div className={cn(
-                'fixed top-[72px] right-0 z-50 w-56 border border-outline-variant/40 bg-surface-container backdrop-blur-xl py-2 rounded-l-2xl shadow-2xl shadow-black/30 transition-all duration-200 ease-out origin-top-right',
-                profileAnim ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none',
-              )}>
-                <div className="px-4 py-3 border-b border-outline-variant/10">
-                  <p className="text-sm font-semibold text-white">{user.displayName}</p>
-                  <p className="text-xs text-on-surface-variant/70 mt-0.5">{user.role.replace(/_/g, ' ')}</p>
-                </div>
-                <div className="py-1.5">
-                  <button
-                    onClick={() => { closeProfile(); navigate('/profile') }}
-                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-on-surface-variant hover:text-white hover:bg-primary/10 transition-all mx-1.5 rounded-xl"
-                  >
-                    <User size={15} className="shrink-0" />
-                    <span>View Profile</span>
-                  </button>
-                  <button
-                    onClick={() => { closeProfile(); logout() }}
-                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-status-danger hover:bg-status-danger/10 transition-all mx-1.5 rounded-xl"
-                  >
-                    <LogOut size={15} className="shrink-0" />
-                    <span>Logout</span>
-                  </button>
-                </div>
-              </div>
-            )}
           </div>
         )}
       </div>
     </header>
+
+      {user && showProfileMenu && (
+        <div ref={profileMenuRef} className={cn(
+          'fixed top-[72px] right-0 z-[90] w-56 border border-outline-variant/40 bg-surface-container backdrop-blur-xl py-2 rounded-l-2xl shadow-2xl shadow-black/30 transition-all duration-200 ease-out origin-top-right',
+          profileAnim ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none',
+        )}>
+          <div className="px-4 py-3 border-b border-outline-variant/10">
+            <p className="text-sm font-semibold text-white">{user.displayName}</p>
+            <p className="text-xs text-on-surface-variant/70 mt-0.5">{user.role.replace(/_/g, ' ')}</p>
+          </div>
+          <div className="py-1.5">
+            <button
+              onClick={() => { closeProfile(); navigate('/profile') }}
+              className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-on-surface-variant hover:text-white hover:bg-primary/10 transition-all mx-1.5 rounded-xl"
+            >
+              <User size={15} className="shrink-0" />
+              <span>View Profile</span>
+            </button>
+            <button
+              onClick={() => { closeProfile(); logout() }}
+              className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-status-danger hover:bg-status-danger/10 transition-all mx-1.5 rounded-xl"
+            >
+              <LogOut size={15} className="shrink-0" />
+              <span>Logout</span>
+            </button>
+          </div>
+        </div>
+      )}
+    </>
   );
 }

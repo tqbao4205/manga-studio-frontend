@@ -130,8 +130,8 @@ export function WorkspaceCanvas() {
   const mergeResult = useWorkspaceStore((s) => s.mergeResult);
   const mergeError = useWorkspaceStore((s) => s.mergeError);
 
-  const visibleRegions = regions.filter((r) => !hiddenRegionIds.includes(r.id));
   const user = useAuthStore((s) => s.user);
+  const visibleRegions = user?.role === "TANTOU_EDITOR" ? [] : regions.filter((r) => !hiddenRegionIds.includes(r.id));
   const addToast = useUIStore((s) => s.addToast);
 
   // --- Local state: các biến tạm thời trong quá trình vẽ ---
