@@ -39,7 +39,7 @@ import { cn } from "../../utils";
  *      - Title (bold) + Description (nhỏ, tuỳ chọn) ở giữa.
  *      - Nút X bên phải để đóng toast.
  *    - Màu viền (border) và text (text) được xác định bằng colors[variant].
- *    - Style nền: bg-[#fdf8f8], border, shadow (ink shadow) + hiệu ứng
+ *    - Style nền: bg-surface-container, border, shadow-2xl + backdrop-blur
  *      animate-in slide-in-from-right (nếu có cấu hình animation).
  *
  *  Không sử dụng React.forwardRef vì đây là component thuần (function),
@@ -78,8 +78,8 @@ export function ToastContainer() {
           <div
             key={t.id}
             className={cn(
-              "flex items-start gap-3 px-4 py-3 bg-[#fdf8f8] border border-primary/20",
-              "shadow-[2px_2px_0px_#000] animate-in slide-in-from-right",
+              "flex items-start gap-3 px-4 py-3 bg-surface-container border border-primary/20",
+              "shadow-2xl shadow-black/30 backdrop-blur-xl animate-in slide-in-from-right",
               /*
                * colors[t.variant || 'info'] gán border-color + text-color
                * tương ứng với loại toast (success = xanh, error = đỏ...).

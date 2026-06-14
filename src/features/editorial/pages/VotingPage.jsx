@@ -224,7 +224,7 @@ export function VotingPage() {
             <span className="material-symbols-outlined text-base">
               arrow_back
             </span>
-            Trở về danh sách
+            Back to list
           </button>
 
           <div className="flex justify-between items-start">

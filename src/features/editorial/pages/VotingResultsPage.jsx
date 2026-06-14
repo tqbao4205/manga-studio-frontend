@@ -121,12 +121,12 @@ export function VotingResultsPage() {
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
   const addToast = useUIStore((s) => s.addToast);
-  const getMeetingById = useEditorialStore((s) => s.getMeetingById);
   const fetchMeetingById = useEditorialStore((s) => s.fetchMeetingById);
   const finalizeDecision = useEditorialStore((s) => s.finalizeDecision);
 
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [localDecision, setLocalDecision] = useState(null);
 
   // Fetch meeting từ API khi mount
   useEffect(() => {
@@ -143,7 +143,7 @@ export function VotingResultsPage() {
     load();
   }, [meetingId, fetchMeetingById]);
 
-  const meeting = getMeetingById(meetingId);
+  const meeting = useEditorialStore((s) => s.meetings.find((m) => m.id === Number(meetingId)));
   const isChief = isChiefEditor(user);
 
   // Tính summary từ voteSummary của backend
@@ -188,6 +188,7 @@ export function VotingResultsPage() {
   const handleFinalizeDecision = async (decision) => {
     try {
       await finalizeDecision(meetingId, decision);
+      setLocalDecision(decision);
       addToast({
         title: `Series ${decision === "APPROVED" ? "Approved" : "Rejected"}`,
         description:
@@ -218,7 +219,7 @@ export function VotingResultsPage() {
             <span className="material-symbols-outlined text-base">
               arrow_back
             </span>
-            Trở về danh sách
+            Back to list
           </button>
           <div className="flex items-center gap-3 mb-2 flex-wrap">
             <span className="bg-tertiary-container/20 text-tertiary text-xs font-medium px-3 py-1 rounded-full border border-tertiary/30 uppercase tracking-wider">
@@ -262,7 +263,7 @@ export function VotingResultsPage() {
       </section>
 
       {/* Final Decision Banner */}
-      {meeting.decision && <DecisionBanner decision={meeting.decision} />}
+      {(localDecision || meeting?.decision) && <DecisionBanner decision={localDecision || meeting.decision} />}
 
       {/* ── Vote Summary Bar ── */}
       <section className="border border-outline-variant/25 bg-[rgba(27,27,29,0.7)] backdrop-blur-md rounded-2xl p-6 overflow-hidden relative">
@@ -355,10 +356,10 @@ export function VotingResultsPage() {
       </section>
 
       {/* ── Chief Editor: Finalize button ── */}
-      {isChief && !meeting.decision && total > 0 && (
+      {isChief && !meeting.decision && !localDecision && total > 0 && (
         <div className="flex justify-end">
           <button
-            className="bg-gradient-to-r from-[#7c3aed] to-[#d0bcff] text-on-primary py-3 px-8 rounded-xl font-bold active:scale-95 transition-all flex items-center gap-2 shadow-lg shadow-primary/10"
+            className="bg-primary text-on-primary py-3 px-8 rounded-xl font-bold active:scale-95 hover:brightness-110 transition-all flex items-center gap-2 shadow-lg shadow-primary/10"
             onClick={() => setShowConfirmModal(true)}
           >
             <span

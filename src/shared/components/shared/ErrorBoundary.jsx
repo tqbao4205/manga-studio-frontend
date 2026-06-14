@@ -33,7 +33,7 @@ export class ErrorBoundary extends Component {
     // Trạng thái có lỗi: hiển thị UI thông báo lỗi
     if (this.state.hasError) {
       return (
-        <div className="min-h-screen bg-[#fdf8f8] flex items-center justify-center p-8">
+        <div className="min-h-screen bg-background flex items-center justify-center p-8">
           <div className="text-center max-w-md">
             {/* Icon cảnh báo */}
             <div className="w-16 h-16 mx-auto mb-4 bg-status-danger/10 flex items-center justify-center">
