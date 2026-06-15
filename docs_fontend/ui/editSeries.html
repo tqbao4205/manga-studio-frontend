@@ -1,11 +1,13 @@
-<!DOCTYPE html><html class="dark" lang="en" style=""><head>
-<meta charset="utf-8">
-<meta content="width=device-width, initial-scale=1.0" name="viewport">
-<title>Edit Series | MangaFlow</title>
+<!DOCTYPE html>
+
+<html class="dark" lang="en" style=""><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Create New Series | MangaFlow</title>
 <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
-<link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&amp;display=swap" rel="stylesheet">
-<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
 <style>
         .material-symbols-outlined {
             font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
@@ -16,7 +18,7 @@
             width: 6px;
         }
         ::-webkit-scrollbar-track {
-            background: #131315;
+            background: #1a1a2e;
         }
         ::-webkit-scrollbar-thumb {
             background: #353437;
@@ -25,6 +27,8 @@
         ::-webkit-scrollbar-thumb:hover {
             background: #494454;
         }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
     </style>
 <script id="tailwind-config">
         tailwind.config = {
@@ -33,22 +37,22 @@
                 extend: {
                     "colors": {
                         "secondary-fixed": "#e4e2e4",
-                        "surface-container-low": "#1b1b1d",
+                        "surface-container-low": "#232338",
                         "secondary": "#c8c6c8",
-                        "on-primary": "#3c0091",
+                        "on-primary": "#ffffff",
                         "outline-variant": "#494454",
-                        "surface-tint": "#d0bcff",
+                        "surface-tint": "#7c3aed",
                         "on-error": "#690005",
                         "on-error-container": "#ffdad6",
                         "inverse-primary": "#6d3bd7",
-                        "primary-container": "#a078ff",
+                        "primary-container": "#5b21b6",
                         "on-secondary-fixed": "#1b1b1d",
                         "error-container": "#93000a",
                         "surface-container-highest": "#353437",
                         "on-secondary-fixed-variant": "#474649",
-                        "surface-container-high": "#2a2a2c",
-                        "on-surface-variant": "#cbc3d7",
-                        "background": "#131315",
+                        "surface-container-high": "#2a2a40",
+                        "on-surface-variant": "#a7a7c5",
+                        "background": "#1a1a2e",
                         "tertiary-fixed-dim": "#ffb869",
                         "primary-fixed": "#e9ddff",
                         "on-primary-fixed-variant": "#5516be",
@@ -59,24 +63,24 @@
                         "error": "#ffb4ab",
                         "inverse-on-surface": "#303032",
                         "primary-fixed-dim": "#d0bcff",
-                        "surface-container-lowest": "#0e0e10",
+                        "surface-container-lowest": "#121220",
                         "on-primary-fixed": "#23005c",
                         "on-tertiary-fixed-variant": "#673d00",
                         "on-surface": "#e5e1e4",
-                        "surface-variant": "#353437",
+                        "surface-variant": "#232338",
                         "on-tertiary": "#482900",
                         "tertiary-container": "#ca801e",
                         "on-secondary-container": "#b6b4b7",
                         "surface-bright": "#39393b",
                         "tertiary": "#ffb869",
                         "secondary-container": "#474649",
-                        "primary": "#d0bcff",
-                        "outline": "#958ea0",
+                        "primary": "#7c3aed",
+                        "outline": "#6b6b85",
                         "on-tertiary-fixed": "#2c1700",
-                        "surface": "#131315",
-                        "surface-dim": "#131315",
-                        "surface-container": "#201f21",
-                        "on-primary-container": "#340080",
+                        "surface": "#1a1a2e",
+                        "surface-dim": "#1a1a2e",
+                        "surface-container": "#202035",
+                        "on-primary-container": "#e9ddff",
                         "inverse-surface": "#e5e1e4",
                         "on-tertiary-container": "#3f2300"
                     },
@@ -154,7 +158,6 @@
 </a>
 </nav>
 <div class="mt-auto px-4 pb-4 space-y-1">
-
 <a class="flex items-center px-4 py-2 rounded-xl text-on-surface-variant font-medium hover:bg-surface-container-high transition-all" href="#">
 <span class="material-symbols-outlined mr-3" data-icon="settings">settings</span>
 <span class="font-label-md text-label-md">Settings</span>
@@ -169,7 +172,7 @@
 <header class="fixed top-0 right-0 w-full md:w-[calc(100%-240px)] h-16 z-40 bg-surface/80 backdrop-blur-md border-b border-outline-variant flex items-center justify-between px-gutter">
 <div class="flex items-center bg-surface-container-low px-4 py-1.5 rounded-full border border-outline-variant/30 min-w-[320px]">
 <span class="material-symbols-outlined text-outline mr-2" data-icon="search">search</span>
-<input class="bg-transparent border-none text-on-surface focus:ring-0 text-sm w-full" placeholder="Search manuscripts, series, or team..." type="text">
+<input class="bg-transparent border-none text-on-surface focus:ring-0 text-sm w-full" placeholder="Search manuscripts, series, or team..." type="text"/>
 </div>
 <div class="flex items-center space-x-4">
 <button class="w-10 h-10 flex items-center justify-center text-on-surface-variant hover:text-primary transition-all hover:scale-105">
@@ -183,182 +186,167 @@
 </button>
 <div class="h-8 w-[1px] bg-outline-variant mx-2"></div>
 <div class="flex items-center space-x-3 pl-2 cursor-pointer hover:bg-surface-container-high p-1 rounded-lg transition-colors">
-<img alt="Lead Artist Avatar" class="w-8 h-8 rounded-full border border-primary/20" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBYVC_EREUFXuSMkrr5xCj2DCQUh9YnkGe74UmEOOLCxKMT6zAwSmKH7bI0LKevimudVFp04W792CGBMQaoBhwmS98P4-t1c9fD1wzAVwR27_ccn2jIgaSe-g8YZ5kh_kvhv56atn4XGLA5gZZPHZGSG187O7DR-zhdM-vt41-RGB2aHRdu2cVcBlGmmlUZ26C20dDBzuKUXy76AVRMkVxKnUw5eHc8aC7TEIzy1Zvq-gooaDSvEh6fHt4SiYLdESZxnmwtzuXH-aJ9">
+<img alt="Lead Artist Avatar" class="w-8 h-8 rounded-full border border-primary/20" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBYVC_EREUFXuSMkrr5xCj2DCQUh9YnkGe74UmEOOLCxKMT6zAwSmKH7bI0LKevimudVFp04W792CGBMQaoBhwmS98P4-t1c9fD1wzAVwR27_ccn2jIgaSe-g8YZ5kh_kvhv56atn4XGLA5gZZPHZGSG187O7DR-zhdM-vt41-RGB2aHRdu2cVcBlGmmlUZ26C20dDBzuKUXy76AVRMkVxKnUw5eHc8aC7TEIzy1Zvq-gooaDSvEh6fHt4SiYLdESZxnmwtzuXH-aJ9"/>
 <span class="font-label-md text-label-md hidden lg:block">Lead Artist</span>
 </div>
 </div>
 </header>
 <!-- Main Content Canvas -->
 <main class="pt-24 pb-20 px-gutter md:pl-[264px] min-h-screen">
-<div class="max-w-3xl mx-auto">
+<div class="max-w-4xl mx-auto">
 <!-- Header Section -->
-<div class="mb-10">
+<div class="mb-8">
 <button class="flex items-center text-on-surface-variant hover:text-primary transition-colors group mb-4" onclick="window.history.back()">
 <span class="material-symbols-outlined mr-2 group-hover:-translate-x-1 transition-transform" data-icon="arrow_back">arrow_back</span>
-<span class="font-label-md text-label-md uppercase tracking-wider">Back to Series Detail</span>
+<span class="font-label-md text-label-md uppercase tracking-wider">Back</span>
 </button>
-<h1 class="font-headline-lg text-headline-lg text-on-surface mb-2">Edit Series</h1>
-<p class="font-body-md text-body-md text-on-surface-variant">Update your series details and manage production settings.</p>
+<h1 class="font-headline-lg text-headline-lg text-on-surface mb-2">Create New Series</h1>
+<p class="font-body-md text-body-md text-on-surface-variant">Pitch your next masterpiece in detail.</p>
+</div>
+<!-- Tabbed Navigation -->
+<div class="flex space-x-2 border-b border-outline-variant/50 mb-8 overflow-x-auto pb-2">
+<button class="tab-btn active px-6 py-3 font-label-md text-label-md rounded-t-lg bg-surface-container border-b-2 border-primary text-primary transition-all whitespace-nowrap" data-tab="tab1">
+<div class="flex items-center space-x-2">
+<span class="material-symbols-outlined text-lg" data-icon="info">info</span>
+<span>1. Basic Information</span>
+</div>
+</button>
+<button class="tab-btn px-6 py-3 font-label-md text-label-md text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high rounded-t-lg border-b-2 border-transparent transition-all whitespace-nowrap" data-tab="tab2">
+<div class="flex items-center space-x-2">
+<span class="material-symbols-outlined text-lg" data-icon="face">face</span>
+<span>2. Character Sheets</span>
+</div>
+</button>
+<button class="tab-btn px-6 py-3 font-label-md text-label-md text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high rounded-t-lg border-b-2 border-transparent transition-all whitespace-nowrap" data-tab="tab3">
+<div class="flex items-center space-x-2">
+<span class="material-symbols-outlined text-lg" data-icon="public">public</span>
+<span>3. World &amp; Plot</span>
+</div>
+</button>
 </div>
 <!-- Form Container -->
 <form class="space-y-panel-gap">
-<!-- Section 1: Basic Information -->
+<!-- Tab 1: Basic Information -->
+<div class="tab-content active space-y-6" id="tab1">
 <div class="bg-surface-container border border-outline-variant/30 rounded-xl p-8 shadow-sm">
-<div class="flex items-center space-x-3 mb-8">
-<span class="material-symbols-outlined text-primary" data-icon="info">info</span>
-<h2 class="font-headline-md text-headline-md">Basic Information</h2>
-</div>
+<h2 class="font-headline-md text-headline-md mb-6">Basic Information</h2>
 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
 <div class="md:col-span-2">
 <label class="block font-label-md text-label-md text-on-surface-variant mb-2">Series Title</label>
-<input class="w-full bg-surface-container-lowest border-0 border-b border-outline-variant focus:border-primary focus:ring-0 text-on-surface py-3 transition-all" placeholder="e.g. Neon Horizon: Resonance" type="text">
+<input class="w-full bg-surface-container-lowest border border-outline-variant/50 rounded-lg focus:border-primary focus:ring-1 focus:ring-primary text-on-surface py-3 px-4 transition-all" placeholder="e.g. Neon Horizon: Resonance" type="text"/>
 </div>
 <div class="md:col-span-2">
-<label class="block font-label-md text-label-md text-on-surface-variant mb-2">Japanese Title (Optional)</label>
-<input class="w-full bg-surface-container-lowest border-0 border-b border-outline-variant focus:border-primary focus:ring-0 text-on-surface py-3 transition-all" placeholder="e.g. ネオン・ホライゾン：共鳴" type="text">
+<label class="block font-label-md text-label-md text-on-surface-variant mb-2">Subtitle / English Title (Optional)</label>
+<input class="w-full bg-surface-container-lowest border border-outline-variant/50 rounded-lg focus:border-primary focus:ring-1 focus:ring-primary text-on-surface py-3 px-4 transition-all" placeholder="e.g. Resonance of the Neon City" type="text"/>
 </div>
 <div class="md:col-span-2">
-<label class="block font-label-md text-label-md text-on-surface-variant mb-2">Synopsis</label>
-<textarea class="w-full bg-surface-container-lowest border-0 border-b border-outline-variant focus:border-primary focus:ring-0 text-on-surface py-3 transition-all resize-none" placeholder="Briefly describe the world, characters, and core conflict..." rows="4"></textarea>
-</div>
-<div>
-<label class="block font-label-md text-label-md text-on-surface-variant mb-2">Genre</label>
-<select class="w-full bg-surface-container-lowest border-0 border-b border-outline-variant focus:border-primary focus:ring-0 text-on-surface py-3 transition-all appearance-none">
-<option>Action / Sci-Fi</option>
-<option>Slice of Life</option>
-<option>Psychological Thriller</option>
-<option>Fantasy / Isekai</option>
-<option>Romance</option>
-</select>
-</div>
-<div>
-<label class="block font-label-md text-label-md text-on-surface-variant mb-2">Target Demographic</label>
-<select class="w-full bg-surface-container-lowest border-0 border-b border-outline-variant focus:border-primary focus:ring-0 text-on-surface py-3 transition-all appearance-none">
-<option>Seinen</option>
-<option>Shonen</option>
-<option>Josei</option>
-<option>Shojo</option>
-</select>
+<label class="block font-label-md text-label-md text-on-surface-variant mb-2">Synopsis (150-300 words)</label>
+<textarea class="w-full bg-surface-container-lowest border border-outline-variant/50 rounded-lg focus:border-primary focus:ring-1 focus:ring-primary text-on-surface py-3 px-4 transition-all resize-none" placeholder="Write a compelling logline or summary..." rows="5"></textarea>
 </div>
 <div class="md:col-span-2">
-<label class="block font-label-md text-label-md text-on-surface-variant mb-2">Publish Frequency</label>
-<select class="w-full bg-surface-container-lowest border-0 border-b border-outline-variant focus:border-primary focus:ring-0 text-on-surface py-3 transition-all appearance-none">
-<option>Weekly (Recommended)</option>
-<option>Bi-Weekly</option>
-<option>Monthly</option>
-<option>Hiatus / On Demand</option>
-</select>
+<label class="block font-label-md text-label-md text-on-surface-variant mb-2">Category &amp; Tags (Max 3)</label>
+<div class="relative">
+<input class="w-full bg-surface-container-lowest border border-outline-variant/50 rounded-lg focus:border-primary focus:ring-1 focus:ring-primary text-on-surface py-3 px-4 transition-all" placeholder="e.g. Shonen, Action, Fantasy" type="text"/>
+<p class="text-xs text-on-surface-variant mt-2">Separate tags with commas.</p>
 </div>
 </div>
 </div>
-<!-- Section 2: Cover Section -->
+</div>
 <div class="bg-surface-container border border-outline-variant/30 rounded-xl p-8 shadow-sm">
-<div class="flex items-center space-x-3 mb-8">
-<span class="material-symbols-outlined text-primary" data-icon="image">image</span>
-<h2 class="font-headline-md text-headline-md">Cover Artwork</h2>
-</div>
+<h2 class="font-headline-md text-headline-md mb-6">Cover Artwork</h2>
 <div class="flex flex-col md:flex-row gap-8 items-start">
-<div class="w-full md:w-48 aspect-[3/4] bg-surface-container-lowest rounded-lg overflow-hidden relative group border border-outline-variant/30">
-<img src="https://placehold.co/400x600/2a2a2c/d0bcff?text=Current+Cover" alt="Current cover" class="w-full h-full object-cover" />
-<div class="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center cursor-pointer">
-<span class="material-symbols-outlined text-3xl text-white mb-1" data-icon="camera_alt">camera_alt</span>
-<span class="text-xs font-label-sm text-white">Replace Cover</span>
-</div>
+<div class="w-full md:w-48 aspect-[3/4] bg-surface-container-lowest border-2 border-dashed border-outline-variant rounded-lg flex flex-col items-center justify-center text-on-surface-variant hover:border-primary hover:text-primary cursor-pointer transition-all group overflow-hidden relative">
+<span class="material-symbols-outlined text-4xl mb-2 group-hover:scale-110 transition-transform" data-icon="upload_file">upload_file</span>
+<span class="text-xs font-label-sm">Upload Cover</span>
+<div class="absolute inset-0 bg-primary/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
 </div>
 <div class="flex-1 space-y-4">
 <div class="bg-surface-container-high/30 p-4 rounded-lg border border-outline-variant/20">
-<h3 class="font-label-md text-primary mb-1">Current Cover</h3>
+<h3 class="font-label-md text-primary mb-1">Requirements</h3>
 <ul class="text-xs space-y-1 text-on-surface-variant">
-<li class="">• Click the preview or drag a new image to replace</li>
 <li class="">• Recommended Size: 1600 x 2400 px</li>
 <li class="">• Formats: JPG, PNG, WEBP</li>
+<li class="">• Aspect Ratio: 2:3</li>
 <li class="">• Max File Size: 10MB</li>
 </ul>
 </div>
 <p class="text-sm text-on-surface-variant leading-relaxed">
-                                Replacing the cover will immediately update the primary visual across the dashboard and external catalogs.
-                            </p>
+                    This artwork will be the primary visual for the series across the dashboard and external catalogs. High resolution is preferred for marketing materials.
+                </p>
 </div>
 </div>
 </div>
-<!-- Section 3: Series Info (Edit only) -->
+<div class="flex justify-end">
+<button class="bg-primary text-on-primary px-8 py-3 rounded-lg font-bold shadow-lg shadow-primary/20 hover:brightness-110 active:scale-95 transition-all" onclick="switchTab('tab2')" type="button">Next: Character Sheets</button>
+</div>
+</div>
+<!-- Tab 2: Character Sheets -->
+<div class="tab-content space-y-6" id="tab2">
 <div class="bg-surface-container border border-outline-variant/30 rounded-xl p-8 shadow-sm">
-<div class="flex items-center space-x-3 mb-8">
-<span class="material-symbols-outlined text-primary" data-icon="info">info</span>
-<h2 class="font-headline-md text-headline-md">Series Information</h2>
+<div class="flex items-center justify-between mb-6">
+<div class="flex items-center gap-2"><h2 class="font-headline-md text-headline-md">Character Roster</h2><span class="material-symbols-outlined text-outline cursor-help text-lg" title="Provide basic info and sketches. Mandatory: Name, Age, Role, and Core Motivation.">help</span></div>
+<button class="flex items-center space-x-2 text-primary hover:text-primary-container transition-colors" type="button">
+<span class="material-symbols-outlined" data-icon="add_circle">add_circle</span>
+<span class="font-label-md">Add Character</span>
+</button>
 </div>
-<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-<div>
-<label class="block font-label-md text-label-md text-on-surface-variant mb-2">Status</label>
-<p class="text-on-surface font-body-md text-body-md">Ongoing</p>
-</div>
-<div>
-<label class="block font-label-md text-label-md text-on-surface-variant mb-2">Created</label>
-<p class="text-on-surface font-body-md text-body-md">Jan 15, 2026</p>
-</div>
-<div>
-<label class="block font-label-md text-label-md text-on-surface-variant mb-2">Total Chapters</label>
-<p class="text-on-surface font-body-md text-body-md">12</p>
-</div>
-<div>
-<label class="block font-label-md text-label-md text-on-surface-variant mb-2">Global Rank</label>
-<p class="text-on-surface font-body-md text-body-md">#42</p>
-</div>
-<div>
-<label class="block font-label-md text-label-md text-on-surface-variant mb-2">Mangaka</label>
-<p class="text-on-surface font-body-md text-body-md">Yuki Tanaka</p>
-</div>
-<div>
-<label class="block font-label-md text-label-md text-on-surface-variant mb-2">Tantou Editor</label>
-<p class="text-on-surface font-body-md text-body-md">Hana Sato</p>
-</div>
-</div>
-</div>
-<!-- Section 4: Team Assignment -->
-<div class="bg-surface-container border border-outline-variant/30 rounded-xl p-8 shadow-sm">
-<div class="flex items-center space-x-3 mb-8">
-<span class="material-symbols-outlined text-primary" data-icon="diversity_3">diversity_3</span>
-<h2 class="font-headline-md text-headline-md">Team Assignment</h2>
-</div>
-<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-<div>
-<label class="block font-label-md text-label-md text-on-surface-variant mb-2">Assign Mangaka</label>
-<div class="relative">
-<select class="w-full bg-surface-container-lowest border-0 border-b border-outline-variant focus:border-primary focus:ring-0 text-on-surface py-3 transition-all appearance-none">
-<option>Select Artist...</option>
-<option>Yuki Tanaka (Available)</option>
-<option>Kenji Sato (High Load)</option>
-<option>Hina Mori (Available)</option>
-</select>
-<span class="material-symbols-outlined absolute right-2 top-3 text-on-surface-variant pointer-events-none" data-icon="person">person</span>
-</div>
-</div>
-
-</div>
-</div>
-<!-- Section 5: Publishing Info -->
-<div class="bg-surface-container border border-outline-variant/30 rounded-xl p-8 shadow-sm">
-
-
-</div>
-<!-- Form Actions & Toast -->
-<div class="flex flex-col md:flex-row items-center justify-between pt-8 gap-6">
-<div class="flex items-center space-x-3 bg-primary-container text-on-primary-container px-6 py-3 rounded-full shadow-lg opacity-0 transition-all duration-500 translate-y-4" id="successToast">
-<span class="material-symbols-outlined" data-icon="check_circle" data-weight="fill">check_circle</span>
-<span class="font-label-md text-label-md">Draft saved successfully.</span>
-</div>
+<!-- Character Item 1 -->
+<div class="bg-surface-container-lowest border border-outline-variant/50 rounded-lg p-6 mb-4 relative">
+<button class="absolute top-4 right-4 text-outline hover:text-error transition-colors" type="button">
+<span class="material-symbols-outlined" data-icon="delete">delete</span>
+</button>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6"><div class="md:col-span-3 flex flex-col md:flex-row gap-4"> <div class="flex-1"> <label class="block font-label-md text-label-md text-on-surface-variant mb-2">Name</label> <input class="w-full bg-surface-container border border-outline-variant/50 rounded-lg focus:border-primary focus:ring-1 focus:ring-primary text-on-surface py-2 px-3 transition-all" placeholder="Character Name" type="text"/> </div> <div class="w-24"> <label class="block font-label-md text-label-md text-on-surface-variant mb-2">Age</label> <input class="w-full bg-surface-container border border-outline-variant/50 rounded-lg focus:border-primary focus:ring-1 focus:ring-primary text-on-surface py-2 px-3 transition-all" placeholder="e.g. 17" type="text"/> </div> <div class="flex-1"> <label class="block font-label-md text-label-md text-on-surface-variant mb-2">Role</label> <select class="w-full bg-surface-container border border-outline-variant/50 rounded-lg focus:border-primary focus:ring-1 focus:ring-primary text-on-surface py-2 px-3 transition-all appearance-none"> <option>Protagonist</option> <option>Antagonist</option> <option>Supporting</option> </select> </div> </div> <div class="md:col-span-3"> <label class="flex items-center gap-2 font-label-md text-label-md text-on-surface-variant mb-2">Core Motivation <span class="material-symbols-outlined text-sm cursor-help" title="Mandatory: What drives this character?">help</span></label> <input class="w-full bg-surface-container border border-outline-variant/50 rounded-lg focus:border-primary focus:ring-1 focus:ring-primary text-on-surface py-2 px-3 transition-all" placeholder="What drives this character?" type="text"/> </div></div>
+<div class="border-t border-outline-variant/30 pt-4">
+<label class="flex items-center gap-2 font-label-md text-label-md text-on-surface-variant mb-2">Core Motivation <span class="material-symbols-outlined text-sm cursor-help" title="Mandatory: What drives this character?">help</span></label>
 <div class="flex items-center space-x-4">
-<button class="px-6 py-2.5 rounded-lg font-label-md text-label-md text-on-surface-variant hover:text-primary transition-colors" type="button">
-                            Cancel
-                        </button>
-<button class="px-6 py-2.5 rounded-lg border border-outline-variant hover:border-primary hover:text-primary font-label-md text-label-md transition-all" onclick="showToast()" type="button">
-                            Save as Draft
-                        </button>
-<button class="bg-primary text-on-primary px-8 py-3 rounded-lg font-bold shadow-lg shadow-primary/20 hover:brightness-110 active:scale-95 transition-all" type="submit">
-                            Save Changes
-                        </button>
+<div class="h-24 w-24 bg-surface-container border border-dashed border-outline-variant rounded-lg flex flex-col items-center justify-center text-on-surface-variant hover:border-primary hover:text-primary cursor-pointer transition-all">
+<span class="material-symbols-outlined mb-1" data-icon="add_photo_alternate">add_photo_alternate</span>
+<span class="text-[10px]">Upload</span>
+</div>
+<div class="text-xs text-on-surface-variant">
+<p>Require: Full-body angles and expressions.</p>
+<p>Max 5MB/file (.png, .jpg, .jpeg)</p>
 </div>
 </div>
+</div>
+</div>
+</div>
+<div class="flex justify-between">
+<button class="px-6 py-3 rounded-lg border border-outline-variant hover:bg-surface-container-high transition-all" onclick="switchTab('tab1')" type="button">Back</button>
+<button class="bg-primary text-on-primary px-8 py-3 rounded-lg font-bold shadow-lg shadow-primary/20 hover:brightness-110 active:scale-95 transition-all" onclick="switchTab('tab3')" type="button">Next: World &amp; Plot</button>
+</div>
+</div>
+<!-- Tab 3: World & Plot -->
+<div class="tab-content space-y-6" id="tab3">
+<div class="bg-surface-container border border-outline-variant/30 rounded-xl p-8 shadow-sm">
+<div class="flex items-center gap-2 mb-6"><h2 class="font-headline-md text-headline-md">World &amp; Plot</h2><span class="material-symbols-outlined text-outline cursor-help text-lg" title="Define the setting and narrative arc.">help</span></div>
+<div class="space-y-6">
+<div>
+<label class="flex items-center gap-2 font-label-md text-label-md text-on-surface-variant mb-2">World Lore &amp; Mechanics <span class="material-symbols-outlined text-sm cursor-help" title="Briefly describe the power system, rules of the world (e.g., magic usage, races).">help</span></label>
+<textarea class="w-full bg-surface-container-lowest border border-outline-variant/50 rounded-lg focus:border-primary focus:ring-1 focus:ring-primary text-on-surface py-3 px-4 transition-all resize-none" placeholder="Describe power systems, laws, or world-building rules..." rows="4"></textarea>
+</div>
+<div>
+<label class="flex items-center gap-2 font-label-md text-label-md text-on-surface-variant mb-2">World Lore &amp; Mechanics <span class="material-symbols-outlined text-sm cursor-help" title="Briefly describe the power system, rules of the world (e.g., magic usage, races).">help</span></label>
+<textarea class="w-full bg-surface-container-lowest border border-outline-variant/50 rounded-lg focus:border-primary focus:ring-1 focus:ring-primary text-on-surface py-3 px-4 transition-all resize-none" placeholder="Summary of Arc 1 and the planned series conclusion..." rows="4"></textarea>
+</div>
+<div class="border-t border-outline-variant/30 pt-6">
+<label class="flex items-center gap-2 font-label-md text-label-md text-on-surface-variant mb-2">World Lore &amp; Mechanics <span class="material-symbols-outlined text-sm cursor-help" title="Briefly describe the power system, rules of the world (e.g., magic usage, races).">help</span></label>
+<p class="text-xs text-on-surface-variant mb-4">Architecture, costumes, and scenery references.</p>
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+<div class="aspect-square bg-surface-container-lowest border-2 border-dashed border-outline-variant rounded-lg flex flex-col items-center justify-center text-on-surface-variant hover:border-primary hover:text-primary cursor-pointer transition-all">
+<span class="material-symbols-outlined text-2xl mb-1" data-icon="upload">upload</span>
+<span class="text-xs">Add Ref</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="flex justify-between">
+<button class="px-6 py-3 rounded-lg border border-outline-variant hover:bg-surface-container-high transition-all" onclick="switchTab('tab2')" type="button">Back</button>
+<button class="bg-primary text-on-primary px-8 py-3 rounded-lg font-bold shadow-lg shadow-primary/20 hover:brightness-110 active:scale-95 transition-all" type="submit">Submit Pitch</button>
+</div>
+</div>
+<!-- Tab 4: Manuscript Demo -->
 </form>
 </div>
 </main>
@@ -373,25 +361,48 @@
                 toast.classList.remove('opacity-100', 'translate-y-0');
             }, 3000);
         }
+        
+        function switchTab(tabId) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            // Show target tab
+            document.getElementById(tabId).classList.add('active');
+            
+            // Update buttons
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                if(btn.dataset.tab === tabId) {
+                    btn.classList.add('bg-surface-container', 'border-primary', 'text-primary');
+                    btn.classList.remove('text-on-surface-variant', 'border-transparent');
+                } else {
+                    btn.classList.remove('bg-surface-container', 'border-primary', 'text-primary');
+                    btn.classList.add('text-on-surface-variant', 'border-transparent');
+                }
+            });
+            
+            // Scroll to top of form smoothly
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // Add event listeners to tab buttons
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                switchTab(btn.dataset.tab);
+            });
+        });
 
         // Add subtle focus glow interaction to inputs
         const inputs = document.querySelectorAll('input, select, textarea');
         inputs.forEach(input => {
             input.addEventListener('focus', () => {
-                input.parentElement.classList.add('relative');
-                const glow = document.createElement('div');
-                glow.className = 'absolute bottom-0 left-0 w-full h-[2px] bg-primary blur-[2px] opacity-20 pointer-events-none transition-all';
-                glow.id = 'input-focus-glow';
-                input.after(glow);
+                // Remove existing logic that modifies DOM structure which might break new layout
+                input.classList.add('ring-1', 'ring-primary', 'border-primary');
             });
             input.addEventListener('blur', () => {
-                const glow = input.nextElementSibling;
-                if (glow && glow.id === 'input-focus-glow') {
-                    glow.remove();
-                }
+                input.classList.remove('ring-1', 'ring-primary', 'border-primary');
             });
         });
     </script>
-
-
 </body></html>
