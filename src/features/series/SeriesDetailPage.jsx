@@ -1144,17 +1144,29 @@ export function SeriesDetailPage() {
 
             {activeDetailBlock === "characters" && (
               <div className="bg-surface-container rounded-xl shadow-[0px_4px_20px_rgba(139,92,246,0.05)] border border-outline-variant/30 p-6">
-                <h3 className="text-xl font-semibold text-on-surface mb-5">
-                  Characters
-                </h3>
+                <div className="flex items-center justify-between mb-5">
+                  <h3 className="text-xl font-semibold text-on-surface">
+                    Characters
+                  </h3>
+                  {isOwner && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        navigate(`/series/${id}/import/characters`)
+                      }
+                      className="px-3 py-2 rounded-lg text-xs font-semibold border border-primary/30 text-primary hover:bg-primary/10 transition-colors"
+                    >
+                      Import Characters
+                    </button>
+                  )}
+                </div>
                 {characters.length === 0 ? (
                   <div className="text-center py-14 border border-dashed border-outline-variant/30 rounded-xl bg-surface-container-low/30">
                     <p className="text-on-surface-variant">
                       No character data yet.
                     </p>
                     <p className="text-xs text-on-surface-variant/60 mt-1">
-                      Character cards will appear here after backend API is
-                      available.
+                      Use Import Characters to upload in smaller batches.
                     </p>
                   </div>
                 ) : (
@@ -1225,9 +1237,22 @@ export function SeriesDetailPage() {
 
             {activeDetailBlock === "worldplots" && (
               <div className="bg-surface-container rounded-xl shadow-[0px_4px_20px_rgba(139,92,246,0.05)] border border-outline-variant/30 p-6">
-                <h3 className="text-xl font-semibold text-on-surface mb-5">
-                  World & Plots
-                </h3>
+                <div className="flex items-center justify-between mb-5">
+                  <h3 className="text-xl font-semibold text-on-surface">
+                    World & Plots
+                  </h3>
+                  {isOwner && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        navigate(`/series/${id}/import/world-plot`)
+                      }
+                      className="px-3 py-2 rounded-lg text-xs font-semibold border border-primary/30 text-primary hover:bg-primary/10 transition-colors"
+                    >
+                      Import World & Plot
+                    </button>
+                  )}
+                </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   <div>
                     <p className="text-xs text-on-surface-variant uppercase tracking-wider mb-3">

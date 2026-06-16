@@ -23,7 +23,9 @@ import { RegisterPage } from "../features/auth/RegisterPage";
 import { DashboardPage } from "../features/home/DashboardPage";
 import { SeriesListPage } from "../features/series/SeriesListPage";
 import { SeriesDetailPage } from "../features/series/SeriesDetailPage";
-import { NewSeriesPage } from "../features/series/NewSeriesPage";
+import { NewSeriesPage } from "../features/series/pages/NewSeriesPage";
+import { ImportCharactersPage } from "../features/series/pages/ImportCharactersPage";
+import { ImportWorldPlotPage } from "../features/series/pages/ImportWorldPlotPage";
 import { NewChapterPage } from "../features/series/NewChapterPage";
 import { WorkspacePage } from "../features/workspace/WorkspacePage";
 import { TasksPage } from "../features/tasks/TasksPage";
@@ -127,6 +129,24 @@ export default function App() {
           />
           {/* Chi tiết series */}
           <Route path="/series/:seriesId" element={<SeriesDetailPage />} />
+          {/* Import characters separately after create */}
+          <Route
+            path="/series/:seriesId/import/characters"
+            element={
+              <RoleGuard allowedRoles={["MANGAKA"]}>
+                <ImportCharactersPage />
+              </RoleGuard>
+            }
+          />
+          {/* Import world & plot separately after create */}
+          <Route
+            path="/series/:seriesId/import/world-plot"
+            element={
+              <RoleGuard allowedRoles={["MANGAKA"]}>
+                <ImportWorldPlotPage />
+              </RoleGuard>
+            }
+          />
           {/* Chỉnh sửa chapter — mở cho nhiều role hơn */}
           <Route
             path="/series/:seriesId/chapters/:chapterId/edit"
