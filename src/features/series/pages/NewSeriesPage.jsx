@@ -59,12 +59,12 @@ const HELP_CONTENT = {
       "Use tags so readers and editorial reviewers can find your series quickly.",
     body: [
       {
-        heading: "Primary Genre",
-        text: "Pick exactly one core genre matching your story.",
+        heading: "Genres",
+        text: "Pick one or more genres that describe your story.",
       },
       {
-        heading: "Target Demographic",
-        text: "Pick the main audience: Shonen, Shojo, Seinen, or Josei.",
+        heading: "Target Demographics",
+        text: "Pick the intended audience: Shonen, Shojo, Seinen, Josei (can select multiple).",
       },
       {
         heading: "Optional Tags",
@@ -99,13 +99,16 @@ export function NewSeriesPage() {
   const isEdit = location.pathname.endsWith("/edit");
   const addToast = useUIStore((s) => s.addToast);
 
-  const [activeTab, setActiveTab] = useState("basic");
+  const [activeTab, setActiveTab] = useState(() => {
+    const params = new URLSearchParams(location.search);
+    return params.get("tab") === "characters" ? "characters" : "basic";
+  });
   const [helpModal, setHelpModal] = useState(null);
   const [title, setTitle] = useState("");
   const [titleJp, setTitleJp] = useState("");
   const [synopsis, setSynopsis] = useState("");
-  const [genre, setGenre] = useState("");
-  const [demographic, setDemographic] = useState("");
+  const [genres, setGenres] = useState([]);
+  const [demographics, setDemographics] = useState([]);
   const [selectedTags, setSelectedTags] = useState([]);
   const [tagGroups, setTagGroups] = useState([
     { label: "Genre", options: GENRES.map(toLabel) },
@@ -123,9 +126,11 @@ export function NewSeriesPage() {
   const [characters, setCharacters] = useState([]);
   const [charName, setCharName] = useState("");
   const [charMotivation, setCharMotivation] = useState("");
-  const [charSketchFile, setCharSketchFile] = useState(null);
-  const [charSketchPreview, setCharSketchPreview] = useState("");
+  const [charSketchFiles, setCharSketchFiles] = useState([]);
+  const [charSketchPreviews, setCharSketchPreviews] = useState([]);
   const [savingCharacter, setSavingCharacter] = useState(false);
+  const [editingCharId, setEditingCharId] = useState(null);
+  const [existingSketchUrls, setExistingSketchUrls] = useState([]);
 
   const [worldLore, setWorldLore] = useState("");
   const [arcTitle, setArcTitle] = useState("");
@@ -184,11 +189,11 @@ export function NewSeriesPage() {
           setTitle(series.title || "");
           setTitleJp(series.titleJp || "");
           setSynopsis(series.synopsis || "");
-          setGenre(series.genre || "");
-          setDemographic(series.targetDemographic || "");
+          setGenres(series.genres || []);
+          setDemographics(series.targetDemographics || []);
           setCoverImageUrl(series.coverImageUrl || "");
 
-          const seedTags = [series.genre, series.targetDemographic]
+          const seedTags = [...(series.genres || []), ...(series.targetDemographics || [])]
             .filter(Boolean)
             .map(toLabel);
           setSelectedTags(seedTags);
@@ -249,26 +254,44 @@ export function NewSeriesPage() {
     }
   }, [isEdit, activeTab, seriesId]);
 
+  // Auto-fill form khi URL có characterId (bấm Edit từ DetailPage)
+  useEffect(() => {
+    if (!isEdit || !characters.length || loadingProfile || editingCharId) return;
+    const params = new URLSearchParams(location.search);
+    const charId = params.get("characterId");
+    if (!charId) return;
+    const char = characters.find((c) => String(c.id) === charId);
+    if (!char) return;
+    handleEditCharacter(char);
+    // Clean query param d? tránh re-fill khi re-render
+    const newParams = new URLSearchParams(location.search);
+    newParams.delete("characterId");
+    navigate(`${location.pathname}?${newParams.toString()}`, { replace: true });
+  }, [isEdit, characters, loadingProfile, editingCharId, location.search, location.pathname, navigate]);
+
   const toggleTag = (tag) => {
     const upper = String(tag).toUpperCase().replace(/\s+/g, "_");
 
     setSelectedTags((prev) => {
       const exists = prev.includes(tag);
       if (exists) {
-        if (GENRES.includes(upper) && genre === upper) setGenre("");
-        if (DEMOGRAPHICS.includes(upper) && demographic === upper)
-          setDemographic("");
+        if (GENRES.includes(upper))
+          setGenres((g) => g.filter((v) => v !== upper));
+        if (DEMOGRAPHICS.includes(upper))
+          setDemographics((d) => d.filter((v) => v !== upper));
         return prev.filter((t) => t !== tag);
       }
 
       if (prev.length >= 5) return prev;
-      if (GENRES.includes(upper)) setGenre(upper);
-      if (DEMOGRAPHICS.includes(upper)) setDemographic(upper);
+      if (GENRES.includes(upper))
+        setGenres((g) => (g.includes(upper) ? g : [...g, upper]));
+      if (DEMOGRAPHICS.includes(upper))
+        setDemographics((d) => (d.includes(upper) ? d : [...d, upper]));
       return [...prev, tag];
     });
   };
 
-  const canSubmit = title.trim() && genre && demographic && !submitting;
+  const canSubmit = title.trim() && genres.length > 0 && demographics.length > 0 && !submitting;
 
   const buildFormData = () => {
     const formData = new FormData();
@@ -280,8 +303,8 @@ export function NewSeriesPage() {
             title: title.trim(),
             titleJp: titleJp || null,
             synopsis: synopsis || null,
-            genre,
-            targetDemographic: demographic,
+            genres,
+            targetDemographics: demographics,
             coverImageUrl: coverImageUrl || null,
           }),
         ],
@@ -306,14 +329,15 @@ export function NewSeriesPage() {
           title: "Series updated",
           message: "Basic information was saved.",
         });
+        navigate(`/series/${seriesId}`);
       } else {
         const created = await seriesService.create(buildFormData());
         addToast({
           type: "success",
           title: "Series created",
-          message: "Series created. Continue with Character and World & Plot.",
+          message: "Series created successfully.",
         });
-        navigate(`/series/${created.id}/edit`);
+        navigate(`/series/${created.id}`);
       }
     } catch {
       addToast({
@@ -344,20 +368,70 @@ export function NewSeriesPage() {
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  const handlePickCharSketch = (file) => {
-    if (!file) return;
-    setCharSketchFile(file);
+  const handlePickCharSketch = (files) => {
+    if (!files || files.length === 0) return;
+    setCharSketchFiles((prev) => [...prev, ...files]);
 
-    const reader = new FileReader();
-    reader.onload = () => setCharSketchPreview(String(reader.result || ""));
-    reader.readAsDataURL(file);
+    files.forEach((file) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = String(reader.result || "");
+        setCharSketchPreviews((prev) => [...prev, result]);
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleRemoveCharSketch = (index) => {
+    const preview = charSketchPreviews[index];
+    if (preview && (preview.startsWith("http://") || preview.startsWith("https://"))) {
+      // Existing Cloudinary URL — remove from preserved list
+      setExistingSketchUrls((prev) => prev.filter((url) => url !== preview));
+      setCharSketchPreviews((prev) => prev.filter((_, i) => i !== index));
+    } else {
+      // New file preview — remove file
+      setCharSketchFiles((prev) => prev.filter((_, i) => i !== index));
+      setCharSketchPreviews((prev) => prev.filter((_, i) => i !== index));
+    }
   };
 
   const resetCharacterForm = () => {
     setCharName("");
     setCharMotivation("");
-    setCharSketchFile(null);
-    setCharSketchPreview("");
+    setCharSketchFiles([]);
+    setCharSketchPreviews([]);
+    setEditingCharId(null);
+    setExistingSketchUrls([]);
+  };
+
+  const handleEditCharacter = (char) => {
+    const urls = char.sketchUrls || [];
+    setEditingCharId(char.id);
+    setCharName(char.name || "");
+    setCharMotivation(char.motivation || "");
+    setCharSketchFiles([]);
+    setCharSketchPreviews([...urls]);
+    setExistingSketchUrls([...urls]);
+  };
+
+  const handleDeleteCharacter = async (charId) => {
+    if (!isEdit || !seriesId || !charId) return;
+
+    try {
+      await seriesService.deleteCharacter(Number(seriesId), charId);
+      addToast({
+        type: "success",
+        title: "Character deleted",
+        message: "Character was removed successfully.",
+      });
+      fetchEditProfileData();
+    } catch (err) {
+      addToast({
+        type: "error",
+        title: "Delete failed",
+        message: err?.response?.data?.message || "Failed to delete character.",
+      });
+    }
   };
 
   const handleSaveCharacter = async () => {
@@ -365,31 +439,33 @@ export function NewSeriesPage() {
 
     setSavingCharacter(true);
     try {
-      if (charSketchFile) {
-        const formData = new FormData();
-        formData.append(
-          "character",
-          new Blob(
-            [
-              JSON.stringify({
-                name: charName.trim(),
-                motivation: charMotivation || null,
-              }),
-            ],
-            { type: "application/json" },
-          ),
-          "character.json",
-        );
-        formData.append("file", charSketchFile);
+      const formData = new FormData();
+      const body = {
+        name: charName.trim(),
+        motivation: charMotivation || null,
+      };
 
-        await api.post(`/series/${seriesId}/characters`, formData, {
-          headers: { "Content-Type": "multipart/form-data" },
-        });
+      // Khi update: g?i preservedSketchUrls d? BE merge URLs c? + files m?i
+      if (editingCharId) {
+        body.preservedSketchUrls = existingSketchUrls;
+      }
+
+      formData.append(
+        "character",
+        new Blob(
+          [JSON.stringify(body)],
+          { type: "application/json" },
+        ),
+        "character.json",
+      );
+
+      // Ch? g?i files m?i (không g?i l?i URLs c?)
+      charSketchFiles.forEach((file) => formData.append("files", file));
+
+      if (editingCharId) {
+        await seriesService.updateCharacter(Number(seriesId), editingCharId, formData);
       } else {
-        await api.post(`/series/${seriesId}/characters`, {
-          name: charName.trim(),
-          motivation: charMotivation || null,
-        });
+        await seriesService.createCharacter(Number(seriesId), formData);
       }
 
       addToast({
@@ -398,7 +474,7 @@ export function NewSeriesPage() {
         message: `${charName.trim()} was saved successfully.`,
       });
       resetCharacterForm();
-      fetchEditProfileData();
+      navigate(`/series/${seriesId}?tab=characters`);
     } catch (err) {
       addToast({
         type: "error",
@@ -768,16 +844,19 @@ export function NewSeriesPage() {
         <CharacterEditorSection
           name={charName}
           motivation={charMotivation}
-          sketchFile={charSketchFile}
-          sketchPreview={charSketchPreview}
+          sketchFiles={charSketchFiles}
+          sketchPreviews={charSketchPreviews}
           onNameChange={setCharName}
           onMotivationChange={setCharMotivation}
           onSketchPick={handlePickCharSketch}
+          onSketchRemove={handleRemoveCharSketch}
           onSubmit={handleSaveCharacter}
           saving={savingCharacter}
-          submitLabel="Save Character"
+          submitLabel={editingCharId ? "Update Character" : "Save Character"}
           loading={loadingProfile}
           characters={characters}
+          onEdit={handleEditCharacter}
+          onDelete={handleDeleteCharacter}
           secondaryAction={
             <button
               type="button"

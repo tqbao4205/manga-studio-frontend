@@ -150,7 +150,7 @@ const seriesService = {
   },
 
   /**
-   * Xem danh sách lời mời tantou của series.
+   * Lấy danh sách lời mời tantou của series.
    * GET /api/series/{seriesId}/tantou/invitations
    */
   getTantouInvitations: async (seriesId) => {
@@ -180,6 +180,54 @@ const seriesService = {
    */
   respondTantouInvitation: async (invitationId, status) => {
     return api.patch(`/tantou/invitations/${invitationId}`, { status });
+  },
+
+  // ═══════════════════════════════════════════════
+  //  CHARACTER — GET / CREATE / UPDATE / DELETE
+  // ═══════════════════════════════════════════════
+
+  /**
+   * L?y danh sách characters c?a 1 series.
+   * GET /api/series/{seriesId}/characters
+   */
+  getCharacters: async (seriesId) => {
+    return api.get(`/series/${seriesId}/characters`);
+  },
+
+  /**
+   * L?y chi ti?t 1 character.
+   * GET /api/series/{seriesId}/characters/{characterId}
+   */
+  getCharacter: async (seriesId, characterId) => {
+    return api.get(`/series/${seriesId}/characters/${characterId}`);
+  },
+
+  /**
+   * T?o character m?i (multipart: "character" JSON + "files" sketches).
+   * POST /api/series/{seriesId}/characters
+   */
+  createCharacter: async (seriesId, formData) => {
+    return api.post(`/series/${seriesId}/characters`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
+
+  /**
+   * C?p nh?t character (multipart: "character" JSON + "files" optional).
+   * PUT /api/series/{seriesId}/characters/{characterId}
+   */
+  updateCharacter: async (seriesId, characterId, formData) => {
+    return api.put(`/series/${seriesId}/characters/${characterId}`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
+
+  /**
+   * Xoá character.
+   * DELETE /api/series/{seriesId}/characters/{characterId}
+   */
+  deleteCharacter: async (seriesId, characterId) => {
+    return api.delete(`/series/${seriesId}/characters/${characterId}`);
   },
 
   // ═══════════════════════════════════════════════

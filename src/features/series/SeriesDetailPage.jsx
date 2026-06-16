@@ -18,7 +18,7 @@
  */
 
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import {
   ArrowLeft,
   Plus,
@@ -42,6 +42,12 @@ import {
   Globe,
   Image as ImageIcon,
   BookOpen,
+  ChevronLeft,
+  ChevronRight,
+  ZoomIn,
+  ZoomOut,
+  Pencil,
+  Trash2,
 } from "lucide-react";
 import { useSeriesStore } from "../../app/stores/seriesStore";
 import { useAuthStore } from "../../app/stores/authStore";
@@ -54,6 +60,36 @@ import { Dialog } from "../../shared/components/ui/dialog";
 import { EmptyState } from "../../shared/components/shared/EmptyState";
 import { PageLoading } from "../../shared/components/shared/LoadingSpinner";
 import { cn } from "../../shared/utils";
+
+// ── Series Status → color mapping ──
+// Mỗi status có màu riêng để dễ phân biệt trên hero badge
+const seriesStatusColor = {
+  DRAFT:              "bg-blue-500/10 text-blue-400 border-blue-500/20",
+  PENDING_APPROVAL:   "bg-yellow-500/10 text-yellow-400 border-yellow-500/20",
+  APPROVED:           "bg-emerald-500/20 text-emerald-400 border-emerald-500/30",
+  ONGOING:            "bg-emerald-500/20 text-emerald-400 border-emerald-500/30",
+  HIATUS:             "bg-orange-500/10 text-orange-400 border-orange-500/20",
+  CANCELLED:          "bg-red-500/10 text-red-400 border-red-500/20",
+  COMPLETED:          "bg-sky-500/10 text-sky-400 border-sky-500/20",
+  AT_RISK:            "bg-red-500/10 text-red-400 border-red-500/20",
+  REJECTED:           "bg-red-500/10 text-red-400 border-red-500/20",
+  PENDING_TANTOU:     "bg-purple-500/10 text-purple-400 border-purple-500/20",
+  PENDING_BOARD_VOTE: "bg-orange-500/10 text-orange-400 border-orange-500/20",
+};
+
+const seriesStatusLabel = {
+  DRAFT:              "Draft",
+  PENDING_APPROVAL:   "Pending Approval",
+  APPROVED:           "Approved",
+  ONGOING:            "Active",
+  HIATUS:             "Hiatus",
+  CANCELLED:          "Cancelled",
+  COMPLETED:          "Completed",
+  AT_RISK:            "At Risk",
+  REJECTED:           "Rejected",
+  PENDING_TANTOU:     "Pending Lead Editor",
+  PENDING_BOARD_VOTE: "Pending Editorial Review",
+};
 
 // ── Status → color mapping cho chapter badges ──
 const chapterStatusColor = {
@@ -227,7 +263,11 @@ export function SeriesDetailPage() {
   const [tantouSearching, setTantouSearching] = useState(false);
   const [invitingTantouId, setInvitingTantouId] = useState(null);
   const tantouSearchTimeoutRef = useRef(null);
-  const [activeDetailBlock, setActiveDetailBlock] = useState("chapters");
+  const location = useLocation();
+  const [activeDetailBlock, setActiveDetailBlock] = useState(() => {
+    const params = new URLSearchParams(location.search);
+    return params.get("tab") === "characters" ? "characters" : "chapters";
+  });
 
   // Characters + World&Plots (use real API when backend provides endpoints)
   const [seriesCharacters, setSeriesCharacters] = useState([]);
@@ -236,6 +276,39 @@ export function SeriesDetailPage() {
     storyRoadmap: [],
     visualReferences: [],
   });
+  const [sketchLightbox, setSketchLightbox] = useState(null); // { images: [], index: number }
+  const [lightboxZoom, setLightboxZoom] = useState(1);
+  const [lightboxBaseSize, setLightboxBaseSize] = useState({ w: 0, h: 0 });
+
+  const handleLightboxImageLoad = useCallback((e) => {
+    if (!sketchLightbox) return;
+    const nw = e.target.naturalWidth;
+    const nh = e.target.naturalHeight;
+    const vw = window.innerWidth * 0.9;
+    const vh = window.innerHeight * 0.9;
+    const scale = Math.min(vw / nw, vh / nh, 1);
+    setLightboxBaseSize({ w: nw * scale, h: nh * scale });
+    setLightboxZoom(1);
+  }, [sketchLightbox]);
+
+  const handleDeleteCharacter = async (charId, charName) => {
+    if (!window.confirm(`Delete character "${charName}"?`)) return;
+    try {
+      await seriesService.deleteCharacter(id, charId);
+      setSeriesCharacters((prev) => prev.filter((c) => c.id !== charId));
+      addToast({
+        type: "success",
+        title: "Character deleted",
+        message: `"${charName}" was removed successfully.`,
+      });
+    } catch (err) {
+      addToast({
+        type: "error",
+        title: "Delete failed",
+        message: err?.response?.data?.message || "Failed to delete character.",
+      });
+    }
+  };
 
   /**
 
@@ -301,7 +374,47 @@ export function SeriesDetailPage() {
         const data = charactersRes.value;
         setSeriesCharacters(Array.isArray(data) ? data : data?.content || []);
       } else {
-        setSeriesCharacters([]);
+        setSeriesCharacters([
+          {
+            id: 1,
+            name: "Haruki Tanaka",
+            motivation:
+              "<p>A <strong>determined</strong> young artist who <em>refuses</em> to give up on his dream. Key traits:</p><ul><li>Age: 17</li><li>Goal: Become the best manga artist</li><li>Fear: Losing his creative spark</li></ul>",
+            sketches: Array.from(
+              { length: 7 },
+              (_, i) =>
+                `https://picsum.photos/seed/haruki${i + 1}/400/600`,
+            ),
+          },
+          {
+            id: 2,
+            name: "Miyuki Sato",
+            motivation:
+              "<p>A <strong>calm</strong> and <em>collected</em> editor with a sharp eye for detail.</p><ol><li>Strategic thinker</li><li>Perfectionist</li><li>Secret soft spot for shoujo manga</li></ol>",
+            sketches: [
+              "https://picsum.photos/seed/miyuki1/400/600",
+              "https://picsum.photos/seed/miyuki2/400/600",
+            ],
+          },
+          {
+            id: 3,
+            name: "Kenji Watanabe",
+            motivation:
+              "<p>The <strong>comic relief</strong> who hides a <em>tragic past</em> behind his jokes.</p>",
+            sketches: [],
+          },
+          {
+            id: 4,
+            name: "Yuki Nakamura",
+            motivation:
+              "<p>A <strong>mysterious</strong> rival with <em>unknown</em> motives.</p><ul><li>Rival from childhood</li><li>Extremely talented</li><li>Always one step ahead</li></ul>",
+            sketches: [
+              "https://picsum.photos/seed/yuki1/400/600",
+              "https://picsum.photos/seed/yuki2/400/600",
+              "https://picsum.photos/seed/yuki3/400/600",
+            ],
+          },
+        ]);
       }
 
       if (worldRes.status === "fulfilled") {
@@ -772,55 +885,47 @@ export function SeriesDetailPage() {
         {/* Hero content */}
         <div className="absolute bottom-0 left-0 w-full p-container-padding flex flex-col md:flex-row justify-between items-end gap-6">
           <div className="flex-1">
-            {/* Badges */}
-            <div className="flex flex-wrap gap-2 mb-4">
-              <span className="bg-primary/20 text-primary border border-primary/30 px-3 py-1 rounded-full text-xs font-medium backdrop-blur-md">
-                {series.genre}
-              </span>
-              <span className="bg-primary/20 text-primary border border-primary/30 px-3 py-1 rounded-full text-xs font-medium backdrop-blur-md">
-                {series.targetDemographic}
-              </span>
+            {/* Title + Status — cùng hàng */}
+            <div className="flex items-start gap-4 flex-wrap">
+              <div>
+                <h2 className="text-4xl font-bold text-on-surface leading-tight">
+                  {series.title}
+                </h2>
+                {series.titleJp && (
+                  <span className="block text-sm font-normal mt-1 text-on-surface-variant">
+                    {series.titleJp}
+                  </span>
+                )}
+              </div>
               <span
                 className={cn(
-                  "px-3 py-1 rounded-full text-xs font-medium backdrop-blur-md border",
-                  series.status === "ONGOING" ||
-                    series.status === "PUBLISHED" ||
-                    series.status === "APPROVED"
-                    ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30"
-                    : "bg-primary/20 text-primary border-primary/30",
+                  "px-4 py-1.5 rounded-full text-sm font-bold border-2 backdrop-blur-md",
+                  seriesStatusColor[series.status] || "bg-white/10 text-white border-white/20",
                 )}
               >
-                {series.status === "ONGOING"
-                  ? "Active"
-                  : series.status === "PUBLISHED"
-                    ? "Published"
-                    : series.status === "COMPLETED"
-                      ? "Completed"
-                      : series.status === "CANCELLED"
-                        ? "Cancelled"
-                        : series.status === "DRAFT"
-                          ? "Draft"
-                          : series.status === "HIATUS"
-                            ? "Hiatus"
-                            : series.status === "PENDING_APPROVAL"
-                              ? "Pending"
-                              : series.status === "PENDING_TANTOU"
-                                ? "Pending Lead Editor"
-                                : series.status === "PENDING_BOARD_VOTE"
-                                  ? "Pending Editorial Review"
-                                  : series.status}
+                {seriesStatusLabel[series.status] || series.status}
               </span>
             </div>
 
-            {/* Title */}
-            <h2 className="text-4xl font-bold text-on-surface leading-tight">
-              {series.title}
-              {series.titleJp && (
-                <span className="text-sm font-normal ml-4 text-on-surface-variant">
-                  {series.titleJp}
+            {/* Badges — genres + demographics, dưới title */}
+            <div className="flex flex-wrap gap-2 mt-4 mb-4">
+              {series.genres?.map((g) => (
+                <span
+                  key={g}
+                  className="bg-primary/20 text-primary border border-primary/30 px-3 py-1 rounded-full text-xs font-medium backdrop-blur-md"
+                >
+                  {g}
                 </span>
-              )}
-            </h2>
+              ))}
+              {series.targetDemographics?.map((d) => (
+                <span
+                  key={d}
+                  className="bg-primary/20 text-primary border border-primary/30 px-3 py-1 rounded-full text-xs font-medium backdrop-blur-md"
+                >
+                  {d}
+                </span>
+              ))}
+            </div>
 
             {/* Tier + Ranking */}
             <div className="flex items-center gap-6 mt-4">
@@ -1170,66 +1275,102 @@ export function SeriesDetailPage() {
                     </p>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {characters.map((char, idx) => (
-                      <div
-                        key={char.id || idx}
-                        className="rounded-xl bg-surface-container-low border border-outline-variant/20 p-5"
-                      >
-                        <div className="flex items-start gap-3 mb-4">
-                          <div className="w-10 h-10 rounded-full bg-surface-container-highest border border-outline-variant/30 flex items-center justify-center text-on-surface-variant font-bold">
-                            {(char.name || "C")[0]}
-                          </div>
-                          <div>
-                            <p className="text-on-surface font-semibold">
-                              {char.name || `Character ${idx + 1}`}
-                            </p>
-                            <p className="text-xs text-primary/90">
-                              {char.subtitle ||
-                                char.role ||
-                                "Character Profile"}
-                            </p>
-                          </div>
-                        </div>
+                  <div className="grid grid-cols-1 gap-3">
+                    {characters.map((char, idx) => {
+                      const sketches = Array.isArray(char.sketchUrls)
+                        ? char.sketchUrls.filter(Boolean)
+                        : Array.isArray(char.sketches)
+                          ? char.sketches.filter(Boolean)
+                          : [char.sketchPreview].filter(Boolean);
 
-                        <p className="text-[11px] text-on-surface-variant uppercase tracking-wider mb-2">
-                          Core Motivation
-                        </p>
-                        <p className="text-sm text-on-surface-variant leading-relaxed mb-5">
-                          {char.motivation || "No motivation provided."}
-                        </p>
+                      return (
+                          <div
+                            key={char.id || idx}
+                            className="rounded-xl bg-surface-container-low border border-outline-variant/20 border-l-4 border-l-primary/30 p-4"
+                          >
+                            <div className="flex items-start justify-between border-b border-outline-variant/10 pb-2 mb-3">
+                              <p className="text-xl font-bold text-on-surface">
+                                {char.name || `Character ${idx + 1}`}
+                              </p>
+                              {isOwner && (
+                                <div className="flex items-center gap-1 shrink-0">
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      navigate(`/series/${id}/edit?tab=characters&characterId=${char.id}`)
+                                    }
+                                    className="w-7 h-7 rounded-md flex items-center justify-center hover:bg-primary/10 text-on-surface-variant hover:text-primary transition-colors"
+                                    title="Edit"
+                                  >
+                                    <Pencil size={13} />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      handleDeleteCharacter(
+                                        char.id,
+                                        char.name || `Character ${idx + 1}`,
+                                      )
+                                    }
+                                    className="w-7 h-7 rounded-md flex items-center justify-center hover:bg-error/10 text-on-surface-variant hover:text-error transition-colors"
+                                    title="Delete"
+                                  >
+                                    <Trash2 size={13} />
+                                  </button>
+                                </div>
+                              )}
+                            </div>
 
-                        <p className="text-[11px] text-on-surface-variant uppercase tracking-wider mb-2">
-                          Design Sketches
-                        </p>
-                        <div className="flex gap-2">
-                          {(Array.isArray(char.sketches)
-                            ? char.sketches
-                            : [char.sketchPreview].filter(Boolean)
-                          )
-                            .slice(0, 3)
-                            .map((img, i) => (
+                            <div className="bg-surface-container-lowest rounded-lg p-3.5 border border-outline-variant/10 mb-4">
+                              <p className="text-[11px] text-on-surface-variant uppercase tracking-wider mb-2">
+                                Core Motivation
+                              </p>
                               <div
-                                key={i}
-                                className="w-10 h-10 rounded-md bg-surface-container-highest border border-outline-variant/20 overflow-hidden flex items-center justify-center"
-                              >
-                                {img ? (
-                                  <img
-                                    src={img}
-                                    alt={`Sketch ${i + 1}`}
-                                    className="w-full h-full object-cover"
-                                  />
-                                ) : (
-                                  <ImageIcon
-                                    size={13}
-                                    className="text-on-surface-variant/50"
-                                  />
+                                className="ProseMirror text-sm text-on-surface-variant leading-relaxed"
+                                dangerouslySetInnerHTML={{
+                                  __html: char.motivation || "No motivation provided.",
+                                }}
+                              />
+                            </div>
+
+                          {sketches.length > 0 && (
+                            <>
+                              <p className="text-[11px] text-on-surface-variant uppercase tracking-wider mb-2">
+                                Design Sketches
+                              </p>
+                              <div className="relative">
+                                <div className="flex gap-3 overflow-x-auto flex-nowrap pb-1">
+                                  {sketches.map((img, i) => (
+                                    <button
+                                      key={i}
+                                      type="button"
+                                      onClick={() => {
+                                        setSketchLightbox({
+                                          images: sketches,
+                                          index: i,
+                                        });
+                                        setLightboxBaseSize({ w: 0, h: 0 });
+                                        setLightboxZoom(3);
+                                      }}
+                                      className="relative w-60 h-80 bg-surface-container-highest border border-outline-variant/20 overflow-hidden shrink-0 hover:ring-2 hover:ring-primary transition-all"
+                                    >
+                                      <img
+                                        src={img}
+                                        alt={`Sketch ${i + 1}`}
+                                        className="w-full h-full object-cover"
+                                      />
+                                    </button>
+                                  ))}
+                                </div>
+                                {sketches.length > 2 && (
+                                  <div className="absolute right-0 top-0 bottom-0 w-20 bg-gradient-to-l from-surface-container to-transparent pointer-events-none" />
                                 )}
                               </div>
-                            ))}
+                            </>
+                          )}
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </div>
@@ -1378,21 +1519,39 @@ export function SeriesDetailPage() {
                     </span>
                   </div>
                 )}
-                <div className="flex justify-between border-b border-outline-variant/10 pb-2">
-                  <span className="text-sm font-medium text-on-surface-variant">
+                <div className="flex justify-between border-b border-outline-variant/10 pb-2 items-start">
+                  <span className="text-sm font-medium text-on-surface-variant pt-0.5">
                     Genre
                   </span>
-                  <span className="text-sm font-medium text-on-surface">
-                    {series.genre}
-                  </span>
+                  <div className="flex gap-1.5 flex-wrap justify-end">
+                    {series.genres?.length > 0
+                      ? series.genres.map((g) => (
+                          <span
+                            key={g}
+                            className="text-xs px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/20"
+                          >
+                            {g}
+                          </span>
+                        ))
+                      : <span className="text-sm text-on-surface">—</span>}
+                  </div>
                 </div>
-                <div className="flex justify-between border-b border-outline-variant/10 pb-2">
-                  <span className="text-sm font-medium text-on-surface-variant">
+                <div className="flex justify-between border-b border-outline-variant/10 pb-2 items-start">
+                  <span className="text-sm font-medium text-on-surface-variant pt-0.5">
                     Demographic
                   </span>
-                  <span className="text-sm font-medium text-on-surface">
-                    {series.targetDemographic}
-                  </span>
+                  <div className="flex gap-1.5 flex-wrap justify-end">
+                    {series.targetDemographics?.length > 0
+                      ? series.targetDemographics.map((d) => (
+                          <span
+                            key={d}
+                            className="text-xs px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/20"
+                          >
+                            {d}
+                          </span>
+                        ))
+                      : <span className="text-sm text-on-surface">—</span>}
+                  </div>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm font-medium text-on-surface-variant">
@@ -1933,6 +2092,112 @@ export function SeriesDetailPage() {
           </div>
         </div>
       </div>
+      
+      {/* ═══ SKETCH LIGHTBOX ═══ */}
+      {sketchLightbox && (
+        <div
+          className="fixed inset-0 z-50 flex flex-col items-center justify-center pt-40 bg-black/90 backdrop-blur-sm"
+          onClick={() => setSketchLightbox(null)}
+          onWheel={(e) => {
+            if (e.ctrlKey || e.metaKey) {
+              e.preventDefault();
+              setLightboxZoom((prev) =>
+                Math.max(0.25, Math.min(3, prev + (e.deltaY > 0 ? -0.25 : 0.25))),
+              );
+            }
+          }}
+        >
+          <button
+            type="button"
+            onClick={() => setSketchLightbox(null)}
+            className="absolute top-4 right-4 z-10 w-10 h-10 rounded-full bg-surface/60 flex items-center justify-center text-on-surface hover:bg-surface transition-colors"
+          >
+            <X size={20} />
+          </button>
+
+          {sketchLightbox.images.length > 1 && (
+            <>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setLightboxZoom(3);
+                  setSketchLightbox((prev) => ({
+                    ...prev,
+                    index:
+                      (prev.index - 1 + prev.images.length) %
+                      prev.images.length,
+                  }));
+                }}
+                className="absolute left-4 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-surface/60 flex items-center justify-center text-on-surface hover:bg-surface transition-colors"
+              >
+                <ChevronLeft size={20} />
+              </button>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setLightboxZoom(3);
+                  setSketchLightbox((prev) => ({
+                    ...prev,
+                    index: (prev.index + 1) % prev.images.length,
+                  }));
+                }}
+                className="absolute right-4 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-surface/60 flex items-center justify-center text-on-surface hover:bg-surface transition-colors"
+              >
+                <ChevronRight size={20} />
+              </button>
+            </>
+          )}
+
+          <div
+            className="w-full h-full overflow-auto flex items-start justify-center"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <img
+              src={sketchLightbox.images[sketchLightbox.index]}
+              alt={`Sketch ${sketchLightbox.index + 1}`}
+              onLoad={handleLightboxImageLoad}
+              style={{
+                width: lightboxBaseSize.w > 0 ? `${lightboxBaseSize.w * lightboxZoom}px` : "auto",
+                height: lightboxBaseSize.h > 0 ? `${lightboxBaseSize.h * lightboxZoom}px` : "auto",
+              }}
+              className="cursor-pointer shrink-0"
+            />
+          </div>
+
+          <div
+            className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-3 bg-surface/80 px-4 py-2 rounded-full text-sm text-on-surface"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setLightboxZoom((prev) => Math.max(0.25, prev - 0.25));
+              }}
+              disabled={lightboxZoom <= 0.25}
+              className="p-0.5 hover:text-primary disabled:opacity-30 disabled:cursor-not-allowed"
+            >
+              <ZoomOut size={16} />
+            </button>
+            <span className="min-w-[48px] text-center font-medium tabular-nums">
+              {Math.round(lightboxZoom * 100)}%
+            </span>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setLightboxZoom((prev) => Math.min(3, prev + 0.25));
+              }}
+              disabled={lightboxZoom >= 3}
+              className="p-0.5 hover:text-primary disabled:opacity-30 disabled:cursor-not-allowed"
+            >
+              <ZoomIn size={16} />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

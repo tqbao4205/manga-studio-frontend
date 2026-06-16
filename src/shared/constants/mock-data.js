@@ -27,7 +27,7 @@ export const mockSeries = [
   {
     id: 1, title: 'Blade of the Demon Moon', titleJp: '魔月の刃',
     synopsis: 'In an era where demons roam the land, a young swordsman named Kenji embarks on a journey to master the legendary Moon Blade and defeat the Demon King who slaughtered his clan.',
-    genre: 'ACTION', targetDemographic: 'SHONEN', status: 'PUBLISHED',
+    genres: ['ACTION'], targetDemographics: ['SHONEN'], status: 'PUBLISHED',
     coverImageUrl: '', coverColor: '#e63946',
     mangakaId: 1, tantouEditorId: 5,
     publishFrequency: 'WEEKLY',
@@ -38,7 +38,7 @@ export const mockSeries = [
   {
     id: 2, title: 'Shadow Monarch', titleJp: '影の君主',
     synopsis: 'A college student discovers he can command shadows. As he rises through the ranks of hunters, he uncovers a conspiracy that threatens the balance between worlds.',
-    genre: 'FANTASY', targetDemographic: 'SHONEN', status: 'PUBLISHED',
+    genres: ['FANTASY'], targetDemographics: ['SHONEN'], status: 'PUBLISHED',
     coverImageUrl: '', coverColor: '#7c4dff',
     mangakaId: 1, tantouEditorId: 5,
     publishFrequency: 'WEEKLY',
@@ -49,7 +49,7 @@ export const mockSeries = [
   {
     id: 3, title: 'Cherry Blossoms After Winter', titleJp: '冬の桜',
     synopsis: 'Two childhood friends navigate the complexities of love and ambition as they pursue their dreams in Tokyo\'s competitive art scene.',
-    genre: 'ROMANCE', targetDemographic: 'SHOJO', status: 'CANCELLED',
+    genres: ['ROMANCE'], targetDemographics: ['SHOJO'], status: 'CANCELLED',
     coverImageUrl: '', coverColor: '#f472b6',
     mangakaId: 9, tantouEditorId: 6,
     publishFrequency: 'MONTHLY',
@@ -60,7 +60,7 @@ export const mockSeries = [
   {
     id: 4, title: 'Iron Chef Reborn', titleJp: '鉄の料理人',
     synopsis: 'A former Michelin-star chef loses everything and must fight his way back to the top through underground cooking battles.',
-    genre: 'COMEDY', targetDemographic: 'SEINEN', status: 'PUBLISHED',
+    genres: ['COMEDY'], targetDemographics: ['SEINEN'], status: 'PUBLISHED',
     coverImageUrl: '', coverColor: '#f4a261',
     mangakaId: 10, tantouEditorId: 6,
     publishFrequency: 'BIWEEKLY',
@@ -71,7 +71,7 @@ export const mockSeries = [
   {
     id: 5, title: 'Neon Reaper', titleJp: 'ネオン死神',
     synopsis: 'In a cyberpunk Tokyo, a bounty hunter with a mysterious past takes on the most dangerous contracts while searching for her lost sister.',
-    genre: 'ACTION', targetDemographic: 'SEINEN', status: 'PUBLISHED',
+    genres: ['ACTION'], targetDemographics: ['SEINEN'], status: 'PUBLISHED',
     coverImageUrl: '', coverColor: '#4fc3f7',
     mangakaId: 9, tantouEditorId: 5,
     publishFrequency: 'WEEKLY',
@@ -82,7 +82,7 @@ export const mockSeries = [
   {
     id: 6, title: 'The Last Summoner', titleJp: '最後の召喚士',
     synopsis: 'The last surviving summoner must rebuild the ancient order while evading those who seek to eliminate all magic from the world.',
-    genre: 'FANTASY', targetDemographic: 'SHONEN', status: 'DRAFT',
+    genres: ['FANTASY'], targetDemographics: ['SHONEN'], status: 'DRAFT',
     coverImageUrl: '', coverColor: '#2a9d8f',
     mangakaId: 10, tantouEditorId: null,
     publishFrequency: null,
@@ -93,7 +93,7 @@ export const mockSeries = [
   {
     id: 7, title: 'Echoes of Eternity', titleJp: '永遠のこだま',
     synopsis: 'A time-traveling historian discovers that history is not what it seems. Each era holds a secret that could unravel the fabric of reality itself.',
-    genre: 'FANTASY', targetDemographic: 'SEINEN', status: 'DRAFT',
+    genres: ['FANTASY'], targetDemographics: ['SEINEN'], status: 'DRAFT',
     coverImageUrl: '', coverColor: '#264653',
     mangakaId: 1, tantouEditorId: null,
     publishFrequency: null,
@@ -104,7 +104,7 @@ export const mockSeries = [
   {
     id: 8, title: 'Stardust Warriors', titleJp: '星屑戦士',
     synopsis: 'A team of young pilots must defend Earth from an alien invasion using ancient mecha powered by stardust.',
-    genre: 'ACTION', targetDemographic: 'SHONEN', status: 'IN_REVIEW',
+    genres: ['ACTION'], targetDemographics: ['SHONEN'], status: 'IN_REVIEW',
     coverImageUrl: '', coverColor: '#e76f51',
     mangakaId: 9, tantouEditorId: 6,
     publishFrequency: 'WEEKLY',
@@ -115,7 +115,7 @@ export const mockSeries = [
   {
     id: 9, title: 'Love in Parallel', titleJp: 'パラレルラブ',
     synopsis: 'A scientist discovers alternate universes where different versions of her soulmate exist, forcing her to choose between realities.',
-    genre: 'ROMANCE', targetDemographic: 'SHOJO', status: 'APPROVED',
+    genres: ['ROMANCE'], targetDemographics: ['SHOJO'], status: 'APPROVED',
     coverImageUrl: '', coverColor: '#f72585',
     mangakaId: 10, tantouEditorId: 6,
     publishFrequency: 'MONTHLY',
