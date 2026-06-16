@@ -666,7 +666,7 @@ function EditorDashboard() {
                           {s.title}
                         </p>
                         <p className="text-xs text-on-surface-variant">
-                          {s.genre}
+                          {s.genres?.[0] || "—"}
                         </p>
                       </div>
                     </div>

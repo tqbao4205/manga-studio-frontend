@@ -221,9 +221,9 @@ export function CreateMeetingModal({ onClose }) {
                       <span className="text-base text-on-surface block truncate">
                         {selectedSeries.title}
                       </span>
-                      {selectedSeries.genre && (
+                      {selectedSeries.genres?.[0] && (
                         <span className="text-xs text-on-surface-variant">
-                          {selectedSeries.genre}
+                          {selectedSeries.genres[0]}
                         </span>
                       )}
                     </div>

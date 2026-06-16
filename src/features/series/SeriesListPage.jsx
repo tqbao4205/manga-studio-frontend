@@ -241,7 +241,7 @@ export function SeriesListPage() {
             //   - coverColor: string (màu nền fallback)
             //   - mangaka: UserDTO object (có id, displayName, email...)
             //   - chapterCount: number (denormalized từ chapter module)
-            //   - genre: string (từ enum Genre.name())
+            //   - genres: string[] (từ List<Genre> trong backend)
             //   - status: string (từ enum SeriesStatus.name())
             const coverUrl = series.coverImageUrl || seriesPlaceholder(series.title, series.coverColor)
             const mangaka = series.mangaka
@@ -279,10 +279,15 @@ export function SeriesListPage() {
                         <p className="text-on-surface-variant text-xs font-medium mb-3">{series.titleJp}</p>
                       )}
                       {/* Badge Genre + Status */}
-                      <div className="flex flex-wrap gap-2 mb-4">
-                        <span className="px-2 py-1 bg-primary/10 text-primary text-[10px] font-bold rounded-lg uppercase tracking-wider border border-primary/20">
-                          {series.genre}
-                        </span>
+                      <div className="flex flex-wrap gap-1.5 mb-4">
+                        {series.genres?.map((g) => (
+                          <span
+                            key={g}
+                            className="px-2 py-1 bg-primary/10 text-primary text-[10px] font-bold rounded-lg uppercase tracking-wider border border-primary/20"
+                          >
+                            {g}
+                          </span>
+                        ))}
                         <span className={`px-2 py-1 text-[10px] font-bold rounded-lg uppercase tracking-wider border ${statusColorMap[series.status] || 'bg-surface-container-highest text-on-surface-variant'}`}>
                           {statusLabels[series.status] || series.status}
                         </span>

@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
@@ -21,7 +22,7 @@ const ToolbarButton = ({ onClick, active, children }) => (
   </button>
 )
 
-export function RichEditor({ value = '', onChange, placeholder = 'Write something...', minHeight = '120px' }) {
+export function RichEditor({ value = '', onChange, placeholder = 'Write something...', minHeight = '120px', className = '' }) {
   const editor = useEditor({
     extensions: [
       StarterKit,
@@ -31,7 +32,7 @@ export function RichEditor({ value = '', onChange, placeholder = 'Write somethin
     content: value,
     editorProps: {
       attributes: {
-        class: `outline-none text-sm text-on-surface leading-relaxed px-3 py-2`,
+        class: 'outline-none text-sm text-on-surface leading-relaxed px-3 py-2',
         style: `min-height: ${minHeight}`,
       },
     },
@@ -40,10 +41,22 @@ export function RichEditor({ value = '', onChange, placeholder = 'Write somethin
     },
   })
 
+  useEffect(() => {
+    if (editor && value !== editor.getHTML()) {
+      editor.commands.setContent(value)
+    }
+  }, [value, editor])
+
   if (!editor) return null
 
   return (
-    <div className="bg-[#151518] border-0 border-b border-[#3F3F46] focus-within:border-primary focus-within:shadow-[0_4px_12px_-2px_rgba(139,92,246,0.2)] transition-all rounded-none overflow-hidden">
+    <div className={`rich-editor bg-surface-container-lowest border border-outline-variant/50 focus-within:border-primary focus-within:shadow-[0_0_0_1px_rgba(139,92,246,0.3)] transition-all rounded-lg overflow-hidden ${className}`}>
+      <style>{`
+        .rich-editor .ProseMirror ul { list-style-type: disc; padding-left: 1.75rem; }
+        .rich-editor .ProseMirror ol { list-style-type: decimal; padding-left: 1.75rem; }
+        .rich-editor .ProseMirror li { margin-bottom: 0.25rem; }
+        .rich-editor .ProseMirror li p { margin: 0; }
+      `}</style>
       <div className="flex items-center gap-0.5 px-2 pt-2 pb-1.5 border-b border-outline-variant/20 flex-wrap">
         <ToolbarButton
           onClick={() => editor.chain().focus().toggleBold().run()}

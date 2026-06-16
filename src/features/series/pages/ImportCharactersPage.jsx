@@ -19,8 +19,8 @@ export function ImportCharactersPage() {
 
   const [name, setName] = useState("");
   const [motivation, setMotivation] = useState("");
-  const [sketchFile, setSketchFile] = useState(null);
-  const [sketchPreview, setSketchPreview] = useState("");
+  const [sketchFiles, setSketchFiles] = useState([]);
+  const [sketchPreviews, setSketchPreviews] = useState([]);
 
   const fetchData = async () => {
     if (!id) return;
@@ -48,20 +48,28 @@ export function ImportCharactersPage() {
     fetchData();
   }, [id]);
 
-  const handlePickSketch = (file) => {
-    if (!file) return;
-    setSketchFile(file);
+  const handlePickSketch = (files) => {
+    if (!files || files.length === 0) return;
+    setSketchFiles((prev) => [...prev, ...files]);
 
-    const reader = new FileReader();
-    reader.onload = () => setSketchPreview(String(reader.result || ""));
-    reader.readAsDataURL(file);
+    files.forEach((file) => {
+      const reader = new FileReader();
+      reader.onload = () =>
+        setSketchPreviews((prev) => [...prev, String(reader.result || "")]);
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleRemoveSketch = (index) => {
+    setSketchFiles((prev) => prev.filter((_, i) => i !== index));
+    setSketchPreviews((prev) => prev.filter((_, i) => i !== index));
   };
 
   const resetForm = () => {
     setName("");
     setMotivation("");
-    setSketchFile(null);
-    setSketchPreview("");
+    setSketchFiles([]);
+    setSketchPreviews([]);
   };
 
   const handleImport = async () => {
@@ -69,32 +77,25 @@ export function ImportCharactersPage() {
     setSaving(true);
 
     try {
-      if (sketchFile) {
-        const formData = new FormData();
-        formData.append(
-          "character",
-          new Blob(
-            [
-              JSON.stringify({
-                name: name.trim(),
-                motivation: motivation || null,
-              }),
-            ],
-            { type: "application/json" },
-          ),
-          "character.json",
-        );
-        formData.append("file", sketchFile);
+      const formData = new FormData();
+      formData.append(
+        "character",
+        new Blob(
+          [
+            JSON.stringify({
+              name: name.trim(),
+              motivation: motivation || null,
+            }),
+          ],
+          { type: "application/json" },
+        ),
+        "character.json",
+      );
+      sketchFiles.forEach((file) => formData.append("files", file));
 
-        await api.post(`/series/${id}/characters`, formData, {
-          headers: { "Content-Type": "multipart/form-data" },
-        });
-      } else {
-        await api.post(`/series/${id}/characters`, {
-          name: name.trim(),
-          motivation: motivation || null,
-        });
-      }
+      await api.post(`/series/${id}/characters`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
 
       addToast({
         type: "success",
@@ -138,11 +139,12 @@ export function ImportCharactersPage() {
       <CharacterEditorSection
         name={name}
         motivation={motivation}
-        sketchFile={sketchFile}
-        sketchPreview={sketchPreview}
+        sketchFiles={sketchFiles}
+        sketchPreviews={sketchPreviews}
         onNameChange={setName}
         onMotivationChange={setMotivation}
         onSketchPick={handlePickSketch}
+        onSketchRemove={handleRemoveSketch}
         onSubmit={handleImport}
         saving={saving}
         submitLabel="Import Character"
