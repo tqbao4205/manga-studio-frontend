@@ -40,7 +40,6 @@ import {
   Mail,
   Loader,
   Globe,
-  Image as ImageIcon,
   BookOpen,
   ChevronLeft,
   ChevronRight,
@@ -272,7 +271,7 @@ export function SeriesDetailPage() {
   // Characters + World&Plots (use real API when backend provides endpoints)
   const [seriesCharacters, setSeriesCharacters] = useState([]);
   const [seriesWorldProfile, setSeriesWorldProfile] = useState({
-    worldLoreSections: [],
+    worldLore: "",
     storyRoadmap: [],
     visualReferences: [],
   });
@@ -366,71 +365,27 @@ export function SeriesDetailPage() {
 
     const fetchSeriesProfileBlocks = async () => {
       const [charactersRes, worldRes] = await Promise.allSettled([
-        api.get(`/series/${id}/characters`),
-        api.get(`/series/${id}/story-profile`),
+        seriesService.getCharacters(id),
+        seriesService.getStoryProfile(id),
       ]);
 
       if (charactersRes.status === "fulfilled") {
         const data = charactersRes.value;
         setSeriesCharacters(Array.isArray(data) ? data : data?.content || []);
       } else {
-        setSeriesCharacters([
-          {
-            id: 1,
-            name: "Haruki Tanaka",
-            motivation:
-              "<p>A <strong>determined</strong> young artist who <em>refuses</em> to give up on his dream. Key traits:</p><ul><li>Age: 17</li><li>Goal: Become the best manga artist</li><li>Fear: Losing his creative spark</li></ul>",
-            sketches: Array.from(
-              { length: 7 },
-              (_, i) =>
-                `https://picsum.photos/seed/haruki${i + 1}/400/600`,
-            ),
-          },
-          {
-            id: 2,
-            name: "Miyuki Sato",
-            motivation:
-              "<p>A <strong>calm</strong> and <em>collected</em> editor with a sharp eye for detail.</p><ol><li>Strategic thinker</li><li>Perfectionist</li><li>Secret soft spot for shoujo manga</li></ol>",
-            sketches: [
-              "https://picsum.photos/seed/miyuki1/400/600",
-              "https://picsum.photos/seed/miyuki2/400/600",
-            ],
-          },
-          {
-            id: 3,
-            name: "Kenji Watanabe",
-            motivation:
-              "<p>The <strong>comic relief</strong> who hides a <em>tragic past</em> behind his jokes.</p>",
-            sketches: [],
-          },
-          {
-            id: 4,
-            name: "Yuki Nakamura",
-            motivation:
-              "<p>A <strong>mysterious</strong> rival with <em>unknown</em> motives.</p><ul><li>Rival from childhood</li><li>Extremely talented</li><li>Always one step ahead</li></ul>",
-            sketches: [
-              "https://picsum.photos/seed/yuki1/400/600",
-              "https://picsum.photos/seed/yuki2/400/600",
-              "https://picsum.photos/seed/yuki3/400/600",
-            ],
-          },
-        ]);
+        setSeriesCharacters([]);
       }
 
       if (worldRes.status === "fulfilled") {
         const data = worldRes.value || {};
         setSeriesWorldProfile({
-          worldLoreSections:
-            data.worldLoreSections ||
-            (data.worldLore
-              ? [{ title: "World Lore", description: data.worldLore }]
-              : []),
+          worldLore: data.worldLore || "",
           storyRoadmap: data.storyRoadmap || [],
-          visualReferences: data.visualReferences || data.references || [],
+          visualReferences: data.visualReferences || [],
         });
       } else {
         setSeriesWorldProfile({
-          worldLoreSections: [],
+          worldLore: "",
           storyRoadmap: [],
           visualReferences: [],
         });
@@ -664,7 +619,7 @@ export function SeriesDetailPage() {
   const tantou = series.tantouEditor;
   const isAssignedTantou = isTantou && tantou?.id === user?.id;
   const characters = seriesCharacters;
-  const worldLoreSections = seriesWorldProfile.worldLoreSections;
+  const worldLore = seriesWorldProfile.worldLore;
   const storyRoadmap = seriesWorldProfile.storyRoadmap;
   const visualReferences = seriesWorldProfile.visualReferences;
 
@@ -1097,7 +1052,7 @@ export function SeriesDetailPage() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-panel-gap mb-12">
           {/* ─── LEFT COLUMN (8): Chapters / Characters / World & Plots ─── */}
           <div className="lg:col-span-8 flex flex-col gap-base">
-            <div className="flex items-center gap-2 bg-surface-container rounded-xl p-2 border border-outline-variant/30 w-fit">
+            <div className="flex items-center gap-2 bg-surface-container rounded-xl p-2 border border-outline-variant/30 w-full">
               <button
                 onClick={() => setActiveDetailBlock("chapters")}
                 className={cn(
@@ -1394,98 +1349,99 @@ export function SeriesDetailPage() {
                     </button>
                   )}
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                  <div>
-                    <p className="text-xs text-on-surface-variant uppercase tracking-wider mb-3">
-                      World Lore
-                    </p>
-                    {worldLoreSections.length === 0 ? (
-                      <div className="rounded-xl border border-dashed border-outline-variant/30 bg-surface-container-low/30 p-4 text-sm text-on-surface-variant">
-                        No world lore data yet.
-                      </div>
-                    ) : (
-                      <div className="space-y-3">
-                        {worldLoreSections.map((item, idx) => (
-                          <div
-                            key={idx}
-                            className="rounded-xl bg-surface-container-low border border-outline-variant/20 p-4"
-                          >
-                            <p className="text-sm font-semibold text-primary mb-1">
-                              {item.title || `Lore ${idx + 1}`}
-                            </p>
-                            <p className="text-sm text-on-surface-variant leading-relaxed">
-                              {item.description || item.content}
-                            </p>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
 
-                  <div>
-                    <p className="text-xs text-on-surface-variant uppercase tracking-wider mb-3">
-                      Story Roadmap
-                    </p>
-                    {storyRoadmap.length === 0 ? (
-                      <div className="rounded-xl border border-dashed border-outline-variant/30 bg-surface-container-low/30 p-4 text-sm text-on-surface-variant">
-                        No story roadmap data yet.
-                      </div>
-                    ) : (
-                      <div className="space-y-3">
+                {/* World Lore — full width */}
+                <div className="mb-8">
+                  <p className="text-xs text-on-surface-variant uppercase tracking-wider mb-3">
+                    World Lore
+                  </p>
+                  {!worldLore?.trim() ? (
+                    <div className="rounded-xl border border-dashed border-outline-variant/30 bg-surface-container-low/30 p-4 text-sm text-on-surface-variant">
+                      No world lore data yet.
+                    </div>
+                  ) : (
+                    <div
+                      className="ProseMirror rounded-xl bg-surface-container-low border border-outline-variant/20 p-4 text-sm text-on-surface leading-relaxed"
+                      dangerouslySetInnerHTML={{
+                        __html: worldLore,
+                      }}
+                    />
+                  )}
+                </div>
+
+                {/* Story Roadmap — full width */}
+                <div className="mb-8">
+                  <p className="text-xs text-on-surface-variant uppercase tracking-wider mb-3">
+                    Story Roadmap
+                  </p>
+                  {storyRoadmap.length === 0 ? (
+                    <div className="rounded-xl border border-dashed border-outline-variant/30 bg-surface-container-low/30 p-4 text-sm text-on-surface-variant">
+                      No story roadmap data yet.
+                    </div>
+                  ) : (
+                    <div className="relative">
+                      <div className="absolute left-[11px] top-2 bottom-2 w-0.5 bg-primary/20" />
+                      <div className="space-y-6">
                         {storyRoadmap.map((arc, idx) => (
-                          <div key={idx} className="flex gap-3">
-                            <div
-                              className={cn(
-                                "mt-1.5 w-2.5 h-2.5 rounded-full",
-                                idx === 0 ? "bg-primary" : "bg-outline-variant",
-                              )}
-                            />
-                            <div>
+                          <div key={idx} className="relative flex gap-4 pl-1">
+                            <div className="relative z-10 mt-1.5 flex-shrink-0">
+                              <div className="w-[22px] h-[22px] rounded-full flex items-center justify-center bg-surface-container-high text-on-surface-variant">
+                                <span className="text-[10px] font-bold">
+                                  {idx + 1}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="flex-1 rounded-xl bg-surface-container-low border border-outline-variant/20 p-4">
                               <p className="text-sm font-semibold text-on-surface">
                                 {arc.title || `Arc ${idx + 1}`}
                               </p>
-                              <p className="text-sm text-on-surface-variant leading-relaxed">
+                              <p className="text-sm text-on-surface-variant leading-relaxed mt-1">
                                 {arc.summary || arc.description}
                               </p>
                             </div>
                           </div>
                         ))}
                       </div>
-                    )}
-                  </div>
+                    </div>
+                  )}
                 </div>
 
-                <div className="mt-6">
-                  <p className="text-xs text-on-surface-variant uppercase tracking-wider mb-3">
-                    Visual References
-                  </p>
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                    {(visualReferences.length > 0
-                      ? visualReferences
-                      : [null, null, null]
-                    )
-                      .slice(0, 3)
-                      .map((ref, idx) => (
-                        <div
-                          key={idx}
-                          className="h-24 rounded-xl bg-surface-container-highest border border-outline-variant/20 overflow-hidden flex items-center justify-center"
-                        >
-                          {ref?.url || ref ? (
+                {/* Visual References — full width, hidden if empty */}
+                {visualReferences.length > 0 && (
+                  <div>
+                    <p className="text-xs text-on-surface-variant uppercase tracking-wider mb-3">
+                      Visual References
+                    </p>
+                    <div className="relative">
+                      <div className="flex gap-3 overflow-x-auto flex-nowrap pb-1">
+                        {visualReferences.map((ref, idx) => (
+                          <button
+                            key={idx}
+                            type="button"
+                            onClick={() => {
+                              setSketchLightbox({
+                                images: visualReferences.map((r) => r.url || r),
+                                index: idx,
+                              });
+                              setLightboxBaseSize({ w: 0, h: 0 });
+                              setLightboxZoom(3);
+                            }}
+                            className="relative w-60 h-80 bg-surface-container-highest border border-outline-variant/20 overflow-hidden shrink-0 hover:ring-2 hover:ring-primary transition-all"
+                          >
                             <img
                               src={ref.url || ref}
                               alt={`Visual ref ${idx + 1}`}
                               className="w-full h-full object-cover"
                             />
-                          ) : (
-                            <ImageIcon
-                              size={16}
-                              className="text-on-surface-variant/50"
-                            />
-                          )}
-                        </div>
-                      ))}
+                          </button>
+                        ))}
+                      </div>
+                      {visualReferences.length > 4 && (
+                        <div className="absolute right-0 top-0 bottom-0 w-20 bg-gradient-to-l from-surface-container to-transparent pointer-events-none" />
+                      )}
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             )}
           </div>

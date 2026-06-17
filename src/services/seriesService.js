@@ -231,6 +231,37 @@ const seriesService = {
   },
 
   // ═══════════════════════════════════════════════
+  //  STORY PROFILE — World Lore + Roadmap + Visual Refs
+  // ═══════════════════════════════════════════════
+
+  /**
+   * Lấy story profile của series (world lore, roadmap, visual refs).
+   * GET /api/series/{seriesId}/story-profile
+   *
+   * @param {number} seriesId - ID của series
+   * @returns {Promise<Object>} StoryProfileResponse { worldLore, storyRoadmap, visualReferences }
+   */
+  getStoryProfile: async (seriesId) => {
+    return api.get(`/series/${seriesId}/story-profile`);
+  },
+
+  /**
+   * Lưu story profile (multipart: "storyProfile" JSON + "files" ảnh).
+   * PUT /api/series/{seriesId}/story-profile
+   *
+   * @param {number} seriesId - ID của series
+   * @param {FormData} formData
+   *   - "storyProfile": Blob JSON { worldLoreContent, storyRoadmap, preservedVisualRefUrls }
+   *   - "files" × N: File ảnh visual refs mới
+   * @returns {Promise<Object>} StoryProfileResponse
+   */
+  saveStoryProfile: async (seriesId, formData) => {
+    return api.put(`/series/${seriesId}/story-profile`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
+
+  // ═══════════════════════════════════════════════
   //  SERIES WORKFLOW — Submit / Approve / Reject
   // ═══════════════════════════════════════════════
 

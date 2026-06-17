@@ -136,8 +136,9 @@ export function NewSeriesPage() {
   const [arcTitle, setArcTitle] = useState("");
   const [arcSummary, setArcSummary] = useState("");
   const [storyRoadmap, setStoryRoadmap] = useState([]);
-  const [referenceUrl, setReferenceUrl] = useState("");
   const [visualReferences, setVisualReferences] = useState([]);
+  const [visRefFiles, setVisRefFiles] = useState([]);
+  const [visRefPreviews, setVisRefPreviews] = useState([]);
   const [savingWorldPlot, setSavingWorldPlot] = useState(false);
 
   useEffect(() => {
@@ -225,9 +226,7 @@ export function NewSeriesPage() {
 
       if (worldRes.status === "fulfilled") {
         const data = worldRes.value || {};
-        const lore = Array.isArray(data.worldLoreSections)
-          ? data.worldLoreSections[0]?.description || ""
-          : data.worldLore || "";
+        const lore = data.worldLore || "";
 
         setWorldLore(lore);
         setStoryRoadmap(Array.isArray(data.storyRoadmap) ? data.storyRoadmap : []);
@@ -498,30 +497,53 @@ export function NewSeriesPage() {
     setArcSummary("");
   };
 
-  const addReference = () => {
-    if (!referenceUrl.trim()) return;
-    setVisualReferences((prev) => [...prev, { url: referenceUrl.trim() }]);
-    setReferenceUrl("");
-  };
-
   const removeRoadmap = (index) =>
     setStoryRoadmap((prev) => prev.filter((_, idx) => idx !== index));
 
   const removeReference = (index) =>
     setVisualReferences((prev) => prev.filter((_, idx) => idx !== index));
 
+  const handlePickVisRef = (files) => {
+    if (!files || files.length === 0) return;
+    setVisRefFiles((prev) => [...prev, ...files]);
+    files.forEach((file) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = String(reader.result || "");
+        setVisRefPreviews((prev) => [...prev, result]);
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleRemoveVisRef = (index) => {
+    setVisRefFiles((prev) => prev.filter((_, i) => i !== index));
+    setVisRefPreviews((prev) => prev.filter((_, i) => i !== index));
+  };
+
   const handleSaveWorldPlot = async () => {
     if (!isEdit || !seriesId) return;
 
     setSavingWorldPlot(true);
     try {
-      await api.put(`/series/${seriesId}/story-profile`, {
-        worldLoreSections: worldLore
-          ? [{ title: "World Lore", description: worldLore }]
-          : [],
+      const body = {
+        worldLoreContent: worldLore || null,
         storyRoadmap,
-        visualReferences,
-      });
+        preservedVisualRefUrls: visualReferences.map((r) => r.url || r),
+      };
+
+      const formData = new FormData();
+      formData.append(
+        "storyProfile",
+        new Blob([JSON.stringify(body)], { type: "application/json" }),
+        "storyProfile.json",
+      );
+      visRefFiles.forEach((file) => formData.append("files", file));
+
+      await seriesService.saveStoryProfile(Number(seriesId), formData);
+
+      setVisRefFiles([]);
+      setVisRefPreviews([]);
 
       addToast({
         type: "success",
@@ -535,7 +557,7 @@ export function NewSeriesPage() {
         title: "Save failed",
         message:
           err?.response?.data?.message ||
-          "Story profile API is not available yet on backend.",
+          "Failed to save story profile.",
       });
     } finally {
       setSavingWorldPlot(false);
@@ -881,11 +903,12 @@ export function NewSeriesPage() {
           onAddArc={addRoadmapItem}
           storyRoadmap={storyRoadmap}
           onRemoveRoadmap={removeRoadmap}
-          referenceUrl={referenceUrl}
-          onReferenceUrlChange={setReferenceUrl}
-          onAddReference={addReference}
           visualReferences={visualReferences}
           onRemoveReference={removeReference}
+          refFiles={visRefFiles}
+          refPreviews={visRefPreviews}
+          onRefPick={handlePickVisRef}
+          onRefRemove={handleRemoveVisRef}
           onSave={handleSaveWorldPlot}
           saving={savingWorldPlot}
           saveLabel="Save World & Plot"
