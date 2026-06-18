@@ -93,6 +93,10 @@ api.interceptors.request.use(
  */
 api.interceptors.response.use(
   (response) => {
+    // Blob response → trả về full response để lấy headers (Content-Disposition, filename)
+    if (response.config.responseType === 'blob') {
+      return response;
+    }
     // Request thành công (status 2xx) → trả về data luôn
     // Giúp component gọi API không cần .then(res => res.data)
     return response.data;

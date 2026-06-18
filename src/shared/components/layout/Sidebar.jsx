@@ -40,6 +40,12 @@ const extraNav = [
     path: "/schedule",
     roles: ["EDITORIAL_BOARD", "CHIEF_EDITOR"],
   },
+  {
+    label: "Rankings",
+    icon: "leaderboard",
+    path: "/rankings",
+    roles: ["EDITORIAL_BOARD", "CHIEF_EDITOR"],
+  },
 
 ];
 

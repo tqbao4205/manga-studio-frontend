@@ -32,6 +32,7 @@ import { TasksPage } from "../features/tasks/TasksPage";
 import { ChapterDetailPage } from "../features/series/ChapterDetailPage";
 import { ProfilePage } from "../features/profile/ProfilePage";
 import { SchedulePage } from "../features/schedule/SchedulePage";
+import { RankingPage } from "../features/ranking/RankingPage";
 import { InvitationsPage } from "../features/invitations/InvitationsPage";
 import { TantouInvitationsPage } from "../features/invitations/TantouInvitationsPage";
 import { NotFoundPage } from "../features/not-found/NotFoundPage";
@@ -222,6 +223,16 @@ export default function App() {
             element={
               <RoleGuard allowedRoles={["EDITORIAL_BOARD", "CHIEF_EDITOR"]}>
                 <SchedulePage />
+              </RoleGuard>
+            }
+          />
+
+          {/* Rankings — bảng xếp hạng series (chỉ EDITORIAL_BOARD + CHIEF_EDITOR) */}
+          <Route
+            path="/rankings"
+            element={
+              <RoleGuard allowedRoles={["EDITORIAL_BOARD", "CHIEF_EDITOR"]}>
+                <RankingPage />
               </RoleGuard>
             }
           />
