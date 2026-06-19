@@ -189,11 +189,11 @@ export default function App() {
           />
 
           {/* ─── Editorial Board Meetings ─── */}
-          {/* Danh sách cuộc họp — EDITORIAL_BOARD + CHIEF_EDITOR (Chief tạo + kết thúc) */}
+          {/* Danh sách cuộc họp — EDITORIAL_BOARD + CHIEF_EDITOR + TANTOU_EDITOR */}
           <Route
             path="/editorial"
             element={
-              <RoleGuard allowedRoles={["EDITORIAL_BOARD", "CHIEF_EDITOR"]}>
+              <RoleGuard allowedRoles={["EDITORIAL_BOARD", "CHIEF_EDITOR", "TANTOU_EDITOR"]}>
                 <EditorialBoardPage />
               </RoleGuard>
             }
@@ -207,11 +207,11 @@ export default function App() {
               </RoleGuard>
             }
           />
-          {/* Trang kết quả vote — EDITORIAL_BOARD + CHIEF_EDITOR (Chief mới được Finalize) */}
+          {/* Trang kết quả vote — EDITORIAL_BOARD + CHIEF_EDITOR + TANTOU_EDITOR (read-only) */}
           <Route
             path="/editorial/:meetingId/results"
             element={
-              <RoleGuard allowedRoles={["EDITORIAL_BOARD", "CHIEF_EDITOR"]}>
+              <RoleGuard allowedRoles={["EDITORIAL_BOARD", "CHIEF_EDITOR", "TANTOU_EDITOR"]}>
                 <VotingResultsPage />
               </RoleGuard>
             }

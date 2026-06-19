@@ -3,6 +3,8 @@ import { create } from 'zustand'
 import authService from '../../services/authService'
 import { connectWebSocket, disconnectWebSocket } from '../../services/websocket'
 import { useNotificationStore } from './notificationStore'
+import { useEditorialStore } from './editorialStore'
+import { useSeriesStore } from './seriesStore'
 
 /**
  * ─────────────────────────────────────────────
@@ -100,10 +102,27 @@ const handleWebSocketMessage = (type, data) => {
       useAuthStore.getState().incrementTantouTrigger()
       break
 
+    case 'MEETING_UPDATED':
+    case 'MEETING_COMPLETED':
+    case 'MEETING_DECISION_MADE':
+      // Update store trực tiếp từ WebSocket data (không gọi API)
+      useEditorialStore.getState().updateMeeting(data)
+      break
+
+    case 'MEETING_INVITATION':
+      // Invitation không có MeetingResponse, trigger refetch
+      useAuthStore.getState().incrementMeetingTrigger()
+      break
+
+    case 'SERIES_STATUS_UPDATED':
+      // Update series status realtime cho mangaka
+      useSeriesStore.getState().updateSeriesStatus(data.id, data.status)
+      break
+
     case 'NOTIFICATION':
       // Nhận notification realtime từ backend → thêm vào notificationStore
       useNotificationStore.getState().addNotification(data)
-      // Nếu notification type liên quan đến task → trigger refetch task list
+      // Trigger refetch cho TASK_ events (MEETING_ events đã handled qua direct push)
       if (data && typeof data.type === 'string' && data.type.startsWith('TASK_')) {
         useAuthStore.getState().incrementTaskTrigger()
       }
@@ -164,6 +183,17 @@ export const useAuthStore = create((set, get) => ({
    *   - SeriesDetailPage watch bi?n này → useEffect phát hi?n thay d?i → refetch series
    */
   tantouTrigger: 0,
+
+  /**
+  /**
+   * meetingTrigger: Biến đếm trigger refetch danh sách meetings.
+   *
+   * Cách hoạt động:
+   *   - Khi WebSocket nhận NOTIFICATION với type MEETING_INVITATION
+   *   → incrementMeetingTrigger() được gọi
+   *   - EditorialBoardPage watch biến này → useEffect phát hiện thay đổi → refetch meetings
+   */
+  meetingTrigger: 0,
 
   /**
    * taskTrigger: Biến đếm trigger refetch danh sách tasks.
@@ -452,5 +482,16 @@ export const useAuthStore = create((set, get) => ({
    */
   incrementTaskTrigger: () => {
     set((state) => ({ taskTrigger: state.taskTrigger + 1 }))
+  },
+
+  // ────────────────────────────────────────────────
+  //  10. INCREMENT MEETING TRIGGER — Báo hiệu cần refetch meetings
+  // ────────────────────────────────────────────────
+  /**
+   * Tăng meetingTrigger lên 1 khi WebSocket nhận MEETING_ event.
+   * EditorialBoardPage watch biến này để tự động refetch meetings.
+   */
+  incrementMeetingTrigger: () => {
+    set((state) => ({ meetingTrigger: state.meetingTrigger + 1 }))
   },
 }))

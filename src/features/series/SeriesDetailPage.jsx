@@ -145,7 +145,7 @@ export function SeriesDetailPage() {
       fetchById(id);
       fetchChapters(id);
     }
-  }, [id, fetchById, fetchChapters]);
+  }, [id, fetchById, fetchChapters, tantouTrigger]);
 
   const series = currentSeries;
   const isMangaka = user?.role === "MANGAKA";
@@ -577,11 +577,11 @@ export function SeriesDetailPage() {
         title: "Chapter updated",
         message: `Chapter has been ${labelMap[newStatus] || "updated"}.`,
       });
-    } catch {
+    } catch (err) {
       addToast({
         type: "error",
         title: "Error",
-        message: "Failed to update chapter status.",
+        message: err?.response?.data?.message || "Failed to update chapter status.",
       });
     }
   };
@@ -672,7 +672,7 @@ export function SeriesDetailPage() {
         ch.status === "PLANNED" ||
         ch.status === "IN_PROGRESS")
     ) {
-      const canSubmit = ch.progressPercent === 100;
+      const canSubmit = ch.progressPercent === 100 && series?.status === "ONGOING";
       return (
         <button
           onClick={(e) => {
@@ -685,13 +685,13 @@ export function SeriesDetailPage() {
               ? "bg-primary-container text-on-primary-container active:scale-95"
               : "bg-surface-container-highest text-on-surface-variant/50 cursor-not-allowed"
           }`}
-          title={canSubmit ? "Submit for review" : "Complete all pages first"}
+          title={canSubmit ? "Submit for review" : series?.status !== "ONGOING" ? "Series must be ONGOING first" : "Complete all pages first"}
         >
           {canSubmit ? (
             "Submit"
           ) : (
             <>
-              <Lock size={12} className="inline mr-1" /> Incomplete
+              <Lock size={12} className="inline mr-1" /> {series?.status !== "ONGOING" ? "Not available" : "Incomplete"}
             </>
           )}
         </button>
@@ -712,7 +712,7 @@ export function SeriesDetailPage() {
       );
     }
     if (isOwner && ch.status === "REVISION_REQUIRED") {
-      const canSubmit = ch.progressPercent === 100;
+      const canSubmit = ch.progressPercent === 100 && series?.status === "ONGOING";
       return (
         <button
           onClick={(e) => {
@@ -725,13 +725,13 @@ export function SeriesDetailPage() {
               ? "bg-primary-container text-on-primary-container active:scale-95"
               : "bg-surface-container-highest text-on-surface-variant/50 cursor-not-allowed"
           }`}
-          title={canSubmit ? "Resubmit for review" : "Complete all pages first"}
+          title={canSubmit ? "Resubmit for review" : series?.status !== "ONGOING" ? "Series must be ONGOING first" : "Complete all pages first"}
         >
           {canSubmit ? (
             "Resubmit"
           ) : (
             <>
-              <Lock size={12} className="inline mr-1" /> Incomplete
+              <Lock size={12} className="inline mr-1" /> {series?.status !== "ONGOING" ? "Not available" : "Incomplete"}
             </>
           )}
         </button>

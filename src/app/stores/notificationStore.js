@@ -41,7 +41,6 @@ import {
   markAsRead as markAsReadApi,
   markAllAsRead as markAllAsReadApi,
 } from '../../services/notificationService'
-import { useUIStore } from './uiStore'
 
 export const useNotificationStore = create((set, get) => ({
   // ══════════════════════════════════════════════════════════════
@@ -224,11 +223,6 @@ export const useNotificationStore = create((set, get) => ({
       unreadCount: state.unreadCount + 1,
     }))
 
-    // Hiển thị toast notification ngắn gọn trên UI
-    // Dùng uiStore.addToast() — tự động ẩn sau 5 giây
-    useUIStore.getState().addToast({
-      type: 'info',
-      message: notification.title,  // VD: "New task: Castle Background"
-    })
+
   },
 }))

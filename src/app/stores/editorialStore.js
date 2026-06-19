@@ -41,6 +41,13 @@ export const CHIEF_EDITOR_ID = 7
 export const isChiefEditor = (user) =>
   user?.role === 'CHIEF_EDITOR' || (!user?.role && user?.id === CHIEF_EDITOR_ID)
 
+/**
+ * Kiểm tra user có phải Tantou Editor không.
+ * @param {Object|null} user
+ * @returns {boolean}
+ */
+export const isTantouEditor = (user) => user?.role === 'TANTOU_EDITOR'
+
 export const useEditorialStore = create((set, get) => ({
   /** Danh sách meetings load từ API */
   meetings: [],
@@ -181,6 +188,21 @@ export const useEditorialStore = create((set, get) => ({
       throw err
     }
   },
+
+  // ─────────────────────────────────────────────────────────
+  //  UPDATE FROM WS — Cập nhật meeting từ WebSocket realtime
+  // ─────────────────────────────────────────────────────────
+  /**
+   * Được gọi từ authStore.handleWebSocketMessage khi nhận MEETING_UPDATED / MEETING_COMPLETED.
+   * Update trực tiếp store, không gọi API, không loading.
+   *
+   * @param {Object} meetingData - MeetingResponse từ backend
+   */
+  updateMeeting: (meetingData) => set((s) => ({
+    meetings: s.meetings.map((m) =>
+      m && m.id === meetingData.id ? meetingData : m
+    ),
+  })),
 
   // ─────────────────────────────────────────────────────────
   //  HELPERS: Derived state (tính local, không gọi API)
