@@ -143,6 +143,8 @@ export function VotingResultsPage() {
     load();
   }, [meetingId, fetchMeetingById]);
 
+  // Re-render khi WebSocket push MEETING_UPDATED / MEETING_COMPLETED
+  // (store subscription tự động trigger re-render qua useEditorialStore)
   const meeting = useEditorialStore((s) => s.meetings.find((m) => m.id === Number(meetingId)));
   const isChief = isChiefEditor(user);
 
@@ -201,7 +203,7 @@ export function VotingResultsPage() {
     } catch (err) {
       addToast({
         title: "Decision failed",
-        description: err.message || "Không thể ghi nhận quyết định.",
+        description: err?.response?.data?.message || err.message || "Cannot record decision.",
         variant: "error",
       });
     }
@@ -356,7 +358,7 @@ export function VotingResultsPage() {
       </section>
 
       {/* ── Chief Editor: Finalize button ── */}
-      {isChief && !meeting.decision && !localDecision && total > 0 && (
+      {isChief && !meeting.decision && !localDecision && meeting.status === 'COMPLETED' && (
         <div className="flex justify-end">
           <button
             className="bg-primary text-on-primary py-3 px-8 rounded-xl font-bold active:scale-95 hover:brightness-110 transition-all flex items-center gap-2 shadow-lg shadow-primary/10"

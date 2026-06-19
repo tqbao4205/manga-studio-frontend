@@ -205,4 +205,24 @@ export const useSeriesStore = create((set, get) => ({
       throw err
     }
   },
+
+  // ────────────────────────────────────────────
+  //  WS UPDATE — Cập nhật series từ WebSocket realtime
+  // ────────────────────────────────────────────
+  /**
+   * Cập nhật status series từ WebSocket event SERIES_STATUS_UPDATED.
+   * Update cả currentSeries (SeriesDetailPage) + seriesList (SeriesListPage).
+   * Không gọi API, không loading.
+   *
+   * @param {number} seriesId
+   * @param {string} newStatus - 'ONGOING' | 'DRAFT'
+   */
+  updateSeriesStatus: (seriesId, newStatus) => set((s) => ({
+    currentSeries: s.currentSeries?.id === seriesId
+      ? { ...s.currentSeries, status: newStatus }
+      : s.currentSeries,
+    seriesList: s.seriesList.map((series) =>
+      series.id === seriesId ? { ...series, status: newStatus } : series
+    ),
+  })),
 }))

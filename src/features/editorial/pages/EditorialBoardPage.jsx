@@ -18,6 +18,7 @@ import { useAuthStore } from "../../../app/stores/authStore";
 import {
   useEditorialStore,
   isChiefEditor,
+  isTantouEditor,
 } from "../../../app/stores/editorialStore";
 import { CreateMeetingModal } from "../components/CreateMeetingModal";
 
@@ -68,7 +69,7 @@ function CoverPlaceholder({ seriesId, seriesTitle, coverImageUrl, coverColor }) 
 }
 
 // ── Single Meeting Row Card ──
-function MeetingCard({ meeting, isChief }) {
+function MeetingCard({ meeting, isChief, isTantou }) {
   const navigate = useNavigate();
   const statusCfg = STATUS_CONFIG[meeting.status] || STATUS_CONFIG.PENDING;
 
@@ -89,8 +90,8 @@ function MeetingCard({ meeting, isChief }) {
     if (meeting.status === "COMPLETED") {
       navigate(`/editorial/${meeting.id}/results`);
     } else if (meeting.status === "PENDING") {
-      // Chief không có quyền vote, chỉ xem kết quả
-      navigate(isChief ? `/editorial/${meeting.id}/results` : `/editorial/${meeting.id}/vote`);
+      // Chief + Tantou không có quyền vote, chỉ xem kết quả
+      navigate(isChief || isTantou ? `/editorial/${meeting.id}/results` : `/editorial/${meeting.id}/vote`);
     }
   };
 
@@ -140,6 +141,18 @@ function MeetingCard({ meeting, isChief }) {
             <span className="material-symbols-outlined text-base">group</span>
             <span>{(meeting.participants || []).length} Participants</span>
           </div>
+          {meeting.meetingLink && (
+            <a
+              href={meeting.meetingLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 mt-1.5 text-xs text-primary hover:underline"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <span className="material-symbols-outlined text-sm">open_in_new</span>
+              {meeting.meetingLink}
+            </a>
+          )}
         </div>
       </div>
 
@@ -197,7 +210,18 @@ function MeetingCard({ meeting, isChief }) {
           className="flex gap-2 items-center"
           onClick={(e) => e.stopPropagation()}
         >
-          {meeting.status === "PENDING" && !isChief && (
+          {meeting.meetingLink && (
+            <a
+              href={meeting.meetingLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-10 h-10 flex items-center justify-center rounded-xl bg-surface-container hover:bg-surface-bright transition-colors border border-outline-variant/30 text-primary"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <span className="material-symbols-outlined">open_in_new</span>
+            </a>
+          )}
+          {meeting.status === "PENDING" && !isChief && !isTantou && (
             <button
               className="w-10 h-10 flex items-center justify-center rounded-xl bg-surface-container hover:bg-surface-bright transition-colors border border-primary/30 text-primary"
               onClick={() => navigate(`/editorial/${meeting.id}/vote`)}
@@ -225,16 +249,18 @@ export function EditorialBoardPage() {
   const meetings = useEditorialStore((s) => s.meetings);
   const loading = useEditorialStore((s) => s.loading);
   const fetchMeetings = useEditorialStore((s) => s.fetchMeetings);
+  const meetingTrigger = useAuthStore((s) => s.meetingTrigger);
 
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [activeFilter, setActiveFilter] = useState("ALL");
 
   const isChief = isChiefEditor(user);
+  const isTantou = isTantouEditor(user);
 
-  // Fetch meetings từ API khi mount component
+  // Fetch meetings từ API khi mount component hoặc khi nhận MEETING_ event realtime
   useEffect(() => {
     fetchMeetings()
-  }, [fetchMeetings])
+  }, [fetchMeetings, meetingTrigger])
 
   // Lọc meetings theo tab
   const filteredMeetings = meetings.filter((m) => {
@@ -335,6 +361,7 @@ export function EditorialBoardPage() {
                 key={meeting.id}
                 meeting={meeting}
                 isChief={isChief}
+                isTantou={isTantou}
               />
             ))
           )

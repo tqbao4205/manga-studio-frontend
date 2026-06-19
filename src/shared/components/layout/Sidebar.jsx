@@ -32,7 +32,7 @@ const extraNav = [
     label: "Editorial Reviews",
     icon: "groups",
     path: "/editorial",
-    roles: ["EDITORIAL_BOARD", "CHIEF_EDITOR"],
+    roles: ["EDITORIAL_BOARD", "CHIEF_EDITOR", "TANTOU_EDITOR"],
   },
   {
     label: "Schedule",

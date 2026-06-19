@@ -7,7 +7,7 @@
   ============================================================
 */
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useAuthStore } from "../../../app/stores/authStore";
 import { useUIStore } from "../../../app/stores/uiStore";
 import { useEditorialStore } from "../../../app/stores/editorialStore";
@@ -56,8 +56,10 @@ export function CreateMeetingModal({ onClose }) {
   const [pendingSeries, setPendingSeries] = useState([]);
   const [seriesLoading, setSeriesLoading] = useState(true);
 
-  // Danh sách user có thể mời (EDITORIAL_BOARD + TANTOU_EDITOR)
-  const [availableUsers, setAvailableUsers] = useState([]);
+  // Danh sách EDITORIAL_BOARD (luôn hiện)
+  const [boardMembers, setBoardMembers] = useState([]);
+  // Tantou editor của series được chọn (fetch riêng)
+  const [seriesTantou, setSeriesTantou] = useState(null);
   const [usersLoading, setUsersLoading] = useState(true);
 
   useEffect(() => {
@@ -77,24 +79,14 @@ export function CreateMeetingModal({ onClose }) {
         if (!cancelled) setSeriesLoading(false);
       });
 
-    // Fetch EDITORIAL_BOARD + TANTOU_EDITOR để chọn participant
+    // Fetch EDITORIAL_BOARD (chỉ EB, tantou sẽ fetch riêng theo series)
     setUsersLoading(true);
-    Promise.all([
-      api.get('/users/board-members'),
-      api.get('/users/tantou-editors'),
-    ])
-      .then(([boardMembers, tantouEditors]) => {
-        if (!cancelled) {
-          // Gộp 2 danh sách, loại bỏ trùng lặp (nếu có)
-          const all = [...(boardMembers || []), ...(tantouEditors || [])];
-          const unique = Array.from(
-            new Map(all.map((u) => [u.id, u])).values()
-          );
-          setAvailableUsers(unique);
-        }
+    api.get('/users/board-members')
+      .then((data) => {
+        if (!cancelled) setBoardMembers(data || []);
       })
       .catch(() => {
-        if (!cancelled) setAvailableUsers([]);
+        if (!cancelled) setBoardMembers([]);
       })
       .finally(() => {
         if (!cancelled) setUsersLoading(false);
@@ -117,11 +109,38 @@ export function CreateMeetingModal({ onClose }) {
   );
   const [submitting, setSubmitting] = useState(false);
 
-  const isValid = form.seriesId && form.title.trim() && form.scheduledAt;
+  const isValid = form.seriesId && form.title.trim() && form.scheduledAt
+    && selectedParticipants.length > 1;
 
   const selectedSeries = pendingSeries.find(
     (s) => s.id === Number(form.seriesId),
   );
+
+  // Khi series thay đổi → fetch tantou editor của series đó
+  useEffect(() => {
+    if (!form.seriesId) {
+      setSeriesTantou(null);
+      return;
+    }
+    let cancelled = false;
+    seriesService.getById(Number(form.seriesId))
+      .then((series) => {
+        if (!cancelled) setSeriesTantou(series.tantouEditor || null);
+      })
+      .catch(() => {
+        if (!cancelled) setSeriesTantou(null);
+      });
+    return () => { cancelled = true; };
+  }, [form.seriesId]);
+
+  // Combine board members + series tantou
+  const availableUsers = useMemo(() => {
+    const users = [...boardMembers];
+    if (seriesTantou && !users.some(u => u.id === seriesTantou.id)) {
+      users.push(seriesTantou);
+    }
+    return users;
+  }, [boardMembers, seriesTantou]);
 
   const toggleParticipant = (userId) => {
     // Không cho bỏ chọn chính mình (user hiện tại luôn là người tạo)
