@@ -30,7 +30,7 @@ export const tasksListService = {
   resolveRegionSeriesLookup: async (tasks = [], seriesItems = []) => {
     const neededRegionIds = new Set(
       tasks
-        .map((task) => task?.regionId)
+        .flatMap((task) => (task?.regions || []).map((r) => r.id))
         .filter(Boolean)
         .map((id) => Number(id)),
     )

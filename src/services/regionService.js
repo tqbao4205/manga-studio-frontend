@@ -35,6 +35,18 @@ const regionService = {
   },
 
   /**
+   * Lấy danh sách region IDs có task DONE trong page.
+   * Frontend dùng để ẩn regions đã hoàn thành khi load page.
+   * Endpoint: GET /api/v1/pages/{pageId}/regions/done-ids
+   *
+   * @param {number} pageId - ID của page
+   * @returns {Promise<Array<number>>} Mảng region IDs
+   */
+  getDoneRegionIds: async (pageId) => {
+    return api.get(`/v1/pages/${pageId}/regions/done-ids`);
+  },
+
+  /**
    * Tạo region mới trên page.
    * Endpoint: POST /api/v1/pages/{pageId}/regions
    *

@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { X, Share2, MoreVertical, ArrowUpRight, Download, Eye, Flag, CalendarDays, Upload, Loader2 } from "lucide-react";
 import { Avatar } from "../../../shared/components/ui/avatar";
-import { cn, formatDate } from "../../../shared/utils";
+import { cn, formatDate, forceDownload } from "../../../shared/utils";
 import { useAuthStore } from "../../../app/stores/authStore";
 import { useUIStore } from "../../../app/stores/uiStore";
 import taskService from "../../../services/taskService";
@@ -11,7 +11,7 @@ function statusBadge(status) {
     return { label: "DONE", className: "bg-tertiary/20 text-tertiary" };
   }
   if (
-    ["IN_PROGRESS", "SUBMITTED", "IN_REVIEW", "REVISION_REQUIRED"].includes(
+    ["IN_PROGRESS", "SUBMITTED", "IN_REVIEW", "REVISION_REQUIRED", "REVISE"].includes(
       status,
     )
   ) {
@@ -34,11 +34,8 @@ export function TaskDetailsDrawer({
   onOpenWorkspace,
   onTaskUpdated,
 }) {
-  if (!open) return null;
-
   const user = useAuthStore((s) => s.user);
   const addToast = useUIStore((s) => s.addToast);
-  const status = statusBadge(task?.status);
   const imgRef = useRef(null);
   const [imgMeta, setImgMeta] = useState({ cw: 0, ch: 0, nw: 0, nh: 0 });
   const [submitFile, setSubmitFile] = useState(null);
@@ -73,14 +70,16 @@ export function TaskDetailsDrawer({
     return () => ro.disconnect();
   }, [open]);
 
-  const bboxStyle = (() => {
-    const { cw, ch, nw, nh } = imgMeta;
-    if (!cw || !ch || !nw || !nh) return null;
+  if (!open) return null;
 
-    // Fallback nếu chưa có toạ độ thật (backend chưa rebuild)
-    if (task?.regionX == null || task?.regionY == null || task?.regionWidth == null || task?.regionHeight == null) {
-      return { left: '25%', top: '35%', width: '20%', height: '20%' };
-    }
+  const status = statusBadge(task?.status);
+
+  const bboxStyles = (() => {
+    const { cw, ch, nw, nh } = imgMeta;
+    if (!cw || !ch || !nw || !nh) return [];
+
+    const regions = task?.regions || [];
+    if (regions.length === 0) return [];
 
     const cAspect = cw / ch;
     const iAspect = nw / nh;
@@ -96,22 +95,23 @@ export function TaskDetailsDrawer({
     const baseH = task?.pageHeight || nh;
     const sX = dW / baseW;
     const sY = dH / baseH;
-    return {
-      left: oX + task.regionX * sX,
-      top: oY + task.regionY * sY,
-      width: Math.max(task.regionWidth * sX, 24),
-      height: Math.max(task.regionHeight * sY, 12),
-    };
+
+    return regions.map(r => ({
+      id: r.id,
+      left: oX + (r.x || 0) * sX,
+      top: oY + (r.y || 0) * sY,
+      width: Math.max((r.width || 0) * sX, 24),
+      height: Math.max((r.height || 0) * sY, 12),
+      label: r.label || r.regionType || 'FOCUS',
+      color: r.color || '#6b7280',
+    }));
   })();
 
   const handleDownload = (url, name) => {
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = name;
-    a.click();
+    forceDownload(url, name);
   };
 
-  const canSubmit = task?.status && ["TODO", "IN_PROGRESS", "REJECTED"].includes(task.status) && !(task.submissions || []).some((s) => s.status === "SUBMITTED");
+  const canSubmit = task?.status && ["IN_PROGRESS"].includes(task.status) && !(task.submissions || []).some((s) => s.status === "SUBMITTED");
 
   const handleSubmitWork = async () => {
     if (!submitFile) return;
@@ -211,23 +211,72 @@ export function TaskDetailsDrawer({
                 </div>
               </section>
 
-              {/* Image preview with bounding box */}
+              {/* Image preview with bounding boxes */}
               {task?.pageImageUrl && (
                 <section>
                   <div ref={imgRef} className="relative bg-surface-container-high rounded-lg overflow-hidden border border-outline-variant/20 w-full h-[480px]">
                     <img src={task.pageImageUrl} alt="" className="w-full h-full object-contain" />
-                    {bboxStyle && (
-                      <div className="absolute border-2 border-primary-container bg-primary-container/10 ring-4 ring-primary/20"
+                    {bboxStyles.map(box => (
+                      <div key={box.id} className="absolute border-2 rounded-sm"
                         style={{
-                          left: bboxStyle.left,
-                          top: bboxStyle.top,
-                          width: bboxStyle.width,
-                          height: bboxStyle.height,
+                          left: box.left,
+                          top: box.top,
+                          width: box.width,
+                          height: box.height,
+                          borderColor: box.color,
+                          backgroundColor: box.color + '15',
                         }}
                       >
-                        <div className="absolute -top-2.5 -left-2.5 bg-primary-container text-white px-2 py-0.5 rounded text-[9px] font-bold whitespace-nowrap leading-none">
-                          {task.regionLabel || task.regionType || "FOCUS"}
+                        <div className="absolute -top-2.5 -left-2.5 text-white px-2 py-0.5 rounded text-[9px] font-bold whitespace-nowrap leading-none"
+                          style={{ backgroundColor: box.color }}
+                        >
+                          {box.label}
                         </div>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              )}
+
+              {/* Region Information */}
+              {task?.regions?.length > 0 && (
+                <section>
+                  <h3 className="mb-3 text-sm font-bold uppercase text-on-surface-variant">
+                    {task.regions.length > 1 ? `Regions (${task.regions.length})` : 'Region Information'}
+                  </h3>
+                  <div className="rounded-xl border border-outline-variant/30 bg-surface-container-low p-4">
+                    {task.regions.length === 1 ? (
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <p className="text-[10px] uppercase text-on-surface-variant">Type</p>
+                          <p className="text-sm font-bold text-on-surface">{task.regions[0].regionType || '-'}</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] uppercase text-on-surface-variant">Label</p>
+                          <p className="text-sm font-bold text-on-surface">{task.regions[0].label || '-'}</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] uppercase text-on-surface-variant">Size</p>
+                          <p className="text-sm font-bold text-on-surface">{task.regions[0].width || 0} &times; {task.regions[0].height || 0}</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] uppercase text-on-surface-variant">Position</p>
+                          <p className="text-sm font-bold text-on-surface">({task.regions[0].x || 0}, {task.regions[0].y || 0})</p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {task.regions.slice(0, 5).map(r => (
+                          <div key={r.id} className="flex items-center gap-2 text-sm">
+                            <span className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                              style={{ backgroundColor: r.color || '#6b7280' }} />
+                            <span className="font-medium text-on-surface">{r.label || `Region #${r.id}`}</span>
+                            <span className="text-on-surface-variant/50 text-[10px] uppercase ml-auto">{r.regionType || ''}</span>
+                          </div>
+                        ))}
+                        {task.regions.length > 5 && (
+                          <p className="text-[10px] text-on-surface-variant/50">...and {task.regions.length - 5} more</p>
+                        )}
                       </div>
                     )}
                   </div>

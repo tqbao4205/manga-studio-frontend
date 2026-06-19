@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { X, CalendarDays, ChevronDown, Loader2, Eye, Upload } from "lucide-react";
 import { useWorkspaceStore } from "../../../app/stores/workspaceStore";
+import { cn } from "../../utils";
 import assistantService from "../../../services/assistantService";
 
 const PRIORITIES = ["LOW", "MEDIUM", "HIGH", "URGENT"];
@@ -13,7 +14,7 @@ const PRIORITY_COLORS = {
   URGENT: "bg-error/20 text-error border-error/40",
 };
 
-export function CreateTaskModal({ open, region, page, seriesId: propSeriesId, onClose, onSubmit }) {
+export function CreateTaskModal({ open, regions, page, seriesId: propSeriesId, onClose, onSubmit }) {
   const storeSeriesId = useWorkspaceStore((s) => s.seriesId);
   const seriesId = propSeriesId || storeSeriesId;
 
@@ -31,9 +32,10 @@ export function CreateTaskModal({ open, region, page, seriesId: propSeriesId, on
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    if (!region) return;
-    setTitle(`${region.regionType || "Task"} - ${region.label || "Region"}`);
-  }, [region]);
+    if (!regions || regions.length === 0) return;
+    const first = regions[0];
+    setTitle(`${first.regionType || "Task"} - ${first.label || "Region"}${regions.length > 1 ? ` (+${regions.length - 1} more)` : ''}`);
+  }, [regions]);
 
   useEffect(() => {
     if (!open || !seriesId) return;
@@ -61,7 +63,7 @@ export function CreateTaskModal({ open, region, page, seriesId: propSeriesId, on
       .finally(() => setLoadingAssistants(false));
   }, [open, seriesId]);
 
-  if (!open || !region) return null;
+  if (!open || !regions || regions.length === 0) return null;
 
   const handleSubmit = async () => {
     console.log("[CreateTaskModal] submit check — title:", title, "assistantId:", assistantId);
@@ -94,31 +96,28 @@ export function CreateTaskModal({ open, region, page, seriesId: propSeriesId, on
     <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
       <div className="w-full max-w-5xl max-h-[90vh] rounded-xl border border-outline-variant/30 bg-surface shadow-2xl overflow-hidden flex flex-col">
         <div className="flex-1 flex overflow-hidden">
-          <div className="w-[38%] border-r border-outline-variant/20 bg-surface-container-low/50 p-5 flex flex-col gap-5 overflow-y-auto">
-            <div className="relative bg-surface-container-high rounded-lg overflow-hidden border border-outline-variant/20 group flex-1 min-h-[260px]">
-              {pageImg ? (
+          <div className="w-[38%] border-r border-outline-variant/20 bg-surface-container-low/50 p-5 flex flex-col gap-4 overflow-y-auto">
+            {pageImg && (
+              <div className="relative bg-surface-container-high rounded-lg overflow-hidden border border-outline-variant/20 flex-1 min-h-[200px]">
                 <img src={pageImg} alt="" className="w-full h-full object-cover" />
-              ) : (
-                <div className="flex items-center justify-center h-full text-on-surface-variant/40 text-sm">No preview</div>
-              )}
-              <div className="absolute top-[35%] left-[25%] border-2 border-primary-container bg-primary-container/10 ring-4 ring-primary/20 flex items-center justify-center"
-                style={{ width: Math.max(region.width * 0.15, 80), height: Math.max(region.height * 0.15, 80) }}>
-                <div className="absolute -top-2.5 -left-2.5 bg-primary-container text-white px-2 py-0.5 rounded text-[10px] font-bold">{region.regionType || "FOCUS"}</div>
               </div>
-            </div>
+            )}
 
             <div className="bg-surface-container rounded-lg p-4 border border-outline-variant/20">
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-primary mb-3">Region Information</h3>
-              <div className="grid grid-cols-2 gap-3">
-                {[
-                  ["Type", region.regionType || "—"],
-                  ["Label", region.label || `#${region.id}`],
-                  ["Size", `${Math.round(region.width)} x ${Math.round(region.height)} px`],
-                  ["Coords", `x:${Math.round(region.x)} y:${Math.round(region.y)}`],
-                ].map(([label, value]) => (
-                  <div key={label}>
-                    <p className="text-[10px] uppercase tracking-wide text-on-surface-variant/50">{label}</p>
-                    <p className="text-sm font-medium text-on-surface">{value}</p>
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-primary mb-3">
+                Selected Regions ({regions.length})
+              </h3>
+              <div className="space-y-2 max-h-60 overflow-y-auto">
+                {regions.map((r, i) => (
+                  <div key={r.id} className={cn(
+                    'flex items-center gap-2 p-2 rounded-lg text-sm',
+                    i % 2 === 0 ? 'bg-surface-container-high' : 'bg-transparent',
+                  )}>
+                    <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: r.color || '#6b7280' }} />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-on-surface font-medium truncate">{r.label || `Region #${r.id}`}</p>
+                      <p className="text-[11px] text-on-surface-variant/60">{r.regionType}</p>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -129,7 +128,7 @@ export function CreateTaskModal({ open, region, page, seriesId: propSeriesId, on
             <div className="flex items-start justify-between">
               <div>
                 <h2 className="text-lg font-semibold text-on-surface">Create New Task</h2>
-                <p className="text-sm text-on-surface-variant/60 mt-0.5">Assign work for the selected region</p>
+                <p className="text-sm text-on-surface-variant/60 mt-0.5">Assign work for the selected regions</p>
               </div>
               <button onClick={onClose} className="w-7 h-7 flex items-center justify-center rounded-lg text-on-surface-variant/50 hover:text-on-surface hover:bg-surface-container transition-colors">
                 <X size={16} />

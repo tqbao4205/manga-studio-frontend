@@ -87,10 +87,26 @@ export const useTaskStore = create((set, get) => ({
   createTask: async (regionId, data) => {
     try {
       await taskService.create(regionId, data);
-      // Reload tasks của region để có list mới nhất
       await get().loadTasks(regionId);
     } catch (err) {
       console.error('[taskStore] createTask failed:', err);
+      throw err;
+    }
+  },
+
+  /**
+   * Tạo 1 task cho nhiều regions.
+   * Endpoint: POST /api/tasks/batch
+   *
+   * @param {number[]} regionIds - Mảng IDs của regions
+   * @param {Object} data - { title, description, notes, priority, dueDate, assistantId }
+   */
+  createBatchTask: async (regionIds, data) => {
+    try {
+      await taskService.createBatch(regionIds, data);
+      await Promise.all(regionIds.map(id => get().loadTasks(id)));
+    } catch (err) {
+      console.error('[taskStore] createBatchTask failed:', err);
       throw err;
     }
   },
@@ -100,7 +116,7 @@ export const useTaskStore = create((set, get) => ({
    * Endpoint: PATCH /api/tasks/{id}/status
    *
    * @param {number} taskId - ID của task
-   * @param {string} status - TODO | IN_PROGRESS | REJECTED
+   * @param {string} status - TODO | IN_PROGRESS | REVISE
    */
   updateTaskStatus: async (taskId, status) => {
     try {
@@ -173,13 +189,25 @@ export const useTaskStore = create((set, get) => ({
   submitTask: async (taskId, formData) => {
     set({ isSubmitting: true });
     try {
-      await taskService.submit(taskId, formData);
+      const submission = await taskService.submit(taskId, formData);
+      // Cập nhật local status của task thành SUBMITTED
+      set((s) => {
+        const newMap = { ...s.tasksByRegion };
+        Object.keys(newMap).forEach((regionId) => {
+          newMap[regionId] = newMap[regionId].map((t) =>
+            t.id === taskId ? { ...t, status: 'SUBMITTED' } : t,
+          );
+        });
+        return { tasksByRegion: newMap };
+      });
       // Reload submissions
       await get().loadSubmissions(taskId);
       set({ isSubmitting: false });
+      return submission;
     } catch (err) {
       console.error('[taskStore] submitTask failed:', err);
       set({ isSubmitting: false });
+      throw err;
     }
   },
 

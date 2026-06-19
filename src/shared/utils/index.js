@@ -109,6 +109,7 @@ export function getStatusColor(status) {
     IN_PROGRESS: '#2563eb',
     IN_REVIEW: '#7c3aed',
     SUBMITTED: '#7c3aed',
+    REVISE: '#f59e0b',
     REVISION_REQUIRED: '#dc2626',
     DRAFT: '#6b7280',
     CANCELLED: '#dc2626',
@@ -246,4 +247,35 @@ export function getRankColor(tier) {
     D: '#6b7280',
   }
   return map[tier] || '#6b7280'
+}
+
+/**
+ * forceDownload — Tải ảnh từ URL, hỗ trợ Cloudinary cross-origin.
+ *
+ * Cloudinary chặn tải qua a.download vì CORS.
+ * Fix: inject fl_attachment flag vào URL Cloudinary để server
+ * trả về Content-Disposition: attachment → buộc trình duyệt tải file.
+ *
+ * @param {string} url      - URL ảnh (Cloudinary hoặc thường)
+ * @param {string} filename - Tên file khi tải về
+ *
+ * Ví dụ:
+ *   forceDownload('https://res.cloudinary.com/.../image/upload/v123/img.png', 'page-1.png')
+ *   → tải URL https://res.cloudinary.com/.../image/upload/fl_attachment/v123/img.png
+ */
+export function forceDownload(url, filename) {
+  if (!url) return
+  const a = document.createElement('a')
+  a.target = '_blank'
+
+  if (url.includes('cloudinary.com')) {
+    a.href = url.replace('/image/upload/', '/image/upload/fl_attachment/')
+  } else {
+    a.href = url
+    a.download = filename
+  }
+
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
 }

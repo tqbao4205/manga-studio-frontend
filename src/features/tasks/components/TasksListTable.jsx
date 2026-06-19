@@ -8,6 +8,7 @@ function getStatusPresentation(status) {
     "SUBMITTED",
     "IN_REVIEW",
     "REVISION_REQUIRED",
+    "REVISE",
   ].includes(status)
     ? "REVIEW"
     : ["DONE", "APPROVED", "COMPLETED"].includes(status)

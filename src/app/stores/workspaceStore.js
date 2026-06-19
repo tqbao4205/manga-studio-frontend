@@ -79,7 +79,7 @@ export const useWorkspaceStore = create((set, get) => ({
   annotations: [],
   zoom: 1,
   mode: 'select',
-  selectedRegionId: null,
+  selectedRegionIds: [],
   selectedLayerId: null,
   selectedCommentId: null,
   selectedAnnotationId: null,
@@ -122,7 +122,7 @@ export const useWorkspaceStore = create((set, get) => ({
         layers: [],
         comments: [],
         annotations: [],
-        selectedRegionId: null,
+        selectedRegionIds: [],
         selectedLayerId: null,
         isLoading: false,
       });
@@ -154,11 +154,12 @@ export const useWorkspaceStore = create((set, get) => ({
   loadPage: async (pageId) => {
     set({ isLoadingPage: true, currentPageId: pageId });
     try {
-      // Gọi song song regions + layers + comments
-      const [regions, layers, apiComments] = await Promise.all([
+      // Gọi song song regions + layers + comments + done region IDs
+      const [regions, layers, apiComments, doneRegionIds] = await Promise.all([
         regionService.getByPage(pageId),
         layerService.getByPage(pageId),
         commentService.getByPage(pageId),
+        regionService.getDoneRegionIds(pageId),
       ]);
       // Nếu page có ảnh gốc, inject virtual base layer ở sortOrder 0
       const { pages } = get();
@@ -186,10 +187,10 @@ export const useWorkspaceStore = create((set, get) => ({
 
       set({
         regions: regions || [],
-        hiddenRegionIds: [],
+        hiddenRegionIds: doneRegionIds || [],
         layers: finalLayers,
         comments: flatComments,
-        selectedRegionId: null,
+        selectedRegionIds: [],
         selectedLayerId: null,
         selectedCommentId: null,
         isLoadingPage: false,
@@ -208,19 +209,25 @@ export const useWorkspaceStore = create((set, get) => ({
   setMode: (mode) => set({ mode }),
   setZoom: (zoom) => set({ zoom: Math.max(0.1, Math.min(10, zoom)) }),
 
-  selectRegion: (regionId) => set({
-    selectedRegionId: regionId,
+  selectRegion: (regionId) => set((s) => ({
+    selectedRegionIds: s.selectedRegionIds.includes(regionId)
+      ? s.selectedRegionIds.filter(id => id !== regionId)
+      : [...s.selectedRegionIds, regionId],
     selectedLayerId: null,
-  }),
+  })),
   hideRegion: (regionId) => set((s) => ({
     hiddenRegionIds: s.hiddenRegionIds.includes(regionId)
       ? s.hiddenRegionIds
       : [...s.hiddenRegionIds, regionId],
   })),
   resetHiddenRegions: () => set({ hiddenRegionIds: [] }),
+  setSelectedRegions: (regionIds) => set({
+    selectedRegionIds: regionIds,
+    selectedLayerId: null,
+  }),
   selectLayer: (layerId) => set({
     selectedLayerId: layerId,
-    selectedRegionId: null,
+    selectedRegionIds: [],
   }),
   selectComment: (commentId) => set({ selectedCommentId: commentId }),
   selectAnnotation: (annotationId) => set({ selectedAnnotationId: annotationId }),
@@ -278,8 +285,7 @@ export const useWorkspaceStore = create((set, get) => ({
       await regionService.delete(regionId);
       set((s) => ({
         regions: s.regions.filter((r) => r.id !== regionId),
-        selectedRegionId:
-          s.selectedRegionId === regionId ? null : s.selectedRegionId,
+        selectedRegionIds: s.selectedRegionIds.filter(id => id !== regionId),
       }));
     } catch (err) {
       console.error('[workspaceStore] deleteRegion failed:', err);
@@ -772,7 +778,7 @@ export const useWorkspaceStore = create((set, get) => ({
       annotations: [],
       zoom: 1,
       mode: 'select',
-      selectedRegionId: null,
+      selectedRegionIds: [],
       selectedLayerId: null,
       selectedCommentId: null,
       selectedAnnotationId: null,

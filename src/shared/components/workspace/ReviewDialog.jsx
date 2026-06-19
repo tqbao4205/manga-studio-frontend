@@ -1,52 +1,32 @@
-/**
- * ── ReviewDialog.jsx — Dialog duyệt bài submission ──
- *
- * 🎯 Mục đích:
- *   - MANAGA mở dialog này khi click "Review" trên task đã submit
- *   - Hiển thị ảnh submission + cho phép APPROVED hoặc REVISION_REQUIRED
- *   - Khi APPROVED, có tuỳ chọn "Add as layer" để tự động tạo layer từ ảnh kết quả
- *
- * 📌 API calls (qua taskStore):
- *   - reviewSubmission(subId, status, note) → PATCH /api/submissions/{id}/status
- *   - addLayer(pageId, formData) → POST /api/v1/pages/{pageId}/layers (nếu "Add as layer")
- */
-
 import { useState } from 'react'
-import { Check, RotateCcw, X, FileImage, Loader2, MoveHorizontal } from 'lucide-react'
+import { Check, RotateCcw, FileImage, Loader2, Eye, EyeOff, AlertTriangle } from 'lucide-react'
 import { Dialog } from '../ui/dialog'
-import { Button } from '../ui/button'
-import { ComparisonSlider } from './ComparisonSlider'
 import { cn } from '../../utils'
 
-/**
- * @param {Object} props
- * @param {boolean} props.open - Hiển thị dialog
- * @param {Function} props.onClose - Đóng dialog
- * @param {Object} props.submission - Submission data (id, resultImageUrl, note, ...)
- * @param {string} props.taskLabel - Tên task (hiển thị trên title)
- * @param {Function} props.onReview - Callback: (submissionId, status, note) => Promise
- * @param {boolean} props.isReviewing - Đang xử lý (disable nút)
- */
 export function ReviewDialog({ open, onClose, submission, taskLabel, onReview, isReviewing, originalUrl }) {
-  const [status, setStatus] = useState(null) // 'APPROVED' | 'REVISION_REQUIRED'
-  const [note, setNote] = useState('')
-  const [compareOpen, setCompareOpen] = useState(false)
+  const [comment, setComment] = useState('')
+  const [revising, setRevising] = useState(false)
+  const [showLayer, setShowLayer] = useState(true)
+  const [confirmApprove, setConfirmApprove] = useState(false)
+  const [confirmRevise, setConfirmRevise] = useState(false)
 
-  /**
-   * Reset state khi đóng dialog
-   */
   const handleClose = () => {
-    setStatus(null)
-    setNote('')
+    setComment('')
+    setRevising(false)
+    setConfirmApprove(false)
+    setConfirmRevise(false)
     onClose()
   }
 
-  /**
-   * Xác nhận review: gọi callback onReview.
-   */
-  const handleConfirm = async () => {
-    if (!status || !submission) return
-    await onReview(submission.id, status, note)
+  const handleApproveConfirm = async () => {
+    if (!submission) return
+    await onReview(submission.id, 'APPROVED', '')
+    handleClose()
+  }
+
+  const handleReviseConfirm = async () => {
+    if (!submission || !comment.trim()) return
+    await onReview(submission.id, 'REVISION_REQUIRED', comment.trim())
     handleClose()
   }
 
@@ -56,135 +36,183 @@ export function ReviewDialog({ open, onClose, submission, taskLabel, onReview, i
       onClose={handleClose}
       title={`Review — ${taskLabel || 'Task'}`}
       description="Approve or request revision for this submission"
-      size="md"
+      size="lg"
+      className="max-w-5xl"
     >
-      <div className="space-y-4">
-        {/* Ảnh submission */}
-        {submission?.resultImageUrl ? (
-          <div>
-            <div className="border border-outline-variant rounded-lg overflow-hidden bg-surface-variant/20 relative">
-              {originalUrl && (
+      <div className="flex gap-6">
+        {/* ═══ LEFT: Image Viewer ═══ */}
+        <div className="w-4/5 flex flex-col gap-2">
+          {submission?.resultImageUrl ? (
+            <>
+              <div className="relative w-full bg-surface-container-high rounded-lg overflow-hidden border border-outline-variant/20 max-h-[70vh]" style={{ minHeight: 300 }}>
                 <img
-                  src={originalUrl}
-                  alt="Original page"
-                  className="absolute inset-0 w-full h-full object-contain"
+                  src={originalUrl || submission.resultImageUrl}
+                  alt="Review"
+                  className="w-full h-full object-contain"
                 />
-              )}
-              <img
-                src={submission.resultImageUrl}
-                alt="Submission preview"
-                className="relative w-full h-auto max-h-[300px] object-contain mx-auto"
+                {originalUrl && (
+                  <img
+                    src={submission.resultImageUrl}
+                    alt="Submission preview"
+                    className="absolute inset-0 w-full h-full object-contain"
+                    style={{ opacity: showLayer ? 0.8 : 0 }}
+                  />
+                )}
+              </div>
+
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setShowLayer(!showLayer)}
+                  className={cn(
+                    'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all border',
+                    showLayer
+                      ? 'bg-primary/10 border-primary/30 text-primary'
+                      : 'border-outline-variant/30 text-on-surface-variant hover:border-primary/30'
+                  )}
+                >
+                  {showLayer ? <Eye size={14} /> : <EyeOff size={14} />}
+                  {showLayer ? 'Hide Layer' : 'Show Layer'}
+                </button>
+              </div>
+            </>
+          ) : (
+            <div className="h-64 flex items-center justify-center border border-dashed border-outline-variant/40 rounded-lg">
+              <FileImage size={32} className="text-on-surface-variant/40" />
+            </div>
+          )}
+        </div>
+
+        {/* ═══ RIGHT: Controls ═══ */}
+        <div className="w-1/5 flex flex-col gap-3 overflow-y-auto max-h-[560px]">
+          {submission?.note && (
+            <div className="text-xs text-on-surface-variant/70 bg-surface-container-lowest p-2.5 rounded-lg border border-outline-variant/20">
+              <span className="font-semibold text-on-surface-variant">Note from assistant: </span>
+              {submission.note}
+            </div>
+          )}
+
+          {/* Revise comment input — chỉ hiện khi bấm Revise */}
+          {revising && (
+            <div>
+              <label className="text-[11px] font-semibold uppercase tracking-wider text-on-surface-variant block mb-1">
+                Reason for revision *
+              </label>
+              <textarea
+                value={comment}
+                onChange={(e) => setComment(e.target.value)}
+                placeholder="Describe what needs to be changed..."
+                rows={3}
+                className="w-full px-2.5 py-1.5 text-sm bg-surface-container-low border border-outline-variant/30 outline-none focus:border-primary text-on-surface rounded-lg placeholder:text-on-surface-variant/40 resize-none"
               />
             </div>
-            {originalUrl && (
+          )}
+
+          {/* ═══ Approve confirmation ═══ */}
+          {confirmApprove ? (
+            <div className="flex flex-col gap-2 pt-3 border-t border-outline-variant mt-auto">
+              <div className="flex items-center gap-1.5 text-xs font-medium text-status-success bg-status-success/10 rounded-lg px-2.5 py-2">
+                <AlertTriangle size={14} />
+                Approve this task?
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setConfirmApprove(false)}
+                  className="flex-1 px-2.5 py-1.5 rounded-lg border border-outline-variant/30 text-xs font-medium text-on-surface-variant hover:text-on-surface transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleApproveConfirm}
+                  disabled={isReviewing}
+                  className="flex-1 flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-all disabled:opacity-40 border-status-success bg-status-success/10 text-status-success hover:bg-status-success/20"
+                >
+                  {isReviewing ? (
+                    <><Loader2 size={14} className="animate-spin" /> Yes</>
+                  ) : (
+                    <><Check size={14} /> Yes, Approve</>
+                  )}
+                </button>
+              </div>
+            </div>
+          ) : confirmRevise ? (
+            /* ═══ Revise confirmation ═══ */
+            <div className="flex flex-col gap-2 pt-3 border-t border-outline-variant mt-auto">
+              <div className="flex items-center gap-1.5 text-xs font-medium text-status-warning bg-status-warning/10 rounded-lg px-2.5 py-2">
+                <AlertTriangle size={14} />
+                Send this revision?
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setConfirmRevise(false)}
+                  className="flex-1 px-2.5 py-1.5 rounded-lg border border-outline-variant/30 text-xs font-medium text-on-surface-variant hover:text-on-surface transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleReviseConfirm}
+                  disabled={isReviewing}
+                  className="flex-1 flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-all disabled:opacity-40 border-status-warning bg-status-warning/10 text-status-warning hover:bg-status-warning/20"
+                >
+                  {isReviewing ? (
+                    <><Loader2 size={14} className="animate-spin" /> Yes</>
+                  ) : (
+                    <><RotateCcw size={14} /> Yes, Revise</>
+                  )}
+                </button>
+              </div>
+            </div>
+          ) : (
+            /* ═══ Normal buttons ═══ */
+            <div className="flex flex-col gap-1.5 pt-3 border-t border-outline-variant mt-auto">
               <button
-                onClick={() => setCompareOpen(true)}
-                className="mt-2 flex items-center gap-1 text-xs font-medium text-primary hover:text-primary/80 transition-colors mx-auto"
+                onClick={() => { setConfirmApprove(true); setRevising(false); setConfirmRevise(false) }}
+                disabled={isReviewing}
+                className="w-full flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-all disabled:opacity-40 border-status-success bg-status-success/10 text-status-success hover:bg-status-success/20"
               >
-                <MoveHorizontal size={14} /> Compare with slider
+                {isReviewing ? (
+                  <><Loader2 size={14} className="animate-spin" /> Approving...</>
+                ) : (
+                  <><Check size={14} /> Approve</>
+                )}
               </button>
-            )}
-          </div>
-        ) : (
-          <div className="h-32 flex items-center justify-center border border-dashed border-outline-variant/40 rounded-lg">
-            <FileImage size={32} className="text-on-surface-variant/40" />
-          </div>
-        )}
 
-        {/* Submission note từ ASSISTANT */}
-        {submission?.note && (
-          <div className="text-xs text-on-surface-variant/70 bg-surface-container-lowest p-2 rounded-lg border border-outline-variant/20">
-            <span className="font-semibold text-on-surface-variant">Note: </span>
-            {submission.note}
-          </div>
-        )}
+              <button
+                onClick={() => {
+                  if (!revising) {
+                    setRevising(true)
+                    setConfirmApprove(false)
+                    setConfirmRevise(false)
+                  } else {
+                    setConfirmRevise(true)
+                  }
+                }}
+                disabled={isReviewing || (revising && !comment.trim())}
+                className={cn(
+                  'w-full flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-all disabled:opacity-40',
+                  revising
+                    ? 'border-status-warning bg-status-warning/10 text-status-warning hover:bg-status-warning/20'
+                    : 'border-outline-variant/30 text-on-surface-variant hover:border-status-warning/50'
+                )}
+              >
+                {isReviewing ? (
+                  <><Loader2 size={14} className="animate-spin" /> Sending...</>
+                ) : revising ? (
+                  <><RotateCcw size={14} /> Send Revision</>
+                ) : (
+                  <><RotateCcw size={14} /> Revise</>
+                )}
+              </button>
 
-        {/* Chọn status: APPROVED hoặc REVISION_REQUIRED */}
-        <div>
-          <label className="text-[11px] font-semibold uppercase tracking-wider text-on-surface-variant block mb-2">
-            Decision *
-          </label>
-          <div className="flex gap-2">
-            <button
-              onClick={() => setStatus('APPROVED')}
-              className={cn(
-                'flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg border text-sm font-medium transition-all',
-                status === 'APPROVED'
-                  ? 'border-status-success bg-status-success/10 text-status-success'
-                  : 'border-outline-variant/30 text-on-surface-variant hover:border-status-success/50',
-              )}
-            >
-              <Check size={16} /> Approved
-            </button>
-            <button
-              onClick={() => setStatus('REVISION_REQUIRED')}
-              className={cn(
-                'flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg border text-sm font-medium transition-all',
-                status === 'REVISION_REQUIRED'
-                  ? 'border-status-warning bg-status-warning/10 text-status-warning'
-                  : 'border-outline-variant/30 text-on-surface-variant hover:border-status-warning/50',
-              )}
-            >
-              <RotateCcw size={16} /> Revise
-            </button>
-          </div>
-        </div>
-
-        {/* Note (bắt buộc nếu REVISION_REQUIRED) */}
-        <div>
-          <label className="text-[11px] font-semibold uppercase tracking-wider text-on-surface-variant block mb-1">
-            {status === 'REVISION_REQUIRED' ? 'Revision Notes *' : 'Review Note (optional)'}
-          </label>
-          <textarea
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-            placeholder={
-              status === 'REVISION_REQUIRED'
-                ? 'Describe what needs to be changed...'
-                : 'Optional feedback...'
-            }
-            rows={3}
-            className="w-full px-2.5 py-1.5 text-sm bg-surface-container-low border border-outline-variant/30 outline-none focus:border-primary text-on-surface rounded-lg placeholder:text-on-surface-variant/40 resize-none"
-          />
-        </div>
-
-        {/* Footer */}
-        <div className="flex items-center justify-end gap-2 pt-2 border-t border-outline-variant">
-          <Button variant="ghost" size="sm" onClick={handleClose}>
-            Cancel
-          </Button>
-          <Button
-            size="sm"
-            onClick={handleConfirm}
-            disabled={!status || isReviewing || (status === 'REVISION_REQUIRED' && !note.trim())}
-          >
-            {isReviewing ? (
-              <>
-                <Loader2 size={14} className="animate-spin mr-1" /> Processing...
-              </>
-            ) : status === 'APPROVED' ? (
-              <>
-                <Check size={14} className="mr-1" /> Approve
-              </>
-            ) : (
-              <>
-                <RotateCcw size={14} className="mr-1" /> Request Revision
-              </>
-            )}
-          </Button>
+              <button
+                onClick={handleClose}
+                className="w-full px-2.5 py-1.5 rounded-lg text-[11px] font-medium text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-all"
+              >
+                Cancel
+              </button>
+            </div>
+          )}
         </div>
       </div>
-
-      {/* ComparisonSlider dialog */}
-      <ComparisonSlider
-        open={compareOpen}
-        onClose={() => setCompareOpen(false)}
-        originalUrl={originalUrl}
-        submissionUrl={submission?.resultImageUrl}
-        originalLabel="Original Page"
-        submissionLabel={submission?.note || 'Submission'}
-        label={taskLabel}
-      />
     </Dialog>
   )
 }

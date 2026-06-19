@@ -18,7 +18,7 @@
  *
  *   === SUBMISSIONS ===
  *   GET    /api/tasks/{taskId}/submissions           — Lịch sử submissions của task
- *   POST   /api/tasks/{taskId}/submissions           — Nộp bài (multipart)
+   * POST   /api/tasks/{taskId}/submissions           — Submit (multipart)
  *   PATCH  /api/submissions/{id}/status              — Duyệt bài (APPROVED/REVISION_REQUIRED)
  *
  *   === ATTACHMENTS ===
@@ -98,7 +98,21 @@ const taskService = {
   },
 
   /**
-   * Cập nhật thông tin task (chỉ khi TODO hoặc REJECTED).
+   * Tạo 1 task mới cho nhiều regions.
+   * Endpoint: POST /api/tasks/batch
+   *
+   * Body: { regionIds: [...], title, description, notes, ... }
+   *
+   * @param {number[]} regionIds - Mảng IDs của regions
+   * @param {Object} data - TaskCreateRequest (không bao gồm regionIds)
+   * @returns {Promise<Object>} TaskResponse vừa tạo
+   */
+  createBatch: async (regionIds, data) => {
+    return api.post('/tasks/batch', { regionIds, ...data });
+  },
+
+  /**
+   * Cập nhật thông tin task (chỉ khi TODO hoặc REVISE).
    * Endpoint: PUT /api/tasks/{id}
    *
    * @param {number} id - ID của task
@@ -114,13 +128,11 @@ const taskService = {
    * Endpoint: PATCH /api/tasks/{id}/status
    *
    * Chuyển đổi hợp lệ:
-   *   TODO → IN_PROGRESS (ASSISTANT nhận task)
-   *   IN_PROGRESS → TODO (trả lại)
-   *   IN_PROGRESS → REJECTED (từ chối)
-   *   REJECTED → TODO (gán lại)
+    *   TODO → IN_PROGRESS (ASSISTANT accepts)
+    *   REVISE → IN_PROGRESS (ASSISTANT retries)
    *
    * @param {number} id - ID của task
-   * @param {string} status - Trạng thái mới (TODO | IN_PROGRESS | REJECTED)
+   * @param {string} status - Trạng thái mới (TODO | IN_PROGRESS | REVISE)
    * @returns {Promise<Object>} TaskResponse đã cập nhật status
    */
   updateStatus: async (id, status) => {

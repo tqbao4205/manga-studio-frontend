@@ -31,6 +31,7 @@ const labels = {
   PLANNED: "Planned",
   IN_PROGRESS: "In Progress",
   IN_REVIEW: "In Review",
+  REVISE: "Revise",
   REJECTED: "Rejected",
   PENDING: "Pending",
   SUBMITTED: "Submitted",
@@ -56,7 +57,7 @@ export function StatusBadge({ status, className, size = "md" }) {
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 font-medium border",
+        "inline-flex items-center gap-1.5 font-medium border rounded-full",
         size === "sm" ? "text-[10px] px-2 py-0.5" : "text-xs px-2.5 py-0.5",
         className,
       )}

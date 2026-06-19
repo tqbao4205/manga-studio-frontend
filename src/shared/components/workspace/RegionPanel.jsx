@@ -31,7 +31,7 @@ const typeIcons = {
 
 export function RegionPanel() {
   const regions = useWorkspaceStore((s) => s.regions)
-  const selectedRegionId = useWorkspaceStore((s) => s.selectedRegionId)
+  const selectedRegionIds = useWorkspaceStore((s) => s.selectedRegionIds)
   const selectRegion = useWorkspaceStore((s) => s.selectRegion)
   const updateRegion = useWorkspaceStore((s) => s.updateRegion)
   const hiddenRegionIds = useWorkspaceStore((s) => s.hiddenRegionIds)
@@ -45,9 +45,9 @@ export function RegionPanel() {
   const labelValueRef = useRef('')
 
   const handleSelectRegion = (regionId) => {
-    const isSelected = selectedRegionId === regionId
-    selectRegion(isSelected ? null : regionId)
-    if (!isSelected) {
+    const wasSelected = selectedRegionIds.includes(regionId)
+    selectRegion(regionId)
+    if (!wasSelected) {
       loadTasks(regionId)
     }
     if (openMenuRegionId) setOpenMenuRegionId(null)
@@ -109,7 +109,7 @@ export function RegionPanel() {
           {visibleRegions.map((r) => {
             const TypeIcon = typeIcons[r.regionType] || Square
             const color = REGION_COLORS[r.regionType] || '#6b7280'
-            const isSelected = selectedRegionId === r.id
+            const isSelected = selectedRegionIds.includes(r.id)
 
             return (
               <div key={r.id}>
@@ -123,7 +123,20 @@ export function RegionPanel() {
                   )}
                 >
                   <div className="flex items-center gap-3">
-                    <div
+                    <div className="flex items-center gap-2">
+                      <div className={cn(
+                        'w-4 h-4 rounded border-2 flex items-center justify-center transition-all',
+                        isSelected
+                          ? 'bg-primary border-primary'
+                          : 'border-outline-variant/50',
+                      )}>
+                        {isSelected && (
+                          <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                            <path d="M2 5L4 7L8 3" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                          </svg>
+                        )}
+                      </div>
+                      <div
                       className="w-9 h-9 rounded-lg flex items-center justify-center border"
                       style={{
                         backgroundColor: `${color}1a`,
@@ -131,6 +144,7 @@ export function RegionPanel() {
                       }}
                     >
                       <TypeIcon size={20} style={{ color }} />
+                    </div>
                     </div>
                     <div>
                       <div className="text-sm font-bold text-on-surface">

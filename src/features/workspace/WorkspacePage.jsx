@@ -73,7 +73,7 @@ import { PageLoading } from "../../shared/components/shared/LoadingSpinner";
 import { StatusBadge } from "../../shared/components/shared/StatusBadge";
 import { Dialog } from "../../shared/components/ui/dialog";
 import { Button } from "../../shared/components/ui/button";
-import { cn } from "../../shared/utils";
+import { cn, forceDownload } from "../../shared/utils";
 
 /* Tab definitions cho review mode (chỉ Comments) */
 const reviewTabDefs = [
@@ -99,7 +99,7 @@ const tabDefs = [
     label: "Tasks",
     icon: ListTodo,
     Component: TaskPanel,
-    roles: ["MANGAKA", "ASSISTANT", "TANTOU_EDITOR"],
+    roles: ["MANGAKA", "ASSISTANT"],
   },
   {
     id: "comments",
@@ -167,7 +167,7 @@ export function WorkspacePage() {
   const addLayer = useWorkspaceStore((s) => s.addLayer);
   const reorderPages = useWorkspaceStore((s) => s.reorderPages);
   const layers = useWorkspaceStore((s) => s.layers);
-  const selectedRegionId = useWorkspaceStore((s) => s.selectedRegionId);
+  const selectedRegionIds = useWorkspaceStore((s) => s.selectedRegionIds);
   const mergePage = useWorkspaceStore((s) => s.mergePage);
   const clearMergeResult = useWorkspaceStore((s) => s.clearMergeResult);
   const flattenPage = useWorkspaceStore((s) => s.flattenPage);
@@ -178,7 +178,7 @@ export function WorkspacePage() {
   // ─── Other stores ───
   const user = useAuthStore((s) => s.user);
   const addToast = useUIStore((s) => s.addToast);
-  const createTask = useTaskStore((s) => s.createTask);
+  const createBatchTask = useTaskStore((s) => s.createBatchTask);
   const updateChapterStatus = useSeriesStore((s) => s.updateChapterStatus);
   const chapters = useSeriesStore((s) => s.chapters);
 
@@ -434,15 +434,13 @@ export function WorkspacePage() {
   };
 
   /**
-   * Submit assigned task: gọi taskStore.createTask (API).
-   * Endpoint: POST /api/regions/{regionId}/tasks
+   * Submit assigned task: gọi createBatchTask (POST /api/tasks/batch).
    */
   const handleSubmitAssignedTask = async (formValues) => {
-    if (!selectedRegion) return;
+    if (selectedRegions.length === 0) return;
 
     try {
-      await createTask(selectedRegion.id, {
-        regionType: formValues.regionType || selectedRegion.regionType || "OTHER",
+      await createBatchTask(selectedRegions.map(r => r.id), {
         title: formValues.title,
         description: formValues.description,
         notes: formValues.notes,
@@ -455,7 +453,7 @@ export function WorkspacePage() {
       setCreateTaskOpen(false);
       addToast({
         title: "Task created",
-        description: `Assigned to region ${selectedRegion.label || `#${selectedRegion.id}`}`,
+        description: `Assigned to ${selectedRegions.length} region(s)`,
         variant: "success",
       });
       navigate(taskFlowReturnTo);
@@ -499,7 +497,7 @@ export function WorkspacePage() {
     (t) => t.id === activeTab,
   )?.Component;
   const currentPage = pages.find((p) => p.id === currentPageId);
-  const selectedRegion = regions.find((r) => r.id === selectedRegionId);
+  const selectedRegions = regions.filter((r) => selectedRegionIds.includes(r.id));
 
   const regionCount = regions.length;
   const completedRegions = regions.filter(
@@ -813,14 +811,14 @@ export function WorkspacePage() {
               <div className="border-t border-outline-variant p-4">
                 <button
                   onClick={() => setCreateTaskOpen(true)}
-                  disabled={!selectedRegion}
+                  disabled={selectedRegions.length === 0}
                   className="w-full rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-on-primary transition-all hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  Assign Task
+                  Assign Task {selectedRegions.length > 0 && `(${selectedRegions.length})`}
                 </button>
-                {!selectedRegion && (
+                {selectedRegions.length === 0 && (
                   <p className="mt-2 text-xs text-on-surface-variant">
-                    Select a region on canvas or in Regions tab to continue.
+                    Select regions on canvas or in Regions tab to continue.
                   </p>
                 )}
               </div>
@@ -846,7 +844,7 @@ export function WorkspacePage() {
 
       <CreateTaskModal
         open={createTaskOpen}
-        region={selectedRegion}
+        regions={selectedRegions}
         page={currentPage}
         seriesId={chapter?.seriesId}
         onClose={() => setCreateTaskOpen(false)}
@@ -892,12 +890,7 @@ export function WorkspacePage() {
             {mergeImageUrl && (
               <Button
                 size="sm"
-                onClick={() => {
-                  const a = document.createElement("a");
-                  a.href = mergeImageUrl;
-                  a.download = `page-${currentPageId}-merged.png`;
-                  a.click();
-                }}
+                onClick={() => forceDownload(mergeImageUrl, `page-${currentPageId}-merged.png`)}
               >
                 <Download size={14} className="mr-1" /> Download
               </Button>

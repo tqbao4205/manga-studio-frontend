@@ -109,12 +109,13 @@ export function WorkspaceCanvas() {
   const layers = useWorkspaceStore((s) => s.layers);
   const allComments = useWorkspaceStore((s) => s.comments);
   const annotations = useWorkspaceStore((s) => s.annotations);
-  const selectedRegionId = useWorkspaceStore((s) => s.selectedRegionId);
+  const selectedRegionIds = useWorkspaceStore((s) => s.selectedRegionIds);
   const selectedCommentId = useWorkspaceStore((s) => s.selectedCommentId);
   const selectedAnnotationId = useWorkspaceStore((s) => s.selectedAnnotationId);
   const zoom = useWorkspaceStore((s) => s.zoom);
   const mode = useWorkspaceStore((s) => s.mode);
   const selectRegion = useWorkspaceStore((s) => s.selectRegion);
+  const setSelectedRegions = useWorkspaceStore((s) => s.setSelectedRegions);
   const selectComment = useWorkspaceStore((s) => s.selectComment);
   const selectAnnotation = useWorkspaceStore((s) => s.selectAnnotation);
   const updateRegion = useWorkspaceStore((s) => s.updateRegion);
@@ -194,22 +195,24 @@ export function WorkspaceCanvas() {
     return () => ro.disconnect();
   }, []);
 
-  // Attach Transformer vào region đang được chọn (cho phép resize/kéo)
+  // Attach Transformer vào các region đang được chọn (cho phép resize/kéo)
   useEffect(() => {
     const tr = transformerRef.current;
     const stage = stageRef.current;
     if (!tr || !stage) return;
-    if (selectedRegionId !== null && mode === "select") {
-      const node = stage.findOne(`#region-${selectedRegionId}`);
-      if (node) {
-        tr.nodes([node]);
+    if (selectedRegionIds.length > 0 && mode === "select") {
+      const nodes = selectedRegionIds
+        .map((id) => stage.findOne(`#region-${id}`))
+        .filter(Boolean);
+      if (nodes.length > 0) {
+        tr.nodes(nodes);
         tr.getLayer()?.batchDraw();
         return;
       }
     }
     tr.nodes([]);
     tr.getLayer()?.batchDraw();
-  }, [selectedRegionId, regions, mode]);
+  }, [selectedRegionIds, regions, mode]);
 
   // Fallback: nếu merge/final image load lỗi (404), quay về originalImageUrl
   useEffect(() => {
@@ -532,9 +535,9 @@ export function WorkspaceCanvas() {
       if ((e.key === "Delete" || e.key === "Backspace") && mode === "select") {
         // Không xoá region khi đang gõ trong ô input/text
         if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
-        if (selectedRegionId !== null) {
+        if (selectedRegionIds.length > 0) {
           e.preventDefault();
-          deleteRegion(selectedRegionId);
+          selectedRegionIds.forEach((id) => deleteRegion(id));
         } else if (selectedAnnotationId !== null) {
           e.preventDefault();
           deleteAnnotation(selectedAnnotationId);
@@ -543,7 +546,7 @@ export function WorkspaceCanvas() {
       }
     },
     [
-      selectedRegionId,
+      selectedRegionIds,
       selectedCommentId,
       selectedAnnotationId,
       mode,
@@ -652,7 +655,7 @@ export function WorkspaceCanvas() {
           {/* Các region (vùng chú thích) trên trang */}
           {visibleRegions.map((r) => {
             const color = REGION_COLORS[r.regionType] || "#6b7280";
-            const isSelected = selectedRegionId === r.id;
+            const isSelected = selectedRegionIds.includes(r.id);
             return (
               <Fragment key={r.id}>
                 <Group
@@ -665,7 +668,11 @@ export function WorkspaceCanvas() {
                   onClick={(e) => {
                     if (mode !== "select") return;
                     e.cancelBubble = true;
-                    selectRegion(selectedRegionId === r.id ? null : r.id);
+                    if (e.evt.ctrlKey || e.evt.metaKey) {
+                      selectRegion(r.id);
+                    } else {
+                      setSelectedRegions(isSelected ? [] : [r.id]);
+                    }
                   }}
                   onDragMove={(e) => handleRegionDragMove(e, r)}
                   onDragEnd={(e) => handleRegionDragMove(e, r)}

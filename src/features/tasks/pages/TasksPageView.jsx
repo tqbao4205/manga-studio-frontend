@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AlertCircle, Plus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "../../../app/stores/authStore";
@@ -14,6 +14,7 @@ import { tasksListService } from "../services/tasksListService";
 export function TasksPageView() {
   const navigate = useNavigate();
   const role = useAuthStore((state) => state.user?.role || "ASSISTANT");
+  const taskTrigger = useAuthStore((state) => state.taskTrigger);
   const addToast = useUIStore((state) => state.addToast);
   const {
     tasks,
@@ -35,6 +36,11 @@ export function TasksPageView() {
   const selectedSeriesLabel = seriesOptions.find(
     (option) => option.value === filterState.selectedSeries,
   )?.label;
+
+  // Realtime: refetch tasks khi WebSocket báo có thay đổi
+  useEffect(() => {
+    reloadTasks()
+  }, [taskTrigger])
 
   const handleCreateTask = () => {
     navigate("/workspace/1", {

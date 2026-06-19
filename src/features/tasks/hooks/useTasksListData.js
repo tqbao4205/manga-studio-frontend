@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { tasksListService } from '../services/tasksListService'
 
 function decorateTask(task, regionSeriesLookup = new Map()) {
-  const mappedSeries = regionSeriesLookup.get(Number(task.regionId)) || null
+  const mappedSeries = regionSeriesLookup.get(Number(task.regions?.[0]?.id)) || null
   const seriesId = task.seriesId || mappedSeries?.seriesId || null
   const seriesTitle = task.seriesTitle || mappedSeries?.seriesTitle || 'Unknown Series'
   const chapterId = task.chapterId || mappedSeries?.chapterId || null

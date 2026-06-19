@@ -103,6 +103,10 @@ const handleWebSocketMessage = (type, data) => {
     case 'NOTIFICATION':
       // Nhận notification realtime từ backend → thêm vào notificationStore
       useNotificationStore.getState().addNotification(data)
+      // Nếu notification type liên quan đến task → trigger refetch task list
+      if (data && typeof data.type === 'string' && data.type.startsWith('TASK_')) {
+        useAuthStore.getState().incrementTaskTrigger()
+      }
       break
 
     default:
@@ -160,6 +164,16 @@ export const useAuthStore = create((set, get) => ({
    *   - SeriesDetailPage watch bi?n này → useEffect phát hi?n thay d?i → refetch series
    */
   tantouTrigger: 0,
+
+  /**
+   * taskTrigger: Biến đếm trigger refetch danh sách tasks.
+   *
+   * Cách hoạt động:
+   *   - Khi WebSocket nhận NOTIFICATION với type TASK_ASSIGNED / TASK_SUBMITTED / TASK_APPROVED / TASK_REVISION_REQUIRED
+   *   → incrementTaskTrigger() được gọi
+   *   - TaskPanel / TaskListPage watch biến này → useEffect phát hiện thay đổi → refetch tasks
+   */
+  taskTrigger: 0,
 
   // ────────────────────────────────────────────────
   //  1. LOGIN — Đăng nhập
@@ -427,5 +441,16 @@ export const useAuthStore = create((set, get) => ({
    */
   incrementTantouTrigger: () => {
     set((state) => ({ tantouTrigger: state.tantouTrigger + 1 }))
+  },
+
+  // ────────────────────────────────────────────────
+  //  9. INCREMENT TASK TRIGGER — Báo hiệu cần refetch tasks
+  // ────────────────────────────────────────────────
+  /**
+   * Tang taskTrigger lên 1 khi WebSocket nhận TASK_ event.
+   * TaskPanel watch biến này để tự động refetch tasks.
+   */
+  incrementTaskTrigger: () => {
+    set((state) => ({ taskTrigger: state.taskTrigger + 1 }))
   },
 }))

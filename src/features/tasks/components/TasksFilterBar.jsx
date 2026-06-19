@@ -6,7 +6,7 @@ const STATUS_OPTIONS = [
   { value: "TODO", label: "TODO" },
   { value: "REVIEW", label: "REVIEW" },
   { value: "DONE", label: "DONE" },
-  { value: "REJECTED", label: "REJECTED" },
+  { value: "REVISE", label: "REVISE" },
 ];
 
 const PRIORITY_OPTIONS = [

@@ -14,7 +14,7 @@ const QUICK_STATUS_OPTIONS = [
   { label: "TODO", value: "TODO" },
   { label: "REVIEW", value: "IN_PROGRESS" },
   { label: "DONE", value: "DONE" },
-  { label: "REJECTED", value: "REJECTED" },
+  { label: "REVISE", value: "REVISE" },
 ];
 
 export function TaskRowActionsMenu({

@@ -6,7 +6,7 @@ function normalizeStatus(status) {
   if (!status) return 'TODO'
   if (['DONE', 'APPROVED', 'COMPLETED'].includes(status)) return 'DONE'
   if (['REJECTED'].includes(status)) return 'REJECTED'
-  if (['IN_PROGRESS', 'SUBMITTED', 'IN_REVIEW', 'REVISION_REQUIRED'].includes(status)) return 'REVIEW'
+  if (['IN_PROGRESS', 'SUBMITTED', 'IN_REVIEW', 'REVISION_REQUIRED', 'REVISE'].includes(status)) return 'REVIEW'
   return 'TODO'
 }
 

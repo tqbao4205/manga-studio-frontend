@@ -37,7 +37,7 @@ import {
   Flag, Download, Loader2, ChevronDown, CalendarDays, X,
 } from 'lucide-react'
 import assistantService from '../../../services/assistantService'
-import { getPriorityColor } from '../../utils'
+import { cn, getPriorityColor, forceDownload } from '../../utils'
 
 /** Danh sách mức độ ưu tiên (giữ nguyên) */
 const priorityOptions = [
@@ -54,30 +54,32 @@ export function TaskPanel() {
   const currentPageId = useWorkspaceStore((s) => s.currentPageId)
   const regions = useWorkspaceStore((s) => s.regions)
   const pages = useWorkspaceStore((s) => s.pages)
-  const selectedRegionId = useWorkspaceStore((s) => s.selectedRegionId)
+  const selectedRegionIds = useWorkspaceStore((s) => s.selectedRegionIds)
   const seriesId = useWorkspaceStore((s) => s.seriesId)
   const addLayer = useWorkspaceStore((s) => s.addLayer)
   const loadPage = useWorkspaceStore((s) => s.loadPage)
   const selectRegion = useWorkspaceStore((s) => s.selectRegion)
-  const hideRegion = useWorkspaceStore((s) => s.hideRegion)
+  const setSelectedRegions = useWorkspaceStore((s) => s.setSelectedRegions)
 
   const tasksByRegion = useTaskStore((s) => s.tasksByRegion)
   const isLoading = useTaskStore((s) => s.isLoading)
   const isSubmitting = useTaskStore((s) => s.isSubmitting)
   const loadTasks = useTaskStore((s) => s.loadTasks)
-  const createTask = useTaskStore((s) => s.createTask)
+  const createBatchTask = useTaskStore((s) => s.createBatchTask)
   const submitTask = useTaskStore((s) => s.submitTask)
   const reviewSubmission = useTaskStore((s) => s.reviewSubmission)
+  const updateTaskStatus = useTaskStore((s) => s.updateTaskStatus)
   const selectTask = useTaskStore((s) => s.selectTask)
 
   const user = useAuthStore((s) => s.user)
+  const taskTrigger = useAuthStore((s) => s.taskTrigger)
   const addToast = useUIStore((s) => s.addToast)
 
   const currentPage = pages.find((p) => p.id === currentPageId)
 
   // ─── Local state ───
   const [assignOpen, setAssignOpen] = useState(false)
-  const [selectedRegion, setSelectedRegion] = useState('')
+  const [assignRegionIds, setAssignRegionIds] = useState([])
   const [selectedAssistant, setSelectedAssistant] = useState('')
   const [taskTitle, setTaskTitle] = useState('')
   const [taskDescription, setTaskDescription] = useState('')
@@ -117,8 +119,13 @@ export function TaskPanel() {
     }
   }, [assignOpen, realAssistants])
 
+  // ─── Gom tasks từ tất cả regions ───
+  const allPageTasks = regions
+    .flatMap((r) => tasksByRegion[r.id] || [])
+    .filter((t, i, arr) => arr.findIndex((x) => x.id === t.id) === i)
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+
   // ─── Load tasks cho tất cả regions của page ───
-  // Khi regions thay đổi, load tasks cho những region chưa có trong tasksByRegion.
   useEffect(() => {
     if (!regions.length) return
     regions.forEach((r) => {
@@ -128,17 +135,11 @@ export function TaskPanel() {
     })
   }, [regions.length])
 
-  // ─── Gom tasks từ tất cả regions ───
-  const allPageTasks = regions
-    .flatMap((r) => tasksByRegion[r.id] || [])
-    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-
-  // ─── Auto-hide regions khi task DONE ───
+  // ─── Realtime: refetch tasks khi WebSocket báo có thay đổi ───
   useEffect(() => {
-    allPageTasks.forEach((t) => {
-      if (t.status === 'DONE') hideRegion(t.regionId)
-    })
-  }, [allPageTasks])
+    if (!regions.length) return
+    regions.forEach((r) => loadTasks(r.id))
+  }, [taskTrigger, regions.length])
 
   // ─── ResizeObserver: cập nhật kích thước container ảnh ───
   useEffect(() => {
@@ -175,15 +176,15 @@ export function TaskPanel() {
     )
   }
 
-  const assignedRegionIds = new Set(allPageTasks.map((t) => t.regionId))
+  const assignedRegionIds = new Set(allPageTasks.flatMap((t) => t.regions?.map((r) => r.id) || []))
   const unassignedRegions = regions.filter((r) => !assignedRegionIds.has(r.id))
 
-  const canSubmit = (status) => status === 'TODO' || status === 'IN_PROGRESS' || status === 'REJECTED'
+  const canSubmit = (status) => status === 'IN_PROGRESS'
 
   // ─── Handlers ───
 
   const resetAssignForm = () => {
-    setSelectedRegion('')
+    setAssignRegionIds([])
     setSelectedAssistant('')
     setTaskTitle('')
     setTaskDescription('')
@@ -195,21 +196,21 @@ export function TaskPanel() {
   }
 
   /**
-   * Assign task: gọi createTask (POST /api/regions/{regionId}/tasks).
+   * Assign task: gọi createBatchTask (POST /api/tasks/batch).
    */
   const handleAssign = async () => {
-    if (!selectedRegion || !selectedAssistant) return
-    const region = regions.find((r) => r.id === Number(selectedRegion))
+    if (assignRegionIds.length === 0 || !selectedAssistant) return
+    const selectedRegions = assignRegionIds.map((id) => regions.find((r) => r.id === Number(id))).filter(Boolean)
     const assistant = realAssistants.find((a) => a.assistant.id === Number(selectedAssistant))
-    if (!region || !assistant) return
+    if (selectedRegions.length === 0 || !assistant) return
 
     const defaultDeadline = new Date(Date.now() + 14 * 86400000).toISOString().slice(0, 10)
+    const regionNames = selectedRegions.map((r) => r.label || `Region #${r.id}`).join(', ')
 
     setPosting(true)
     try {
-      await createTask(region.id, {
-        regionType: region.regionType || 'OTHER',
-        title: taskTitle.trim() || `${region.regionType || 'Work'} — Page ?`,
+      await createBatchTask(selectedRegions.map((r) => r.id), {
+        title: taskTitle.trim() || `${selectedRegions[0].regionType || 'Work'} — Page ?`,
         description: taskDescription.trim() || '',
         notes: taskNotes.trim() || '',
         priority: taskPriority,
@@ -220,7 +221,7 @@ export function TaskPanel() {
 
       addToast({
         title: 'Task assigned',
-        description: `"${taskTitle}" → ${assistant.assistant.displayName}`,
+        description: `"${taskTitle}" → ${assistant.assistant.displayName} (${selectedRegions.length} regions)`,
         variant: 'success',
       })
       setAssignOpen(false)
@@ -229,6 +230,44 @@ export function TaskPanel() {
       addToast({ title: 'Failed to assign task', variant: 'error' })
     } finally {
       setPosting(false)
+    }
+  }
+
+  /**
+   * Accept task: ASSISTANT nhận task → TODO → IN_PROGRESS.
+   * Endpoint: PATCH /api/tasks/{id}/status
+   */
+  const handleAcceptTask = async (taskId, regionIds) => {
+    try {
+      await updateTaskStatus(taskId, 'IN_PROGRESS')
+      const ids = regionIds || []
+      await Promise.all(ids.filter(Boolean).map((id) => loadTasks(id)))
+      addToast({
+        title: 'Task accepted',
+        description: 'You have accepted this task',
+        variant: 'success',
+      })
+    } catch {
+      addToast({ title: 'Failed to accept task', variant: 'error' })
+    }
+  }
+
+  /**
+   * Retry: ASSISTANT retries task after revision → REVISE → IN_PROGRESS.
+   * Endpoint: PATCH /api/tasks/{id}/status
+   */
+  const handleRetryTask = async (taskId, regionIds) => {
+    try {
+      await updateTaskStatus(taskId, 'IN_PROGRESS')
+      const ids = regionIds || []
+      await Promise.all(ids.filter(Boolean).map((id) => loadTasks(id)))
+      addToast({
+        title: 'Task reopened',
+        description: 'You can now resubmit your work',
+        variant: 'success',
+      })
+    } catch {
+      addToast({ title: 'Failed to retry task', variant: 'error' })
     }
   }
 
@@ -245,8 +284,8 @@ export function TaskPanel() {
 
     try {
       await submitTask(submitTarget.taskId, formData)
-      await loadTasks(submitTarget.regionId)
-      selectRegion(null)
+      await Promise.all((submitTarget.regionIds || [submitTarget.regionId]).filter(Boolean).map((id) => loadTasks(id)))
+      setSelectedRegions([])
       addToast({
         title: 'Submitted',
         description: `${submitTarget.label} submitted for review`,
@@ -263,11 +302,6 @@ export function TaskPanel() {
    * Endpoint: PATCH /api/submissions/{id}/status
    */
   const handleReview = async (submissionId, status, note, addAsLayer) => {
-      if (status === 'APPROVED') {
-        selectRegion(null)
-        if (reviewTarget?.regionId) hideRegion(reviewTarget.regionId)
-        loadPage(currentPageId)
-      }
     try {
       const result = await reviewSubmission(submissionId, status, note)
       if (!result) {
@@ -278,14 +312,14 @@ export function TaskPanel() {
         return
       }
       // Update local task data ngay lập tức
-      const regionId = reviewTarget?.regionId
-      if (regionId) {
+      const regionIds = reviewTarget?.regionIds || (reviewTarget?.regionId ? [reviewTarget.regionId] : [])
+      regionIds.forEach((regionId) => {
         useTaskStore.setState((s) => {
           const tasks = (s.tasksByRegion[regionId] || []).map((t) => {
             if (t.id !== reviewTarget?.taskId) return t
             return {
               ...t,
-              status: status === 'APPROVED' ? 'DONE' : 'REJECTED',
+              status: status === 'APPROVED' ? 'DONE' : 'REVISE',
               submissions: t.submissions?.map((sub) =>
                 sub.id === submissionId ? { ...sub, status } : sub
               ) || [],
@@ -293,17 +327,15 @@ export function TaskPanel() {
           })
           return { tasksByRegion: { ...s.tasksByRegion, [regionId]: tasks } }
         })
-      }
+      })
       addToast({
         title: status === 'APPROVED' ? 'Approved' : 'Revision requested',
         variant: status === 'APPROVED' ? 'success' : 'info',
       })
       if (status === 'APPROVED') {
-        loadPage(currentPageId)
+        await loadPage(currentPageId)
       }
-      if (regionId) {
-        loadTasks(regionId)
-      }
+      await Promise.all(regionIds.map((id) => loadTasks(id)))
     } catch {
       addToast({
         title: 'Review failed',
@@ -389,7 +421,8 @@ export function TaskPanel() {
       {allPageTasks.length > 0 && (
         <div className="space-y-1 px-2">
           {allPageTasks.map((t) => {
-            const region = regions.find((r) => r.id === t.regionId)
+            const firstRegion = t.regions?.[0]
+            const taskRegions = t.regions || []
             const taskStatus = t.status
             const latestSubmission = t.submissions?.length
               ? t.submissions.reduce((a, b) =>
@@ -397,6 +430,7 @@ export function TaskPanel() {
                 )
               : null
             const pageImg = currentPage?.originalImageUrl || currentPage?.webImageUrl
+            const regionIds = taskRegions.map((r) => r.id)
 
             return (
               <div
@@ -415,8 +449,13 @@ export function TaskPanel() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5">
                     <span className="text-xs font-medium text-on-surface truncate">
-                      {t.title || region?.label || `Region #${t.regionId}`}
+                      {t.title || firstRegion?.label || `Region #${firstRegion.id}`}
                     </span>
+                    {taskRegions.length > 1 && (
+                      <span className="text-[9px] px-1 py-0.5 bg-surface-container-high text-on-surface-variant rounded font-medium flex-shrink-0">
+                        {taskRegions.length} regions
+                      </span>
+                    )}
                     <StatusBadge status={taskStatus} size="sm" className="flex-shrink-0" />
                   </div>
                   <div className="text-[10px] text-on-surface-variant mt-0.5 flex items-center gap-1.5 flex-wrap">
@@ -440,23 +479,37 @@ export function TaskPanel() {
                 <div onClick={(e) => e.stopPropagation()}>
                   {user?.role === 'MANGAKA' && t.submissions?.some(s => s.status === 'SUBMITTED') && (
                     <button
-                      onClick={() => setReviewTarget({ taskId: t.id, regionId: t.regionId, submissionId: latestSubmission?.id || null, label: region?.label || `Region #${t.regionId}`, resultImageUrl: latestSubmission?.resultImageUrl || '', submissionNote: latestSubmission?.note || '', originalUrl: currentPage?.webImageUrl || currentPage?.originalImageUrl || '' })}
-                      className="flex items-center gap-0.5 text-[9px] font-medium text-status-success hover:text-status-success/80 transition-colors px-1.5 py-1 rounded hover:bg-status-success/10"
+                      onClick={() => setReviewTarget({ taskId: t.id, regionIds, label: t.title || `Task #${t.id}`, submissionId: latestSubmission?.id || null, resultImageUrl: latestSubmission?.resultImageUrl || '', submissionNote: latestSubmission?.note || '', originalUrl: currentPage?.webImageUrl || currentPage?.originalImageUrl || '' })}
+                      className="flex items-center gap-0.5 text-[9px] font-medium text-primary hover:text-primary/80 transition-colors px-1.5 py-1 rounded hover:bg-primary/10"
                     >
-                      <Check size={8} /> Review
+                      Review
                     </button>
                   )}
                   {user?.role === 'ASSISTANT' && t.assistant?.id === user.id && (
-                    t.submissions?.some(s => s.status === 'SUBMITTED')
-                      ? <span className="flex items-center gap-0.5 text-[9px] text-status-warning"><Clock size={8} /> Pending</span>
-                      : canSubmit(taskStatus) && (
-                        <button
-                          onClick={() => setSubmitTarget({ taskId: t.id, regionId: t.regionId, label: region?.label || `Region #${t.regionId}` })}
-                          className="flex items-center gap-0.5 text-[9px] font-medium text-primary hover:text-primary/80 transition-colors px-1.5 py-1 rounded hover:bg-primary/10"
-                        >
-                          <Upload size={8} /> Submit
-                        </button>
-                      )
+                    taskStatus === 'TODO' ? (
+                      <button
+                        onClick={() => handleAcceptTask(t.id, regionIds)}
+                        className="flex items-center gap-0.5 text-[9px] font-medium text-primary hover:text-primary/80 transition-colors px-1.5 py-1 rounded hover:bg-primary/10"
+                      >
+                        Accept
+                      </button>
+                    ) : taskStatus === 'IN_PROGRESS' ? (
+                      <button
+                        onClick={() => setSubmitTarget({ taskId: t.id, regionIds, label: t.title || `Task #${t.id}` })}
+                        className="flex items-center gap-0.5 text-[9px] font-medium text-primary hover:text-primary/80 transition-colors px-1.5 py-1 rounded hover:bg-primary/10"
+                      >
+                        <Upload size={8} /> Submit
+                      </button>
+                    ) : taskStatus === 'REVISE' ? (
+                      <button
+                        onClick={() => handleRetryTask(t.id, regionIds)}
+                        className="flex items-center gap-0.5 text-[9px] font-medium text-primary hover:text-primary/80 transition-colors px-1.5 py-1 rounded hover:bg-primary/10"
+                      >
+                        Retry
+                      </button>
+                    ) : taskStatus === 'SUBMITTED' ? (
+                      <span className="flex items-center gap-0.5 text-[9px] text-status-warning"><Clock size={8} /> Pending review</span>
+                    ) : null
                   )}
                 </div>
               </div>
@@ -468,7 +521,8 @@ export function TaskPanel() {
       {/* ─── Task Detail Dialog ─── */}
       {selectedTask && (() => {
         const st = selectedTask
-        const stRegion = regions.find((r) => r.id === st.regionId)
+        const stFirstRegion = st.regions?.[0]
+        const stRegions = st.regions || []
         const stLatestSubmission = st.submissions?.length
           ? st.submissions.reduce((a, b) => (a.version || 0) > (b.version || 0) ? a : b)
           : null
@@ -478,14 +532,15 @@ export function TaskPanel() {
           <Dialog
             open={!!selectedTask}
             onClose={() => setSelectedTask(null)}
-            title={st.title || stRegion?.label || `Task #${st.id}`}
+            title={st.title || (stFirstRegion ? `Region #${stFirstRegion.id}` : `Task #${st.id}`)}
             size="lg"
+            className="max-w-5xl"
           >
             <div className="flex gap-0">
-              {/* ─── Left Panel: Image + Region Info ─── */}
-              <div className="w-[38%] flex-shrink-0 border-r border-outline-variant/20 bg-surface-container-low/50 p-5 flex flex-col gap-5 overflow-y-auto max-h-[70vh]">
+              {/* ─── Left Panel: Image ─── */}
+              <div className="w-[60%] flex-shrink-0 border-r border-outline-variant/20 bg-surface-container-low/50 p-5 flex flex-col gap-5 overflow-y-auto max-h-[70vh]">
                 {/* Thumbnail with bbox */}
-                {stPageImg && stRegion && (
+                {stPageImg && stRegions.length > 0 && (
                   <div ref={detailImgRef} className="w-full bg-surface-container-high rounded-lg overflow-hidden border border-outline-variant/20 relative aspect-auto" style={{ minHeight: 200 }}>
                     {(() => {
                       const { cw, ch, nw, nh } = detailMeta
@@ -519,48 +574,70 @@ export function TaskPanel() {
                       return (
                         <>
                           <img src={stPageImg} alt="" className="w-full h-full object-contain" />
-                          <div
-                            className="absolute border-2 border-primary-container bg-primary-container/15"
-                            style={{
-                              left: offX + stRegion.x * scaleX,
-                              top: offY + stRegion.y * scaleY,
-                              width: Math.max(stRegion.width * scaleX, 10),
-                              height: Math.max(stRegion.height * scaleY, 6),
-                            }}
-                          >
-                            <div className="absolute -top-2.5 -left-2.5 bg-primary-container text-white px-2 py-0.5 rounded text-[9px] font-bold whitespace-nowrap">
-                              {stRegion.regionType || "FOCUS"}
+                          {stRegions.map(r => (
+                            <div key={r.id}
+                              className="absolute border-2 rounded-sm"
+                              style={{
+                                left: offX + (r.x || 0) * scaleX,
+                                top: offY + (r.y || 0) * scaleY,
+                                width: Math.max((r.width || 0) * scaleX, 10),
+                                height: Math.max((r.height || 0) * scaleY, 6),
+                                borderColor: r.color || '#6b7280',
+                                backgroundColor: (r.color || '#6b7280') + '15',
+                              }}
+                            >
+                              <div className="absolute -top-2.5 -left-2.5 text-white px-2 py-0.5 rounded text-[9px] font-bold whitespace-nowrap"
+                                style={{ backgroundColor: r.color || '#6b7280' }}
+                              >
+                                {r.label || r.regionType || "FOCUS"}
+                              </div>
                             </div>
-                          </div>
+                          ))}
                         </>
                       )
                     })()}
-                  </div>
-                )}
-
-                {/* Region Info */}
-                {stRegion && (
-                  <div className="bg-surface-container rounded-lg p-4 border border-outline-variant/20">
-                    <h3 className="text-xs font-semibold uppercase tracking-wider text-primary mb-3">Region Information</h3>
-                    <div className="grid grid-cols-2 gap-3">
-                      {[
-                        ["Type", stRegion.regionType || "_"],
-                        ["Label", stRegion.label ? `${stRegion.label} (#${stRegion.id})` : `#${stRegion.id}`],
-                        ["Size", `${Math.round(stRegion.width)} x ${Math.round(stRegion.height)} px`],
-                        ["Coords", `x:${Math.round(stRegion.x)} y:${Math.round(stRegion.y)}`],
-                      ].map(([label, value]) => (
-                        <div key={label}>
-                          <p className="text-[10px] uppercase tracking-wide text-on-surface-variant/50">{label}</p>
-                          <p className="text-sm font-medium text-on-surface">{value}</p>
-                        </div>
-                      ))}
-                    </div>
                   </div>
                 )}
               </div>
 
               {/* ─── Right Panel: Details ─── */}
               <div className="flex-1 p-5 flex flex-col gap-4 overflow-y-auto max-h-[70vh]">
+                {/* Region Info */}
+                {stFirstRegion && (
+                  <div className="bg-surface-container rounded-lg p-4 border border-outline-variant/20">
+                    <h3 className="text-xs font-semibold uppercase tracking-wider text-primary mb-3">
+                      {stRegions.length > 1 ? `Regions (${stRegions.length})` : 'Region Information'}
+                    </h3>
+                    {stRegions.length === 1 ? (
+                      <div className="grid grid-cols-2 gap-3">
+                        {[
+                          ["Type", stFirstRegion.regionType || "_"],
+                          ["Label", stFirstRegion.label ? `${stFirstRegion.label} (#${stFirstRegion.id})` : `#${stFirstRegion.id}`],
+                          ["Size", `${Math.round(stFirstRegion.width)} x ${Math.round(stFirstRegion.height)} px`],
+                          ["Coords", `x:${Math.round(stFirstRegion.x)} y:${Math.round(stFirstRegion.y)}`],
+                        ].map(([label, value]) => (
+                          <div key={label}>
+                            <p className="text-[10px] uppercase tracking-wide text-on-surface-variant/50">{label}</p>
+                            <p className="text-sm font-medium text-on-surface">{value}</p>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="space-y-1">
+                        {stRegions.slice(0, 5).map((r) => (
+                          <div key={r.id} className="flex items-center gap-2 text-sm">
+                            <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: r.color || '#6b7280' }} />
+                            <span className="font-medium text-on-surface">{r.label || `Region #${r.id}`}</span>
+                            <span className="text-on-surface-variant/50 text-[10px] uppercase">{r.regionType}</span>
+                          </div>
+                        ))}
+                        {stRegions.length > 5 && (
+                          <p className="text-[10px] text-on-surface-variant/50">...and {stRegions.length - 5} more</p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
                 {/* Info grid */}
                 <div className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
                   <div>
@@ -605,7 +682,7 @@ export function TaskPanel() {
                 <div className="flex items-center gap-3 flex-wrap pt-3 border-t border-outline-variant/20">
                   {stPageImg && (
                     <button
-                      onClick={() => { const a = document.createElement('a'); a.href = stPageImg; a.download = `page-${currentPageId || 'reference'}.png`; a.click() }}
+                      onClick={() => forceDownload(stPageImg, `page-${currentPageId || 'reference'}.png`)}
                       className="flex items-center gap-1 text-xs font-medium text-primary hover:text-primary/80 transition-colors"
                     >
                       <Download size={12} /> Download Page
@@ -613,7 +690,7 @@ export function TaskPanel() {
                   )}
                   {st.referenceImageUrl && (
                     <button
-                      onClick={() => { const a = document.createElement('a'); a.href = st.referenceImageUrl; a.download = `ref-${st.id || 'file'}.png`; a.click() }}
+                      onClick={() => forceDownload(st.referenceImageUrl, `ref-${st.id || 'file'}.png`)}
                       className="flex items-center gap-1 text-xs font-medium text-primary hover:text-primary/80 transition-colors"
                     >
                       <Eye size={12} /> Reference Files
@@ -621,7 +698,7 @@ export function TaskPanel() {
                   )}
                   {user?.role === 'ASSISTANT' && st.assistant?.id === user.id && canSubmit(st.status) && !st.submissions?.some(s => s.status === 'SUBMITTED') && (
                     <button
-                      onClick={() => { setSubmitTarget({ taskId: st.id, regionId: st.regionId, label: stRegion?.label || `Region #${st.regionId}` }); setSelectedTask(null) }}
+                      onClick={() => { setSubmitTarget({ taskId: st.id, regionIds: stRegions.map((r) => r.id), label: st.title || `Task #${st.id}` }); setSelectedTask(null) }}
                       className="inline-flex items-center gap-1 text-xs font-medium bg-primary text-on-primary px-3 py-1.5 rounded-lg hover:brightness-110 transition-all"
                     >
                       <Upload size={12} /> Submit
@@ -629,10 +706,10 @@ export function TaskPanel() {
                   )}
                   {user?.role === 'MANGAKA' && st.submissions?.some(s => s.status === 'SUBMITTED') && (
                     <button
-                      onClick={() => { setReviewTarget({ taskId: st.id, regionId: st.regionId, submissionId: stLatestSubmission?.id || null, label: stRegion?.label || `Region #${st.regionId}`, resultImageUrl: stLatestSubmission?.resultImageUrl || '', submissionNote: stLatestSubmission?.note || '', originalUrl: currentPage?.webImageUrl || currentPage?.originalImageUrl || '' }); setSelectedTask(null) }}
-                      className="inline-flex items-center gap-1 text-xs font-medium bg-status-success text-white px-3 py-1.5 rounded-lg hover:brightness-110 transition-all"
+                      onClick={() => { setReviewTarget({ taskId: st.id, regionIds: stRegions.map((r) => r.id), label: st.title || `Task #${st.id}`, submissionId: stLatestSubmission?.id || null, resultImageUrl: stLatestSubmission?.resultImageUrl || '', submissionNote: stLatestSubmission?.note || '', originalUrl: currentPage?.webImageUrl || currentPage?.originalImageUrl || '' }); setSelectedTask(null) }}
+                      className="inline-flex items-center gap-1 text-xs font-medium bg-primary text-white px-3 py-1.5 rounded-lg hover:brightness-110 transition-all"
                     >
-                      <Check size={12} /> Review
+                      Review
                     </button>
                   )}
                 </div>
@@ -697,8 +774,8 @@ export function TaskPanel() {
                     return <img src={pageImg} alt="" className="w-full h-full object-contain" onLoad={handleLoad} />;
                   })()}
 
-                  {(() => {
-                    const selRegion = regions.find((r) => r.id === Number(selectedRegion));
+                  {assignRegionIds.map((rid) => {
+                    const selRegion = regions.find((r) => r.id === Number(rid));
                     if (!selRegion) return null;
                     const { cw, ch, nw, nh } = imgMeta;
                     if (!cw || !ch) return null;
@@ -720,7 +797,7 @@ export function TaskPanel() {
                     const scaleX = displayW / baseW;
                     const scaleY = displayH / baseH;
                     return (
-                      <div className="absolute border-2 border-primary-container bg-primary-container/10 ring-4 ring-primary/20 flex items-center justify-center"
+                      <div key={rid} className="absolute border-2 border-primary-container bg-primary-container/10 ring-4 ring-primary/20 flex items-center justify-center"
                         style={{
                           left: offsetX + selRegion.x * scaleX,
                           top: offsetY + selRegion.y * scaleY,
@@ -733,45 +810,27 @@ export function TaskPanel() {
                         </div>
                       </div>
                     );
-                  })()}
-
-                  {/* Assigned regions overlay */}
-                  {assignedRegionIds.size > 0 && (() => {
-                    const assignedList = regions.filter((r) => assignedRegionIds.has(r.id) && r.id !== Number(selectedRegion));
-                    if (assignedList.length === 0) return null;
-                    return (
-                      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent px-2 pb-2 pt-6 flex flex-wrap gap-1 items-end">
-                        {assignedList.map((r) => (
-                          <span key={r.id} className="inline-flex items-center gap-0.5 text-[9px] px-1.5 py-0.5 bg-status-success/25 text-status-success border border-status-success/30 rounded">
-                            <Check size={7} /> {r.label || `#${r.id}`}
-                          </span>
-                        ))}
-                      </div>
-                    );
-                  })()}
+                  })}
                 </div>
 
-                {(() => {
-                  const selRegion = regions.find((r) => r.id === Number(selectedRegion));
-                  return (
-                    <div className="bg-surface-container rounded-lg p-4 border border-outline-variant/20">
-                      <h3 className="text-xs font-semibold uppercase tracking-wider text-primary mb-3">Region Information</h3>
-                      <div className="grid grid-cols-2 gap-3">
-                        {[
-                          ["Type", selRegion?.regionType || "_"],
-                          ["Label", selRegion?.label ? `${selRegion.label} (#${selRegion.id})` : (selRegion ? `#${selRegion.id}` : "_")],
-                          ["Size", selRegion ? `${Math.round(selRegion.width)} x ${Math.round(selRegion.height)} px` : "_"],
-                          ["Coords", selRegion ? `x:${Math.round(selRegion.x)} y:${Math.round(selRegion.y)}` : "_"],
-                        ].map(([label, value]) => (
-                          <div key={label}>
-                            <p className="text-[10px] uppercase tracking-wide text-on-surface-variant/50">{label}</p>
-                            <p className="text-sm font-medium text-on-surface">{value}</p>
+                {assignRegionIds.length > 0 && (
+                  <div className="bg-surface-container rounded-lg p-4 border border-outline-variant/20">
+                    <h3 className="text-xs font-semibold uppercase tracking-wider text-primary mb-3">Selected Regions ({assignRegionIds.length})</h3>
+                    <div className="space-y-1.5 max-h-40 overflow-y-auto">
+                      {assignRegionIds.map((rid) => {
+                        const selRegion = regions.find((r) => r.id === Number(rid));
+                        if (!selRegion) return null;
+                        return (
+                          <div key={rid} className="flex items-center gap-2 text-sm">
+                            <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: selRegion.color || '#6b7280' }} />
+                            <span className="text-on-surface">{selRegion.label || `#${selRegion.id}`}</span>
+                            <span className="text-on-surface-variant/60 text-[11px]">({selRegion.regionType})</span>
                           </div>
-                        ))}
-                      </div>
+                        );
+                      })}
                     </div>
-                  );
-                })()}
+                  </div>
+                )}
               </div>
 
               {/* Right Panel: Form */}
@@ -788,21 +847,45 @@ export function TaskPanel() {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <label className="text-[11px] font-semibold uppercase tracking-wider text-on-surface-variant/60">Region <span className="text-error">*</span></label>
-                    <div className="relative">
-                      <select
-                        value={selectedRegion}
-                        onChange={(e) => setSelectedRegion(e.target.value)}
-                        className="w-full h-10 px-3.5 text-sm bg-surface-container-high border border-outline-variant/20 rounded-lg outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/30 text-on-surface appearance-none cursor-pointer transition-all"
-                      >
-                        <option value="">Select region...</option>
-                        {unassignedRegions.map((r) => (
-                          <option key={r.id} value={r.id}>
-                            {r.label || `Region #${r.id}`} ({r.regionType})
-                          </option>
-                        ))}
-                      </select>
-                      <ChevronDown size={14} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant/40" />
+                    <label className="text-[11px] font-semibold uppercase tracking-wider text-on-surface-variant/60">Regions <span className="text-error">*</span></label>
+                    <div className="max-h-40 overflow-y-auto space-y-1 rounded-lg border border-outline-variant/20 bg-surface-container-high p-1.5">
+                      {unassignedRegions.length === 0 ? (
+                        <p className="text-xs text-on-surface-variant/60 px-2 py-3 text-center">No unassigned regions</p>
+                      ) : (
+                        unassignedRegions.map((r) => {
+                          const checked = assignRegionIds.includes(String(r.id))
+                          return (
+                            <label
+                              key={r.id}
+                              onClick={() => {
+                                setAssignRegionIds(prev =>
+                                  prev.includes(String(r.id))
+                                    ? prev.filter(id => id !== String(r.id))
+                                    : [...prev, String(r.id)]
+                                )
+                              }}
+                              className={cn(
+                                'flex items-center gap-2.5 px-3 py-2 rounded-lg cursor-pointer transition-all text-sm',
+                                checked
+                                  ? 'bg-primary/10 text-on-surface'
+                                  : 'hover:bg-surface-container text-on-surface-variant',
+                              )}
+                            >
+                              <div className={cn(
+                                'w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 transition-all',
+                                checked ? 'bg-primary border-primary' : 'border-outline-variant/50',
+                              )}>
+                                {checked && (
+                                  <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                                    <path d="M2 5L4 7L8 3" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                  </svg>
+                                )}
+                              </div>
+                              <span className="truncate">{r.label || `Region #${r.id}`} ({r.regionType})</span>
+                            </label>
+                          )
+                        })
+                      )}
                     </div>
                   </div>
 
@@ -953,7 +1036,7 @@ export function TaskPanel() {
               </button>
               <button
                 onClick={handleAssign}
-                disabled={(() => { const d = !selectedRegion || !selectedAssistant || !taskTitle.trim() || posting; return d; })()}
+                disabled={(() => { const d = assignRegionIds.length === 0 || !selectedAssistant || !taskTitle.trim() || posting; return d; })()}
                 className="h-10 px-7 rounded-lg bg-primary-container text-on-primary-container text-sm font-bold hover:brightness-110 disabled:opacity-40 disabled:cursor-not-allowed transition-all active:scale-[0.98] inline-flex items-center gap-2 shadow-[0_0_20px_rgba(139,92,246,0.15)]"
               >
                 {posting && <Loader2 size={14} className="animate-spin" />}
