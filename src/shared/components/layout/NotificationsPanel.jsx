@@ -88,12 +88,8 @@ export function NotificationsPanel({ onClose }) {
     handleClose()
 
     // Override: chưa accept series → navigate đến trang lời mời
-    if (n.type === 'INVITATION_SENT') {
-      navigate('/invitations')
-      return
-    }
-    if (n.type === 'TANTOU_INVITATION_SENT') {
-      navigate('/tantou-invitations')
+    if (n.type === 'INVITATION_SENT' || n.type === 'TANTOU_INVITATION_SENT') {
+      navigate('/team')
       return
     }
 

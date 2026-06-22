@@ -17,18 +17,6 @@ const extraNav = [
     roles: ["MANGAKA", "ASSISTANT"],
   },
   {
-    label: "Invitations",
-    icon: "mail",
-    path: "/invitations",
-    roles: ["ASSISTANT"],
-  },
-  {
-    label: "Lead Editor Invitations",
-    icon: "mail",
-    path: "/tantou-invitations",
-    roles: ["TANTOU_EDITOR"],
-  },
-  {
     label: "Editorial Reviews",
     icon: "groups",
     path: "/editorial",
@@ -41,10 +29,16 @@ const extraNav = [
     roles: ["EDITORIAL_BOARD", "CHIEF_EDITOR"],
   },
   {
+    label: "Team",
+    icon: "group",
+    path: "/team",
+    roles: ["MANGAKA", "TANTOU_EDITOR", "ASSISTANT"],
+  },
+  {
     label: "Rankings",
     icon: "leaderboard",
     path: "/rankings",
-    roles: ["EDITORIAL_BOARD", "CHIEF_EDITOR"],
+    roles: ["EDITORIAL_BOARD", "CHIEF_EDITOR", "MANGAKA", "TANTOU_EDITOR"],
   },
 
 ];
