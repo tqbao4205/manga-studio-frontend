@@ -745,7 +745,7 @@ function EditorialBoardDashboard() {
   const { data: stats, isLoading: statsLoading } = useDashboardStats(user?.id);
   const { data: seriesData } = useSeriesList();
   const { data: schedules } = useSchedules();
-  const rankings = useRankingStore((s) => s.rankings);
+  const monthlyRankings = useRankingStore((s) => s.monthlyRankings);
   const schedulesList = useScheduleStore((s) => s.schedules);
   const seriesListRef = useSeriesStore((s) => s.seriesList);
 
@@ -760,10 +760,15 @@ function EditorialBoardDashboard() {
   const upcomingSchedules =
     (schedules || schedulesList).filter((s) => s.status === "ACTIVE") || [];
 
-  const atRisk = rankings.filter((r) => r.tier === "C" || r.tier === "D").map(r => {
-    const series = seriesListRef.find(s => s.id === r.seriesId);
-    return series ? { ...series, rank: r } : null;
-  }).filter(Boolean);
+  // Lấy bottom 30% của monthly ranking làm at-risk
+  const rankedCount = monthlyRankings.length;
+  const riskThreshold = Math.ceil(rankedCount * 0.7);
+  const atRisk = monthlyRankings
+    .filter(r => r.rank >= riskThreshold)
+    .map(r => {
+      const series = seriesListRef.find(s => s.id === r.seriesId);
+      return series ? { ...series, rank: r } : null;
+    }).filter(Boolean);
 
   const handleApproveSeries = (id, title) => {
     updateSeries(id, { status: 'APPROVED', tantouEditorId: user?.id });
@@ -937,8 +942,6 @@ function EditorialBoardDashboard() {
               </CardHeader>
               <CardContent className="space-y-2">
                 {atRisk.map((s) => {
-                  const wl = useRankingStore.getState().warningLevels?.[s.id] || 0;
-                  const dp = useRankingStore.getState().dangerPeriods?.[s.id] || 0;
                   return (
                     <div
                       key={s.id}
@@ -958,23 +961,9 @@ function EditorialBoardDashboard() {
                         <div className="min-w-0">
                           <p className="text-sm font-medium text-on-surface truncate flex items-center gap-1.5">
                             {s.title}
-                            {wl >= 3 && (
-                              <SirenIcon size={12} className="text-status-danger" />
-                            )}
-                            {wl === 2 && (
-                              <AlertCircle size={12} className="text-status-warning" />
-                            )}
-                            {wl === 1 && (
-                              <AlertTriangle size={12} className="text-status-warning/60" />
-                            )}
                           </p>
                           <p className="text-xs text-on-surface-variant">
-                            #{s.rank.rank} · Tier {s.rank.tier} · {s.rank.totalVotes.toLocaleString()} votes
-                            {dp > 0 && (
-                              <span className="ml-1 text-status-danger">
-                                · {dp} period{dp > 1 ? "s" : ""} in danger
-                              </span>
-                            )}
+                            #{s.rank.rank} · {(s.rank.totalVotes ?? 0).toLocaleString()} votes
                           </p>
                         </div>
                       </div>

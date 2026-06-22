@@ -33,8 +33,8 @@ import { ChapterDetailPage } from "../features/series/ChapterDetailPage";
 import { ProfilePage } from "../features/profile/ProfilePage";
 import { SchedulePage } from "../features/schedule/SchedulePage";
 import { RankingPage } from "../features/ranking/RankingPage";
-import { InvitationsPage } from "../features/invitations/InvitationsPage";
-import { TantouInvitationsPage } from "../features/invitations/TantouInvitationsPage";
+import { TeamManagementPage } from "../features/team/TeamManagementPage";
+
 import { NotFoundPage } from "../features/not-found/NotFoundPage";
 import { EditorialBoardPage } from "../features/editorial/pages/EditorialBoardPage";
 import { VotingPage } from "../features/editorial/pages/VotingPage";
@@ -168,26 +168,6 @@ export default function App() {
               </RoleGuard>
             }
           />
-          {/* Invitations — lời mời vào series cho ASSISTANT */}
-          <Route
-            path="/invitations"
-            element={
-              <RoleGuard allowedRoles={["ASSISTANT"]}>
-                <InvitationsPage />
-              </RoleGuard>
-            }
-          />
-
-          {/* Tantou Invitations — lời mời tantou editor */}
-          <Route
-            path="/tantou-invitations"
-            element={
-              <RoleGuard allowedRoles={["TANTOU_EDITOR"]}>
-                <TantouInvitationsPage />
-              </RoleGuard>
-            }
-          />
-
           {/* ─── Editorial Board Meetings ─── */}
           {/* Danh sách cuộc họp — EDITORIAL_BOARD + CHIEF_EDITOR + TANTOU_EDITOR */}
           <Route
@@ -227,11 +207,21 @@ export default function App() {
             }
           />
 
-          {/* Rankings — bảng xếp hạng series (chỉ EDITORIAL_BOARD + CHIEF_EDITOR) */}
+          {/* Team — quản lý thành viên (MANGAKA + TANTOU_EDITOR) */}
+          <Route
+            path="/team"
+            element={
+              <RoleGuard allowedRoles={["MANGAKA", "TANTOU_EDITOR", "ASSISTANT"]}>
+                <TeamManagementPage />
+              </RoleGuard>
+            }
+          />
+
+          {/* Rankings — bảng xếp hạng series (EDITORIAL_BOARD + CHIEF_EDITOR + MANGAKA + TANTOU_EDITOR) */}
           <Route
             path="/rankings"
             element={
-              <RoleGuard allowedRoles={["EDITORIAL_BOARD", "CHIEF_EDITOR"]}>
+              <RoleGuard allowedRoles={["EDITORIAL_BOARD", "CHIEF_EDITOR", "MANGAKA", "TANTOU_EDITOR"]}>
                 <RankingPage />
               </RoleGuard>
             }

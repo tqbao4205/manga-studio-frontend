@@ -1,26 +1,37 @@
 import api from './api'
 
 const rankingService = {
-  getAll: async (params = {}) => {
-    return api.get('/ranking', { params })
+  // ── Weekly ──
+  getWeekly: async (week) => {
+    return api.get('/ranking/weekly', { params: { week } })
   },
 
-  getHistory: async () => {
-    return api.get('/ranking/metrics/history')
+  exportWeekly: async (week) => {
+    return api.get('/ranking/weekly/export', { params: { week }, responseType: 'blob' })
   },
 
-  exportForm: async (params = {}) => {
-    return api.get('/ranking/export', { params, responseType: 'blob' })
+  importWeekly: async (formData, week) => {
+    return api.post('/ranking/weekly/import', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      params: { week },
+    })
   },
 
-  importExcel: async (formData, month) => {
-    return api.post('/ranking/import-chapters', formData, {
+  // ── Monthly ──
+  getMonthly: async (month) => {
+    return api.get('/ranking/monthly', { params: { month } })
+  },
+
+  exportMonthly: async (month) => {
+    return api.get('/ranking/monthly/export', { params: { month }, responseType: 'blob' })
+  },
+
+  importMonthly: async (formData, month) => {
+    return api.post('/ranking/monthly/import', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
       params: { month },
     })
   },
-
-
 }
 
 export default rankingService

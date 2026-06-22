@@ -169,6 +169,15 @@ const seriesService = {
    * TANTOU_EDITOR xem danh sách l?i m?i PENDING c?a mình.
    * GET /api/tantou/invitations
    */
+  /**
+   * Tìm kiếm user có role TANTOU_EDITOR.
+   * GET /api/users/tantou-editors?search=...
+   */
+  getTantouEditors: async (search) => {
+    const params = search ? { search } : {};
+    return api.get('/users/tantou-editors', { params });
+  },
+
   getMyTantouInvitations: async () => {
     return api.get('/tantou/invitations');
   },
