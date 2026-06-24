@@ -31,9 +31,15 @@
 
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Search, MoreVertical, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Search, MoreVertical, ChevronLeft, ChevronRight, AlertTriangle } from 'lucide-react'
 import { useSeriesStore } from '../../app/stores/seriesStore'
 import { useAuthStore } from '../../app/stores/authStore'
+import { useRankingStore } from '../../app/stores/rankingStore'
+import { useUIStore } from '../../app/stores/uiStore'
+import seriesService from '../../services/seriesService'
+import { cn } from '../../shared/utils'
+import { Dialog } from '../../shared/components/ui/dialog'
+import { LoadingSpinner } from '../../shared/components/shared/LoadingSpinner'
 import { seriesPlaceholder } from '../../shared/constants/mock-data'
 
 // ── Danh sách genre / status ──
@@ -83,10 +89,34 @@ const sortOptions = [
   { value: 'CHAPTER_COUNT_DESC', label: 'Most Chapters' },
 ]
 
+const mgmtStatusColors = {
+  ONGOING: 'bg-green-500/10 text-green-400 border-green-500/20',
+  AT_RISK: 'bg-red-500/10 text-red-400 border-red-500/20',
+  HIATUS: 'bg-orange-500/10 text-orange-400 border-orange-500/20',
+  CANCELLED: 'bg-gray-500/10 text-gray-400 border-gray-500/20',
+  COMPLETED: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
+  DRAFT: 'bg-gray-500/10 text-gray-400 border-gray-500/20',
+}
+
+const mgmtTransitions = {
+  ONGOING: ['HIATUS', 'AT_RISK', 'CANCELLED', 'COMPLETED'],
+  AT_RISK: ['ONGOING', 'CANCELLED'],
+  HIATUS: ['ONGOING', 'CANCELLED'],
+}
+
 export function SeriesListPage() {
   const navigate = useNavigate()
-  const user = useAuthStore((s) => s.user)          // Lấy user hiện tại (để kiểm tra role)
+  const user = useAuthStore((s) => s.user)
+  const isEbCe = user?.role === 'EDITORIAL_BOARD' || user?.role === 'CHIEF_EDITOR'
+  const [activeTab, setActiveTab] = useState(isEbCe ? 'management' : 'browse')
+
   const { seriesList, isLoading, error, totalElements, totalPages, fetchAll } = useSeriesStore()
+  const { atRiskSeries, fetchAtRisk } = useRankingStore()
+  const addToast = useUIStore((s) => s.addToast)
+  const [mgmtSearch, setMgmtSearch] = useState('')
+  const [confirmOpen, setConfirmOpen] = useState(false)
+  const [pendingAction, setPendingAction] = useState(null)
+  const [updatingId, setUpdatingId] = useState(null)
 
   // ── Local state cho filter ──
   // Các state này được dùng để xây dựng params gửi lên backend
@@ -99,15 +129,25 @@ export function SeriesListPage() {
   const pageSize = 6
   const isFiltered = search !== '' || genre !== 'ALL' || status !== 'ALL'
 
-  // ── useEffect: Gọi API mỗi khi filter thay đổi ──
-  // Mỗi lần user thay đổi search/genre/status/sort/page → gọi fetchAll với params mới
-  // Backend tự xử lý filter + sort + phân trang
+  // ── useEffect: Browse tab — gọi API khi filter thay đổi ──
   useEffect(() => {
-    fetchAll({ search, genre, status, page, size: pageSize, sort: sortBy })
-  }, [fetchAll, search, genre, status, page, sortBy])
+    if (activeTab === 'browse') {
+      fetchAll({ search, genre, status, page, size: pageSize, sort: sortBy })
+    }
+  }, [activeTab, fetchAll, search, genre, status, page, sortBy])
 
-  // Reset về trang 0 khi thay đổi filter (tránh ở trang 2 mà filter lại ra ít kết quả)
-  useEffect(() => { setPage(0) }, [search, genre, status, sortBy])
+  // ── useEffect: Management tab — fetch all series + at-risk data ──
+  useEffect(() => {
+    if (activeTab === 'management') {
+      fetchAll({ size: 100 })
+      fetchAtRisk()
+    }
+  }, [activeTab, fetchAll, fetchAtRisk])
+
+  // Reset về trang 0 khi thay đổi filter
+  useEffect(() => {
+    if (activeTab === 'browse') setPage(0)
+  }, [activeTab, search, genre, status, sortBy])
 
   // Xử lý "Go to page" — nhập số trang rồi Enter
   const handleGoToPage = (e) => {
@@ -116,6 +156,49 @@ export function SeriesListPage() {
       if (!isNaN(p) && p >= 1 && p <= totalPages) setPage(p - 1)
       setGoToPage('')
     }
+  }
+
+  // ── Management handlers ──
+  const atRiskMap = (() => {
+    const map = {}
+    atRiskSeries.forEach((item) => { map[item.seriesId] = item })
+    return map
+  })()
+
+  const mgmtFiltered = (() => {
+    if (!mgmtSearch) return seriesList
+    const q = mgmtSearch.toLowerCase()
+    return seriesList.filter((s) => s.title?.toLowerCase().includes(q))
+  })()
+
+  const handleStatusChange = (seriesId, newStatus) => {
+    if (newStatus === 'CANCELLED') {
+      setPendingAction({ seriesId, status: newStatus })
+      setConfirmOpen(true)
+    } else {
+      doUpdateStatus(seriesId, newStatus)
+    }
+  }
+
+  const doUpdateStatus = async (seriesId, status) => {
+    setUpdatingId(seriesId)
+    try {
+      await seriesService.updateStatus(seriesId, { status })
+      addToast({ type: 'success', title: 'Status updated', message: `Series is now ${statusLabels[status] || status}` })
+      fetchAll({ size: 100 })
+      fetchAtRisk()
+    } catch (err) {
+      addToast({ type: 'error', title: 'Update failed', message: err.message })
+    } finally {
+      setUpdatingId(null)
+      setConfirmOpen(false)
+      setPendingAction(null)
+    }
+  }
+
+  const getAvailableOptions = (status) => {
+    if (status === 'CANCELLED' || status === 'COMPLETED') return []
+    return mgmtTransitions[status] || []
   }
 
   return (
@@ -128,14 +211,36 @@ export function SeriesListPage() {
             Manage and track your manga series from draft to final publication.
           </p>
         </div>
-        {/* Tab "All Series" — giữ lại cho UI, bỏ tab Favorites/Archived vì backend chưa hỗ trợ */}
+        {/* Tabs: Browse / Management */}
         <div className="flex items-center gap-4 bg-surface-container-low p-1 rounded-2xl border border-outline-variant/30">
-          <button className="px-6 py-2 rounded-xl text-sm font-bold bg-surface-container-highest text-white">
-            All Series
+          <button
+            onClick={() => setActiveTab('browse')}
+            className={`px-6 py-2 rounded-xl text-sm font-bold transition-all ${
+              activeTab === 'browse'
+                ? 'bg-surface-container-highest text-white'
+                : 'text-on-surface-variant hover:text-white'
+            }`}
+          >
+            Browse
           </button>
+          {isEbCe && (
+            <button
+              onClick={() => setActiveTab('management')}
+              className={`px-6 py-2 rounded-xl text-sm font-bold transition-all ${
+                activeTab === 'management'
+                  ? 'bg-surface-container-highest text-white'
+                  : 'text-on-surface-variant hover:text-white'
+              }`}
+            >
+              Management
+            </button>
+          )}
         </div>
       </div>
 
+      {/* ═══ Browse View ═══ */}
+      {activeTab === 'browse' && (
+      <>
       {/* ═══ Search & Filter Bar ═══ */}
       <div className="glass-panel rounded-3xl p-4 mb-10 flex flex-col lg:flex-row gap-4 items-center border border-outline-variant/20">
         {/* Ô tìm kiếm — gửi search param lên backend LIKE %title% */}
@@ -420,6 +525,119 @@ export function SeriesListPage() {
         </div>
       )}
 
+      </>
+      )}
+
+      {/* ═══ Management View ═══ */}
+      {activeTab === 'management' && (
+      <div>
+        <div className="glass-panel rounded-3xl p-4 mb-8 border border-outline-variant/20">
+          <div className="relative flex-1 w-full">
+            <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-outline" />
+            <input
+              type="text"
+              value={mgmtSearch}
+              onChange={(e) => setMgmtSearch(e.target.value)}
+              placeholder="Search series title..."
+              className="w-full bg-surface-container-lowest border-none rounded-2xl pl-12 pr-4 py-3 text-sm focus:ring-2 focus:ring-primary/50 text-white placeholder:text-outline transition-all"
+            />
+          </div>
+        </div>
+
+        {isLoading ? (
+          <div className="flex justify-center py-20">
+            <LoadingSpinner size="lg" />
+          </div>
+        ) : error ? (
+          <div className="flex flex-col items-center justify-center py-20 text-center">
+            <span className="material-symbols-outlined text-6xl text-red-400 mb-4">error</span>
+            <h3 className="text-xl font-bold text-white mb-2">Failed to load series</h3>
+            <p className="text-on-surface-variant">{error}</p>
+          </div>
+        ) : (
+          <div className="rounded-2xl overflow-hidden border border-outline-variant/20">
+            <div className="grid grid-cols-12 gap-4 px-6 py-4 bg-surface-container-low text-xs font-bold text-on-surface-variant/60 uppercase tracking-wider">
+              <div className="col-span-1">#</div>
+              <div className="col-span-7">Title</div>
+              <div className="col-span-2">Schedule</div>
+              <div className="col-span-2">Status</div>
+            </div>
+            <div className="divide-y divide-outline-variant/10">
+              {mgmtFiltered.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-16 text-center">
+                  <span className="material-symbols-outlined text-5xl text-outline mb-3">search_off</span>
+                  <p className="text-on-surface-variant">No series match your search.</p>
+                </div>
+              ) : (
+                mgmtFiltered.map((series, idx) => {
+                  const atRisk = atRiskMap[series.id]
+                  const isAtRisk = series.status === 'AT_RISK'
+                  const options = getAvailableOptions(series.status)
+                  return (
+                    <div key={series.id}
+                      className={cn(
+                        'grid grid-cols-12 gap-4 px-6 py-4 items-center transition-colors',
+                        isAtRisk ? 'bg-red-500/5' : 'hover:bg-surface-container-low',
+                      )}
+                    >
+                      <div className="col-span-1 text-sm text-on-surface-variant">{idx + 1}</div>
+                      <div className="col-span-7 flex items-center gap-3 min-w-0">
+                        {series.coverImageUrl ? (
+                          <img src={series.coverImageUrl} alt="" className="w-8 h-11 rounded object-cover shrink-0" />
+                        ) : (
+                          <div className="w-8 h-11 rounded shrink-0" style={{ backgroundColor: series.coverColor || '#6B21A8' }} />
+                        )}
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-white truncate flex items-center gap-2">
+                            {series.title}
+                            {isAtRisk && <span className="text-red-400 text-xs">⚠️</span>}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="col-span-2 text-sm text-on-surface-variant">
+                        {series.scheduleType || '\u2014'}
+                      </div>
+                      <div className="col-span-2">
+                        {options.length > 0 ? (
+                          <select
+                            value={series.status}
+                            onChange={(e) => handleStatusChange(series.id, e.target.value)}
+                            disabled={updatingId === series.id}
+                            className={cn(
+                              'appearance-none w-full bg-surface-container-high border rounded-xl px-3 py-2 text-sm font-medium cursor-pointer transition-all',
+                              'focus:ring-2 focus:ring-primary/50',
+                              updatingId === series.id && 'opacity-50 cursor-wait',
+                              mgmtStatusColors[series.status] || 'text-on-surface border-outline-variant/30',
+                            )}
+                          >
+                            <option value={series.status} disabled>
+                              {statusLabels[series.status] || series.status}
+                            </option>
+                            {options.map((opt) => (
+                              <option key={opt} value={opt} className="text-on-surface bg-surface-container">
+                                {statusLabels[opt] || opt}
+                              </option>
+                            ))}
+                          </select>
+                        ) : (
+                          <span className={cn(
+                            'inline-block px-3 py-1.5 rounded-xl text-xs font-bold border',
+                            mgmtStatusColors[series.status] || 'bg-surface-container-high text-on-surface-variant border-outline-variant/30',
+                          )}>
+                            {statusLabels[series.status] || series.status}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+      )}
+
       {/* ═══ Footer ═══ */}
       <footer className="mt-20 border-t border-outline-variant/30 py-10">
         <div className="flex flex-col md:flex-row justify-between items-center gap-4">
@@ -431,6 +649,32 @@ export function SeriesListPage() {
           </div>
         </div>
       </footer>
+
+      {/* ═══ Cancel Confirm Dialog ═══ */}
+      <Dialog
+        open={confirmOpen}
+        onClose={() => { setConfirmOpen(false); setPendingAction(null) }}
+        title="Cancel Series"
+        description="Are you sure you want to cancel this series? This action cannot be undone."
+        size="sm"
+      >
+        <div className="flex items-center gap-4 pt-4">
+          <button
+            onClick={() => { setConfirmOpen(false); setPendingAction(null) }}
+            className="flex-1 py-3 rounded-xl bg-surface-container-high text-on-surface-variant hover:bg-surface-container transition-all text-sm font-medium"
+          >
+            Keep
+          </button>
+          <button
+            onClick={() => {
+              if (pendingAction) doUpdateStatus(pendingAction.seriesId, pendingAction.status)
+            }}
+            className="flex-[2] py-3 rounded-xl bg-red-500 text-white hover:brightness-110 transition-all text-sm font-semibold flex items-center justify-center gap-2"
+          >
+            <AlertTriangle size={16} /> Cancel Series
+          </button>
+        </div>
+      </Dialog>
     </div>
   )
 }

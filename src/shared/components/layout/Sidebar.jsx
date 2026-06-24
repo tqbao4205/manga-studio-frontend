@@ -40,7 +40,6 @@ const extraNav = [
     path: "/rankings",
     roles: ["EDITORIAL_BOARD", "CHIEF_EDITOR", "MANGAKA", "TANTOU_EDITOR"],
   },
-
 ];
 
 export function Sidebar() {

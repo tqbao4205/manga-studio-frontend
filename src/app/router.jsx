@@ -39,6 +39,7 @@ import { NotFoundPage } from "../features/not-found/NotFoundPage";
 import { EditorialBoardPage } from "../features/editorial/pages/EditorialBoardPage";
 import { VotingPage } from "../features/editorial/pages/VotingPage";
 import { VotingResultsPage } from "../features/editorial/pages/VotingResultsPage";
+
 import { ProtectedRoute, RoleGuard } from "./guards";
 
 export default function App() {
