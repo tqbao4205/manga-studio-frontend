@@ -34,8 +34,6 @@ const PLATFORM_OPTIONS = [
 const LEADERBOARD_TABS = [
   { value: "TOP_CHARTS", label: "Top Charts" },
   { value: "BY_GENRE", label: "By Genre" },
-  { value: "TOP_GAINERS", label: "Top Gainers" },
-  { value: "TOP_LOSERS", label: "Top Losers" },
 ];
 
 const ACTIVE_SERIES_STATUSES = new Set([
