@@ -1,8 +1,23 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { tasksListService } from '../services/tasksListService'
 
+function toNumberId(value) {
+  const numeric = Number(value)
+  return Number.isFinite(numeric) ? numeric : null
+}
+
+function resolvePrimaryRegionId(task) {
+  return (
+    toNumberId(task?.regionId) ||
+    toNumberId(task?.region?.id) ||
+    toNumberId(task?.regions?.[0]?.id) ||
+    null
+  )
+}
+
 function decorateTask(task, regionSeriesLookup = new Map()) {
-  const mappedSeries = regionSeriesLookup.get(Number(task.regions?.[0]?.id)) || null
+  const primaryRegionId = resolvePrimaryRegionId(task)
+  const mappedSeries = regionSeriesLookup.get(primaryRegionId) || null
   const seriesId = task.seriesId || mappedSeries?.seriesId || null
   const seriesTitle = task.seriesTitle || mappedSeries?.seriesTitle || 'Unknown Series'
   const chapterId = task.chapterId || mappedSeries?.chapterId || null

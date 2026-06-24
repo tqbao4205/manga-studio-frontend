@@ -125,7 +125,12 @@ const toolDefs = [
     roles: ["MANGAKA", "ASSISTANT", "TANTOU_EDITOR"],
   },
   { id: "draw", icon: Square, label: "Region (R)", roles: ["MANGAKA"] },
-  { id: "comment", icon: MessageSquare, label: "Comment (C)", roles: ["MANGAKA", "ASSISTANT", "TANTOU_EDITOR"] },
+  {
+    id: "comment",
+    icon: MessageSquare,
+    label: "Comment (C)",
+    roles: ["MANGAKA", "ASSISTANT", "TANTOU_EDITOR"],
+  },
 ];
 
 /* Tools cho review mode (TANTOU_EDITOR / EDITORIAL_BOARD) */
@@ -178,7 +183,7 @@ export function WorkspacePage() {
   // ─── Other stores ───
   const user = useAuthStore((s) => s.user);
   const addToast = useUIStore((s) => s.addToast);
-  const createBatchTask = useTaskStore((s) => s.createBatchTask);
+  const createTasksForRegions = useTaskStore((s) => s.createTasksForRegions);
   const updateChapterStatus = useSeriesStore((s) => s.updateChapterStatus);
   const chapters = useSeriesStore((s) => s.chapters);
 
@@ -412,10 +417,13 @@ export function WorkspacePage() {
     const formData = new FormData();
     formData.append("file", file);
     // Backend yêu cầu field 'request' là JSON string chứa metadata
-    formData.append("request", JSON.stringify({
-      label: `Layer ${layers.length + 1}`,
-      opacity: 1,
-    }));
+    formData.append(
+      "request",
+      JSON.stringify({
+        label: `Layer ${layers.length + 1}`,
+        opacity: 1,
+      }),
+    );
     try {
       await addLayer(currentPageId, formData);
       addToast({
@@ -434,21 +442,24 @@ export function WorkspacePage() {
   };
 
   /**
-   * Submit assigned task: gọi createBatchTask (POST /api/tasks/batch).
+   * Submit assigned task cho nhiều region bằng endpoint create theo từng region.
    */
   const handleSubmitAssignedTask = async (formValues) => {
     if (selectedRegions.length === 0) return;
 
     try {
-      await createBatchTask(selectedRegions.map(r => r.id), {
-        title: formValues.title,
-        description: formValues.description,
-        notes: formValues.notes,
-        priority: formValues.priority,
-        dueDate: formValues.dueDate,
-        assistantId: formValues.assistantId,
-        referenceImageUrl: formValues.referenceImageUrl || "",
-      });
+      await createTasksForRegions(
+        selectedRegions.map((r) => r.id),
+        {
+          title: formValues.title,
+          description: formValues.description,
+          notes: formValues.notes,
+          priority: formValues.priority,
+          dueDate: formValues.dueDate,
+          assistantId: formValues.assistantId,
+          referenceImageUrl: formValues.referenceImageUrl || "",
+        },
+      );
 
       setCreateTaskOpen(false);
       addToast({
@@ -472,9 +483,7 @@ export function WorkspacePage() {
     return (
       <div className="h-screen bg-surface flex items-center justify-center">
         <div className="text-center">
-          <p className="text-on-surface-variant text-sm">
-            Chapter not found
-          </p>
+          <p className="text-on-surface-variant text-sm">Chapter not found</p>
           <button
             onClick={() => navigate("/series")}
             className="mt-3 text-xs text-primary hover:underline"
@@ -497,7 +506,9 @@ export function WorkspacePage() {
     (t) => t.id === activeTab,
   )?.Component;
   const currentPage = pages.find((p) => p.id === currentPageId);
-  const selectedRegions = regions.filter((r) => selectedRegionIds.includes(r.id));
+  const selectedRegions = regions.filter((r) =>
+    selectedRegionIds.includes(r.id),
+  );
 
   const regionCount = regions.length;
   const completedRegions = regions.filter(
@@ -514,9 +525,7 @@ export function WorkspacePage() {
             variant="ghost"
             size="icon"
             onClick={() =>
-              navigate(
-                isReviewMode ? "/review" : `/series/${chapter.seriesId}`,
-              )
+              navigate(isReviewMode ? "/review" : `/series/${chapter.seriesId}`)
             }
             title="Back"
           >
@@ -551,7 +560,6 @@ export function WorkspacePage() {
                       : ""}
                 </span>
               )}
-
             </>
           )}
         </div>
@@ -620,7 +628,10 @@ export function WorkspacePage() {
                         onClick={() => loadPage(p.id)}
                         isMangaka={isMangaka}
                         onMarkDone={async () => {
-                          await setPageStatus(p.id, p.status === 'COMPLETED' ? 'UPLOADED' : 'COMPLETED');
+                          await setPageStatus(
+                            p.id,
+                            p.status === "COMPLETED" ? "UPLOADED" : "COMPLETED",
+                          );
                           const data = await chapterService.getById(id);
                           if (data) {
                             setChapter(data);
@@ -737,8 +748,9 @@ export function WorkspacePage() {
                     onClick={() => setMode(t.id)}
                     disabled={currentPageId === null}
                     className={cn(
-                      'w-8 h-8',
-                      mode === t.id && "bg-primary/10 text-primary border border-primary/20",
+                      "w-8 h-8",
+                      mode === t.id &&
+                        "bg-primary/10 text-primary border border-primary/20",
                     )}
                     title={t.label}
                   >
@@ -750,18 +762,33 @@ export function WorkspacePage() {
             <div className="w-px h-5 bg-outline-variant/30 mx-1" />
             {/* Zoom control */}
             <div className="flex items-center">
-              <Button variant="ghost" size="icon" className="w-8 h-8" onClick={() => setZoom(Math.max(0.25, zoom - 0.25))}>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="w-8 h-8"
+                onClick={() => setZoom(Math.max(0.25, zoom - 0.25))}
+              >
                 <ZoomOut size={15} />
               </Button>
-              <span className="mx-1 text-xs font-medium min-w-[32px] text-center tabular-nums text-on-surface tabular-nums">
+              <span className="mx-1 text-xs font-medium min-w-[32px] text-center tabular-nums text-on-surface">
                 {Math.round(zoom * 100)}%
               </span>
-              <Button variant="ghost" size="icon" className="w-8 h-8" onClick={() => setZoom(Math.min(10, zoom + 0.25))}>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="w-8 h-8"
+                onClick={() => setZoom(Math.min(10, zoom + 0.25))}
+              >
                 <ZoomIn size={15} />
               </Button>
             </div>
             <div className="w-px h-5 bg-outline-variant/30 mx-1" />
-            <Button variant="ghost" size="sm" className="px-3 text-xs font-bold" onClick={() => setZoom(1)}>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="px-3 text-xs font-bold"
+              onClick={() => setZoom(1)}
+            >
               Fit To Screen
             </Button>
           </div>
@@ -814,7 +841,8 @@ export function WorkspacePage() {
                   disabled={selectedRegions.length === 0}
                   className="w-full rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-on-primary transition-all hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  Assign Task {selectedRegions.length > 0 && `(${selectedRegions.length})`}
+                  Assign Task{" "}
+                  {selectedRegions.length > 0 && `(${selectedRegions.length})`}
                 </button>
                 {selectedRegions.length === 0 && (
                   <p className="mt-2 text-xs text-on-surface-variant">
@@ -890,7 +918,12 @@ export function WorkspacePage() {
             {mergeImageUrl && (
               <Button
                 size="sm"
-                onClick={() => forceDownload(mergeImageUrl, `page-${currentPageId}-merged.png`)}
+                onClick={() =>
+                  forceDownload(
+                    mergeImageUrl,
+                    `page-${currentPageId}-merged.png`,
+                  )
+                }
               >
                 <Download size={14} className="mr-1" /> Download
               </Button>
@@ -914,11 +947,7 @@ export function WorkspacePage() {
           >
             Cancel
           </Button>
-          <Button
-            size="sm"
-            variant="danger"
-            onClick={handleFlatten}
-          >
+          <Button size="sm" variant="danger" onClick={handleFlatten}>
             {flattening ? (
               <Loader2 size={14} className="animate-spin mr-1" />
             ) : (
@@ -960,7 +989,7 @@ function SortablePageCard({ page, isActive, onClick, isMangaka, onMarkDone }) {
         isDragging ? "opacity-40 z-50" : "",
       )}
     >
-      {(page.finalImageUrl || page.originalImageUrl) ? (
+      {page.finalImageUrl || page.originalImageUrl ? (
         <img
           src={page.finalImageUrl || page.originalImageUrl}
           alt={`Page ${page.pageNumber}`}
@@ -976,20 +1005,28 @@ function SortablePageCard({ page, isActive, onClick, isMangaka, onMarkDone }) {
           {page.label || `Page ${String(page.pageNumber).padStart(2, "0")}`}
         </span>
       </div>
-      {isMangaka && page.status === 'COMPLETED' ? (
+      {isMangaka && page.status === "COMPLETED" ? (
         <button
-          onClick={(e) => { e.stopPropagation(); onMarkDone?.() }}
+          onClick={(e) => {
+            e.stopPropagation();
+            onMarkDone?.();
+          }}
           className="absolute top-2 left-2 bg-yellow-500/90 text-white text-[10px] px-2 py-0.5 rounded-full font-bold hover:bg-yellow-600 transition-colors z-10"
         >
           Undo
         </button>
-      ) : isMangaka && (
-        <button
-          onClick={(e) => { e.stopPropagation(); onMarkDone?.() }}
-          className="absolute top-2 left-2 bg-emerald-500/90 text-white text-[10px] px-2 py-0.5 rounded-full font-bold hover:bg-emerald-600 transition-colors z-10"
-        >
-          Mark Done
-        </button>
+      ) : (
+        isMangaka && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onMarkDone?.();
+            }}
+            className="absolute top-2 left-2 bg-emerald-500/90 text-white text-[10px] px-2 py-0.5 rounded-full font-bold hover:bg-emerald-600 transition-colors z-10"
+          >
+            Mark Done
+          </button>
+        )
       )}
       {isActive && (
         <div className="absolute top-2 right-2 bg-primary text-white text-[10px] px-2 py-0.5 rounded-full font-bold">

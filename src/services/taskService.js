@@ -32,6 +32,7 @@
  */
 
 import api from './api';
+import { logApiCall } from '../shared/utils/telemetry';
 
 const taskService = {
 
@@ -47,6 +48,7 @@ const taskService = {
    * @returns {Promise<Object>} { content: TaskResponse[], page, size, totalElements, totalPages }
    */
   getAll: async (params) => {
+    logApiCall('task', 'getAll', { params });
     return api.get('/tasks', { params });
   },
 
@@ -58,6 +60,7 @@ const taskService = {
    * @returns {Promise<Object>} TaskResponse (có submissions[] + attachments[])
    */
   getById: async (id) => {
+    logApiCall('task', 'getById', { id });
     return api.get(`/tasks/${id}`);
   },
 
@@ -69,6 +72,7 @@ const taskService = {
    * @returns {Promise<Array>} Mảng TaskResponse
    */
   getByRegion: async (regionId) => {
+    logApiCall('task', 'getByRegion', { regionId });
     return api.get(`/regions/${regionId}/tasks`);
   },
 
@@ -94,21 +98,13 @@ const taskService = {
    * @returns {Promise<Object>} TaskResponse vừa tạo (status = TODO)
    */
   create: async (regionId, data) => {
+    logApiCall('task', 'create', {
+      regionId,
+      assistantId: data?.assistantId,
+      priority: data?.priority,
+      dueDate: data?.dueDate,
+    });
     return api.post(`/regions/${regionId}/tasks`, data);
-  },
-
-  /**
-   * Tạo 1 task mới cho nhiều regions.
-   * Endpoint: POST /api/tasks/batch
-   *
-   * Body: { regionIds: [...], title, description, notes, ... }
-   *
-   * @param {number[]} regionIds - Mảng IDs của regions
-   * @param {Object} data - TaskCreateRequest (không bao gồm regionIds)
-   * @returns {Promise<Object>} TaskResponse vừa tạo
-   */
-  createBatch: async (regionIds, data) => {
-    return api.post('/tasks/batch', { regionIds, ...data });
   },
 
   /**
@@ -120,6 +116,7 @@ const taskService = {
    * @returns {Promise<Object>} TaskResponse đã cập nhật
    */
   update: async (id, data) => {
+    logApiCall('task', 'update', { id });
     return api.put(`/tasks/${id}`, data);
   },
 
@@ -136,6 +133,7 @@ const taskService = {
    * @returns {Promise<Object>} TaskResponse đã cập nhật status
    */
   updateStatus: async (id, status) => {
+    logApiCall('task', 'updateStatus', { id, status });
     return api.patch(`/tasks/${id}/status`, { status });
   },
 
@@ -147,6 +145,7 @@ const taskService = {
    * @returns {Promise<void>}
    */
   delete: async (id) => {
+    logApiCall('task', 'delete', { id });
     return api.delete(`/tasks/${id}`);
   },
 
@@ -162,6 +161,7 @@ const taskService = {
    * @returns {Promise<Array>} Mảng SubmissionResponse
    */
   getSubmissions: async (taskId) => {
+    logApiCall('task', 'getSubmissions', { taskId });
     return api.get(`/tasks/${taskId}/submissions`);
   },
 
@@ -180,6 +180,7 @@ const taskService = {
    * @returns {Promise<Object>} SubmissionResponse (status = SUBMITTED)
    */
   submit: async (taskId, formData) => {
+    logApiCall('task', 'submit', { taskId, hasNote: Boolean(formData?.get?.('note')) });
     return api.post(`/tasks/${taskId}/submissions`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
       timeout: 120000,
@@ -196,6 +197,11 @@ const taskService = {
    * @returns {Promise<Object>} SubmissionResponse đã cập nhật
    */
   reviewSubmission: async (submissionId, status, note) => {
+    logApiCall('task', 'reviewSubmission', {
+      submissionId,
+      status,
+      noteLength: note?.length || 0,
+    });
     return api.patch(`/submissions/${submissionId}/status`, { status, note });
   },
 
@@ -215,6 +221,10 @@ const taskService = {
    * @returns {Promise<Object>} AttachmentResponse
    */
   addAttachment: async (taskId, formData) => {
+    logApiCall('task', 'addAttachment', {
+      taskId,
+      fileName: formData?.get?.('file')?.name || null,
+    });
     return api.post(`/tasks/${taskId}/attachments`, formData, {
       timeout: 120000,
     });
@@ -228,6 +238,7 @@ const taskService = {
    * @returns {Promise<void>}
    */
   deleteAttachment: async (id) => {
+    logApiCall('task', 'deleteAttachment', { id });
     return api.delete(`/attachments/${id}`);
   },
 };

@@ -95,18 +95,18 @@ export const useTaskStore = create((set, get) => ({
   },
 
   /**
-   * Tạo 1 task cho nhiều regions.
-   * Endpoint: POST /api/tasks/batch
+   * Tạo task cho nhiều regions bằng endpoint chuẩn theo từng region.
+   * Endpoint: POST /api/regions/{regionId}/tasks
    *
    * @param {number[]} regionIds - Mảng IDs của regions
    * @param {Object} data - { title, description, notes, priority, dueDate, assistantId }
    */
-  createBatchTask: async (regionIds, data) => {
+  createTasksForRegions: async (regionIds, data) => {
     try {
-      await taskService.createBatch(regionIds, data);
-      await Promise.all(regionIds.map(id => get().loadTasks(id)));
+      await Promise.all(regionIds.map((id) => taskService.create(id, data)));
+      await Promise.all(regionIds.map((id) => get().loadTasks(id)));
     } catch (err) {
-      console.error('[taskStore] createBatchTask failed:', err);
+      console.error('[taskStore] createTasksForRegions failed:', err);
       throw err;
     }
   },
