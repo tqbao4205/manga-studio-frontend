@@ -1,0 +1,552 @@
+<!DOCTYPE html><html class="dark" lang="en" style=""><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Editorial Board Dashboard - MangaNexus Executive</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;family=JetBrains+Mono:wght@500&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-bright": "#37374d",
+                        "surface-container-highest": "#333348",
+                        "background": "#111125",
+                        "surface-container-lowest": "#0c0c1f",
+                        "error-container": "#93000a",
+                        "on-tertiary-fixed": "#301400",
+                        "outline-variant": "#4a4455",
+                        "secondary": "#d0bcff",
+                        "primary": "#d2bbff",
+                        "surface-dim": "#111125",
+                        "success-vibrant": "#10B981",
+                        "inverse-primary": "#732ee4",
+                        "on-surface-variant": "#ccc3d8",
+                        "danger-axe": "#EF4444",
+                        "secondary-fixed": "#e9ddff",
+                        "tertiary-fixed": "#ffdcc6",
+                        "surface-container-high": "#28283d",
+                        "surface-deep": "#0F0F1A",
+                        "on-primary-container": "#ede0ff",
+                        "surface-variant": "#333348",
+                        "on-secondary-fixed": "#210f48",
+                        "primary-fixed-dim": "#d2bbff",
+                        "surface-tint": "#d2bbff",
+                        "on-tertiary": "#4f2500",
+                        "surface-container-low": "#1a1a2e",
+                        "accent-pink": "#CB9FD2",
+                        "on-primary": "#3f008e",
+                        "on-tertiary-container": "#ffe0cd",
+                        "on-background": "#e2e0fc",
+                        "inverse-surface": "#e2e0fc",
+                        "tertiary": "#ffb784",
+                        "on-tertiary-fixed-variant": "#713700",
+                        "on-primary-fixed": "#25005a",
+                        "on-error": "#690005",
+                        "on-primary-fixed-variant": "#5a00c6",
+                        "surface-container": "#1e1e32",
+                        "primary-container": "#7c3aed",
+                        "on-surface": "#e2e0fc",
+                        "surface": "#111125",
+                        "inverse-on-surface": "#2f2e43",
+                        "on-secondary-container": "#c2aef0",
+                        "tertiary-container": "#a15100",
+                        "on-secondary": "#37265e",
+                        "error": "#ffb4ab",
+                        "secondary-fixed-dim": "#d0bcff",
+                        "on-error-container": "#ffdad6",
+                        "primary-fixed": "#eaddff",
+                        "accent-gold": "#FFD066",
+                        "on-secondary-fixed-variant": "#4d3d76",
+                        "outline": "#958da1",
+                        "tertiary-fixed-dim": "#ffb784",
+                        "accent-peach": "#FFC9C1",
+                        "secondary-container": "#503f79"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "gutter": "24px",
+                        "container-max": "1440px",
+                        "margin-desktop": "40px",
+                        "unit": "4px",
+                        "margin-mobile": "16px"
+                    },
+                    "fontFamily": {
+                        "headline-md": ["Inter"],
+                        "body-md": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "body-sm": ["Inter"],
+                        "label-md": ["JetBrains Mono"],
+                        "label-sm": ["JetBrains Mono"],
+                        "headline-lg-mobile": ["Inter"],
+                        "headline-xl": ["Inter"],
+                        "headline-lg": ["Inter"]
+                    },
+                    "fontSize": {
+                        "headline-md": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "body-lg": ["18px", { "lineHeight": "28px", "fontWeight": "400" }],
+                        "body-sm": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "label-md": ["12px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "500" }],
+                        "label-sm": ["10px", { "lineHeight": "14px", "letterSpacing": "0.05em", "fontWeight": "500" }],
+                        "headline-lg-mobile": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
+                        "headline-xl": ["48px", { "lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "headline-lg": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .glass-card {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(8px);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            border-left: 1px solid rgba(255, 255, 255, 0.05);
+            border-right: 1px solid rgba(255, 255, 255, 0.02);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.02);
+        }
+        .data-table-row:not(:last-child) {
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .gradient-text {
+            background: linear-gradient(to right, #d2bbff, #CB9FD2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-surface font-body-md min-h-screen selection:bg-primary-container selection:text-on-primary-container pb-20">
+<!-- TopNavBar -->
+<nav class="bg-surface-container-low/80 backdrop-blur-xl docked full-width top-0 border-b border-white/5 shadow-sm fixed top-0 w-full z-50 flex justify-between items-center px-margin-desktop h-16">
+<div class="flex items-center gap-8">
+<div class="font-headline-md text-headline-md font-bold text-primary">MangaNexus Executive</div>
+<div class="hidden md:flex gap-6">
+<a class="text-on-surface-variant hover:text-on-surface transition-colors hover:bg-white/5 font-label-md text-label-md px-3 py-2 rounded" href="#">Analytics</a>
+<a class="text-on-surface-variant hover:text-on-surface transition-colors hover:bg-white/5 font-label-md text-label-md px-3 py-2 rounded" href="#">Series</a>
+<a class="text-primary border-b-2 border-primary pb-1 hover:bg-white/5 font-label-md text-label-md px-3 py-2 rounded-t transition-all duration-200 active:scale-95" href="#">Editorial Board</a>
+<a class="text-on-surface-variant hover:text-on-surface transition-colors hover:bg-white/5 font-label-md text-label-md px-3 py-2 rounded" href="#">Production</a>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<div class="relative hidden lg:block">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant" style="font-variation-settings: 'FILL' 0;">search</span>
+<input class="bg-surface-container-highest border border-white/10 rounded-full pl-10 pr-4 py-1.5 font-body-sm text-body-sm text-on-surface focus:outline-none focus:border-primary transition-colors w-64 placeholder-on-surface-variant/50" placeholder="Search series, editors..." type="text">
+</div>
+<button class="bg-primary-container text-on-primary-container hover:bg-inverse-primary transition-colors px-4 py-2 rounded-lg font-label-md text-label-md flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]" style="font-variation-settings: 'FILL' 0;">add</span>
+                New Series
+            </button>
+<div class="flex items-center gap-2">
+<button class="p-2 rounded-full hover:bg-white/5 text-on-surface-variant hover:text-on-surface transition-colors">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">notifications</span>
+</button>
+<button class="p-2 rounded-full hover:bg-white/5 text-on-surface-variant hover:text-on-surface transition-colors">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">settings</span>
+</button>
+</div>
+<div class="w-8 h-8 rounded-full bg-surface-container-highest overflow-hidden border border-white/10 ml-2">
+<img alt="Chief Editor Profile" class="w-full h-full object-cover" data-alt="A cinematic portrait of a professional editorial executive in a high-tech studio setting, dramatically lit with subtle neon purple and blue accents. Dark mode aesthetic, hyper-realistic, 8k resolution." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBiyBqw3OGO3q1P8RHbUkfXKw20K1P9tXtJWrdSE7UenL5CAmbd46LrfwGjN0Hv7W4eZSS8UhPlTTGj87eYN0ouNB6K-ojzzQnbN-Xt3FEGHETb9QZLa1QM85c6rSGtrBE5hIGns7hD3pppRHXDxQzgptPUhhVWZ0Si_ky-lTY_y4cPb2ZbDdH30N-CEqH0H0iJf0bdSxAwd0nr0iInKZt73WHiy3SS7a0pW22bbQ7ZWzWOWFpiiZuUg3SAjAQOz0-6rtopCeW5qzI">
+</div>
+</div>
+</nav>
+<!-- SideNavBar (Hidden on Mobile, shown on Desktop, pushing content over) -->
+<aside class="bg-surface-container-lowest fixed left-0 top-0 h-screen w-80 border-r border-white/5 fixed left-0 top-0 h-full w-80 flex flex-col z-40 pt-20 transition-transform duration-300 ease-in-out hidden xl:flex">
+<div class="px-6 pb-6 border-b border-white/5 mb-6">
+<div class="flex items-center gap-4 mb-4">
+<div class="w-12 h-12 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center">
+<span class="material-symbols-outlined text-primary text-[24px]" style="font-variation-settings: 'FILL' 1;">movie_creation</span>
+</div>
+<div>
+<h2 class="font-body-md text-body-md font-bold text-on-surface">Series Management</h2>
+<p class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider mt-1">Production Level 0</p>
+</div>
+</div>
+<button class="w-full bg-surface-container-high hover:bg-surface-bright/50 text-primary border border-primary/30 transition-colors px-4 py-2.5 rounded-lg font-label-md text-label-md flex items-center justify-center gap-2 mt-4">
+<span class="material-symbols-outlined text-[18px]" style="font-variation-settings: 'FILL' 0;">groups</span>
+                Meeting Mode
+            </button>
+</div>
+<div class="flex-1 px-4 flex flex-col gap-1 overflow-y-auto">
+<a class="text-on-surface-variant hover:bg-surface-bright/50 hover:bg-surface-container-high transition-colors font-body-sm text-body-sm flex items-center gap-3 px-4 py-3 rounded-lg" href="#">
+<span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' 0;">dashboard</span>
+                Global Overview
+            </a>
+<a class="text-on-surface-variant hover:bg-surface-bright/50 hover:bg-surface-container-high transition-colors font-body-sm text-body-sm flex items-center gap-3 px-4 py-3 rounded-lg" href="#">
+<span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' 0;">inventory_2</span>
+                Asset Management
+            </a>
+<a class="text-on-surface-variant hover:bg-surface-bright/50 hover:bg-surface-container-high transition-colors font-body-sm text-body-sm flex items-center gap-3 px-4 py-3 rounded-lg" href="#">
+<span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' 0;">layers</span>
+                Layer Controls
+            </a>
+<a class="text-on-surface-variant hover:bg-surface-bright/50 hover:bg-surface-container-high transition-colors font-body-sm text-body-sm flex items-center gap-3 px-4 py-3 rounded-lg" href="#">
+<span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' 0;">gavel</span>
+                Axe List
+            </a>
+<a class="bg-primary-container/20 text-primary border-r-4 border-primary hover:bg-surface-container-high transition-colors font-body-sm text-body-sm flex items-center gap-3 px-4 py-3 rounded-lg" href="#">
+<span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' 1;">how_to_vote</span>
+                Voting Council
+            </a>
+</div>
+<div class="p-4 border-t border-white/5 flex flex-col gap-1 mt-auto">
+<a class="text-on-surface-variant hover:bg-surface-bright/50 hover:bg-surface-container-high transition-colors font-body-sm text-body-sm flex items-center gap-3 px-4 py-3 rounded-lg" href="#">
+<span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' 0;">help</span>
+                Support
+            </a>
+<a class="text-on-surface-variant hover:bg-surface-bright/50 hover:bg-surface-container-high transition-colors font-body-sm text-body-sm flex items-center gap-3 px-4 py-3 rounded-lg" href="#">
+<span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' 0;">logout</span>
+                Sign Out
+            </a>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="pt-24 px-margin-mobile md:px-margin-desktop xl:ml-80 max-w-container-max mx-auto transition-all duration-300 pb-12">
+<!-- Header -->
+<div class="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
+<div>
+<h1 class="font-headline-xl text-headline-xl text-on-surface tracking-tight mb-2 gradient-text">Editorial Board</h1>
+<p class="font-body-lg text-body-lg text-on-surface-variant">Macro Overview &amp; Strategic Decisions</p>
+</div>
+<div class="flex gap-3"><div class="relative group">
+    <button class="bg-surface-container border border-white/10 hover:bg-surface-bright text-on-surface transition-colors px-4 py-2 rounded-lg font-label-md text-label-md flex items-center gap-2">
+        <span class="material-symbols-outlined text-[18px]" style="font-variation-settings: 'FILL' 0;">filter_list</span>
+        All Platforms
+        <span class="material-symbols-outlined text-[18px]">expand_more</span>
+    </button>
+    <div class="absolute right-0 mt-2 w-48 bg-surface-container-high border border-white/10 rounded-lg shadow-xl opacity-0 group-hover:opacity-100 transition-opacity z-50 overflow-hidden">
+        <a href="#" class="block px-4 py-2 text-body-sm hover:bg-primary/10 hover:text-primary transition-colors">All Platforms</a>
+        <a href="#" class="block px-4 py-2 text-body-sm hover:bg-primary/10 hover:text-primary transition-colors">Shonen Weekly</a>
+        <a href="#" class="block px-4 py-2 text-body-sm hover:bg-primary/10 hover:text-primary transition-colors">Seinen Monthly</a>
+        <a href="#" class="block px-4 py-2 text-body-sm hover:bg-primary/10 hover:text-primary transition-colors">MangaNexus App</a>
+    </div>
+</div>
+<button class="bg-surface-container border border-white/10 hover:bg-surface-bright text-on-surface transition-colors px-4 py-2 rounded-lg font-label-md text-label-md flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]" style="font-variation-settings: 'FILL' 0;">download</span>
+                    Export Report
+                </button>
+</div>
+</div>
+<!-- KPI Area -->
+<section class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+<div class="glass-card rounded-xl p-6 relative overflow-hidden group">
+<div class="absolute -right-6 -top-6 w-24 h-24 bg-primary/10 rounded-full blur-xl group-hover:bg-primary/20 transition-all duration-500"></div>
+<div class="flex items-start justify-between mb-4">
+<h3 class="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Total Active Series</h3>
+<span class="material-symbols-outlined text-primary text-[24px]" style="font-variation-settings: 'FILL' 0;">menu_book</span>
+</div>
+<div class="flex items-baseline gap-3">
+<span class="font-headline-xl text-headline-xl font-bold text-on-surface">142</span>
+<span class="font-label-sm text-label-sm text-success-vibrant bg-success-vibrant/10 px-2 py-0.5 rounded flex items-center gap-1">
+<span class="material-symbols-outlined text-[12px]">trending_up</span> +3%
+                    </span>
+</div>
+</div>
+<div class="glass-card rounded-xl p-6 relative overflow-hidden group">
+<div class="absolute -right-6 -top-6 w-24 h-24 bg-accent-gold/10 rounded-full blur-xl group-hover:bg-accent-gold/20 transition-all duration-500"></div>
+<div class="flex items-start justify-between mb-4">
+<h3 class="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Proposals Pending</h3>
+<span class="material-symbols-outlined text-accent-gold text-[24px]" style="font-variation-settings: 'FILL' 0;">campaign</span>
+</div>
+<div class="flex items-baseline gap-3">
+<span class="font-headline-xl text-headline-xl font-bold text-on-surface">09</span>
+<span class="font-label-sm text-label-sm text-accent-gold bg-accent-gold/10 px-2 py-0.5 rounded">Awaiting Vote</span>
+</div>
+</div>
+<div class="glass-card rounded-xl p-6 relative overflow-hidden group">
+<div class="absolute -right-6 -top-6 w-24 h-24 bg-accent-peach/10 rounded-full blur-xl group-hover:bg-accent-peach/20 transition-all duration-500"></div>
+<div class="flex items-start justify-between mb-4">
+<h3 class="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Reader Votes (Period)</h3>
+<span class="material-symbols-outlined text-accent-peach text-[24px]" style="font-variation-settings: 'FILL' 0;">how_to_vote</span>
+</div>
+<div class="flex items-baseline gap-3">
+<span class="font-headline-xl text-headline-xl font-bold text-on-surface">1.2M+</span>
+<span class="font-label-sm text-label-sm text-success-vibrant bg-success-vibrant/10 px-2 py-0.5 rounded flex items-center gap-1">
+<span class="material-symbols-outlined text-[12px]">trending_up</span> +12%
+                    </span>
+</div>
+</div>
+</section>
+<!-- Main Layout Grid -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+<!-- Left Column: Master Leaderboard -->
+<div class="lg:col-span-8 flex flex-col gap-6">
+<div class="glass-card rounded-xl overflow-hidden flex flex-col h-full">
+<div class="p-6 border-b border-white/5 flex justify-between items-center bg-surface-container-low/50">
+<div>
+<h2 class="font-headline-md text-headline-md text-on-surface mb-1">Master Leaderboard</h2>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Real-time performance ranking based on reader engagement.</p>
+</div>
+<button class="text-on-surface-variant hover:text-primary transition-colors p-2 rounded-lg hover:bg-white/5">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">filter_list</span>
+</button>
+</div>
+<div class="flex gap-6 px-6 py-3 border-b border-white/5 bg-surface-container-low/30">
+    <button class="text-primary font-label-md text-label-md border-b-2 border-primary pb-1">Top Charts</button>
+    <button class="text-on-surface-variant hover:text-on-surface font-label-md text-label-md transition-colors">By Genre</button>
+    <button class="text-on-surface-variant hover:text-on-surface font-label-md text-label-md transition-colors">Top Gainers</button>
+    <button class="text-on-surface-variant hover:text-on-surface font-label-md text-label-md transition-colors">Top Losers</button>
+</div><div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="border-b border-white/10 bg-surface-container-highest/30">
+<th class="py-4 px-6 font-label-md text-label-md text-on-surface-variant font-medium w-16 text-center">Rank</th>
+<th class="py-4 px-6 font-label-md text-label-md text-on-surface-variant font-medium">Series</th>
+<th class="py-4 px-6 font-label-md text-label-md text-on-surface-variant font-medium text-right">Reader Votes</th>
+<th class="py-4 px-6 font-label-md text-label-md text-on-surface-variant font-medium text-center">Trend</th>
+<th class="py-4 px-6 font-label-md text-label-md text-on-surface-variant font-medium text-right">Actions</th>
+</tr>
+</thead>
+<tbody class="font-body-sm text-body-sm">
+<!-- Rank 1 (S-Tier) -->
+<tr class="data-table-row hover:bg-white/[0.02] transition-colors group bg-accent-gold/5">
+<td class="py-4 px-6 text-center font-label-md text-label-md text-accent-gold font-bold">#1</td>
+<td class="py-4 px-6">
+<div class="flex items-center gap-4">
+<div class="w-12 h-16 rounded overflow-hidden bg-surface-container-highest flex-shrink-0 border border-accent-gold/30">
+<img alt="Neon Genesis Thumbnail" class="w-full h-full object-cover" data-alt="A detailed, cinematic thumbnail illustration of a fantasy manga protagonist wielding a glowing blue sword against a dark, dramatic backdrop. High contrast, studio lighting, professional anime art style." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCBZt1Psh3lUpE_SGWeg0w0EajFZJPzaOOOeelyGE9DY3JqCOTR2-rcR0SLLEJ2R6ciDr5VPvmnN2I0RKNK544ywKH5CATDmYR-zfbcQt7QAa9H0DVPYHss-f6NLXraHynGc2WFRSbAwYZJdWNUK77Qz6VcAR23hyPav8xqIQPT0DAC4hjI-pYwfo9UnGn7yK9v5VZW2KzBf4ZYQbXQ-XY3eSIcE-E3bp8u4kHe6HzeviFcCZW01ld9_rnnIvALfHK01Rr5IfgdiyQ">
+</div>
+<div>
+<div class="flex items-center gap-2 mb-1">
+<span class="font-body-md text-body-md font-semibold text-on-surface">Neon Genesis Drift</span>
+<span class="bg-accent-gold text-surface-deep font-label-sm text-label-sm px-1.5 py-0.5 rounded-sm font-bold shadow-[0_0_10px_rgba(255,208,102,0.3)]">S-TIER</span>
+</div>
+<div class="text-on-surface-variant text-xs">Studio A • Sci-Fi Action</div>
+</div>
+</div>
+</td>
+<td class="py-4 px-6 text-right font-label-md text-label-md text-on-surface font-medium">342.5K</td>
+<td class="py-4 px-6 text-center">
+<div class="flex justify-center items-center">
+<span class="material-symbols-outlined text-success-vibrant" style="font-variation-settings: 'FILL' 1;">arrow_drop_up</span>
+</div>
+</td>
+<td class="py-4 px-6 text-right">
+<button class="text-on-surface-variant hover:text-primary transition-colors p-2 rounded opacity-0 group-hover:opacity-100 focus:opacity-100">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">more_horiz</span>
+</button>
+</td>
+</tr>
+<!-- Rank 2 -->
+<tr class="data-table-row hover:bg-white/[0.02] transition-colors group">
+<td class="py-4 px-6 text-center font-label-md text-label-md text-on-surface-variant">#2</td>
+<td class="py-4 px-6">
+<div class="flex items-center gap-4">
+<div class="w-12 h-16 rounded overflow-hidden bg-surface-container-highest flex-shrink-0">
+<img alt="Cyberpunk Detective Thumbnail" class="w-full h-full object-cover" data-alt="A moody, highly detailed portrait of a cyberpunk detective in the rain, illuminated by neon pink and cyan city lights. Dark mode aesthetic, professional manga cover art style." src="https://lh3.googleusercontent.com/aida-public/AB6AXuByN-PhalKqjkrnYvXczKMXZ3eiD66h71qXbID84bRRSjAm9WArzUI32kEee5-YE3EEq05zY2Wf6XdLob7Z7W25elKhUbQVoh3HSwCD3VvSNo7cHMuex1aOKG5kPIGV7rsYmYUKJOJv1SoZiGXaOiXL8NXgauWuK8Gdxu_sy9ShChWhFajFcpLzE4z3w-sn78j4yjbI9E-NdfhMCxTWYy6RoLGlZT3EgbaT7_Df2j4pG_t2ACkPCEPov4dJ811L-4APZ9-u9aE4Cck">
+</div>
+<div>
+<div class="font-body-md text-body-md font-semibold text-on-surface mb-1">Rain City Blues</div>
+<div class="text-on-surface-variant text-xs">Studio B • Mystery Noir</div>
+</div>
+</div>
+</td>
+<td class="py-4 px-6 text-right font-label-md text-label-md text-on-surface font-medium">289.1K</td>
+<td class="py-4 px-6 text-center">
+<div class="flex justify-center items-center">
+<span class="material-symbols-outlined text-success-vibrant" style="font-variation-settings: 'FILL' 1;">arrow_drop_up</span>
+</div>
+</td>
+<td class="py-4 px-6 text-right">
+<button class="text-on-surface-variant hover:text-primary transition-colors p-2 rounded opacity-0 group-hover:opacity-100 focus:opacity-100">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">more_horiz</span>
+</button>
+</td>
+</tr>
+<!-- Rank 3 -->
+<tr class="data-table-row hover:bg-white/[0.02] transition-colors group">
+<td class="py-4 px-6 text-center font-label-md text-label-md text-on-surface-variant">#3</td>
+<td class="py-4 px-6">
+<div class="flex items-center gap-4">
+<div class="w-12 h-16 rounded overflow-hidden bg-surface-container-highest flex-shrink-0">
+<img alt="Ethereal Forest Thumbnail" class="w-full h-full object-cover" data-alt="A serene, ethereal illustration of a magical forest with glowing plants and a mysterious hooded figure. Cinematic lighting, deep purples and glowing greens, professional fantasy manga style." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBnNXgRsG2PIM-gZFgrnW58BePXdeUPJ06MQ0-y4ol_wH39z_H2lKRe9JR_i0cNs0-DZKOHDulCUzzcdPNWxjpyDURVNrgL0OHZKm7BinDiIIWNS6gQBKUJrYZf47kriMWL1YI9_TcH35GZ5xjQNnanlvtwcQSDfcQH3LZ1kg9zcH-RT1qaFTAbwZaA1yNOgVRmQEvfmtnN3Z7zhZM-S1ZnvMhdDDzU3Sf28RRZIHxhfoC20B1H_f8GFHx4bbrhk4e5mxA1BjGMYg8">
+</div>
+<div>
+<div class="font-body-md text-body-md font-semibold text-on-surface mb-1">Whispering Woods</div>
+<div class="text-on-surface-variant text-xs">Studio A • Fantasy</div>
+</div>
+</div>
+</td>
+<td class="py-4 px-6 text-right font-label-md text-label-md text-on-surface font-medium">210.8K</td>
+<td class="py-4 px-6 text-center">
+<div class="flex justify-center items-center">
+<span class="material-symbols-outlined text-danger-axe" style="font-variation-settings: 'FILL' 1;">arrow_drop_down</span>
+</div>
+</td>
+<td class="py-4 px-6 text-right">
+<button class="text-on-surface-variant hover:text-primary transition-colors p-2 rounded opacity-0 group-hover:opacity-100 focus:opacity-100">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">more_horiz</span>
+</button>
+</td>
+</tr>
+<!-- Rank 4 -->
+<tr class="data-table-row hover:bg-white/[0.02] transition-colors group">
+<td class="py-4 px-6 text-center font-label-md text-label-md text-on-surface-variant">#4</td>
+<td class="py-4 px-6">
+<div class="flex items-center gap-4">
+<div class="w-12 h-16 rounded overflow-hidden bg-surface-container-highest flex-shrink-0">
+<div class="w-full h-full bg-surface-container-highest flex items-center justify-center text-on-surface-variant/30">
+<span class="material-symbols-outlined text-[24px]">image</span>
+</div>
+</div>
+<div>
+<div class="font-body-md text-body-md font-semibold text-on-surface mb-1">Crimson Echo</div>
+<div class="text-on-surface-variant text-xs">Studio C • Thriller</div>
+</div>
+</div>
+</td>
+<td class="py-4 px-6 text-right font-label-md text-label-md text-on-surface font-medium">195.2K</td>
+<td class="py-4 px-6 text-center">
+<div class="flex justify-center items-center text-on-surface-variant font-label-md">—</div>
+</td>
+<td class="py-4 px-6 text-right">
+<button class="text-on-surface-variant hover:text-primary transition-colors p-2 rounded opacity-0 group-hover:opacity-100 focus:opacity-100">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">more_horiz</span>
+</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="p-4 border-t border-white/5 bg-surface-container-lowest/50 text-center">
+<button class="text-primary hover:text-primary-fixed transition-colors font-label-md text-label-md px-4 py-2">View Full Leaderboard</button>
+</div>
+</div>
+</div>
+<!-- Right Column: Widgets -->
+<div class="lg:col-span-4 flex flex-col gap-6">
+<!-- Axe List (Danger Zone) -->
+<div class="glass-card rounded-xl overflow-hidden border border-danger-axe/20 shadow-[0_4px_24px_rgba(239,68,68,0.05)] relative">
+<div class="absolute top-0 left-0 w-full h-1 bg-danger-axe"></div>
+<div class="p-5 border-b border-white/5 flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-danger-axe/10 flex items-center justify-center text-danger-axe">
+<span class="material-symbols-outlined text-[18px]" style="font-variation-settings: 'FILL' 1;">warning</span>
+</div>
+<div>
+<h3 class="font-headline-md text-headline-md text-on-surface text-[18px] leading-tight">Axe List Priority</h3>
+<p class="font-label-sm text-label-sm text-danger-axe/80 uppercase tracking-wider mt-0.5">Critical Review Required</p>
+</div>
+</div>
+<div class="p-5 flex flex-col gap-4 bg-surface-container-low/30">
+<!-- Axe Item 1 -->
+<div class="flex items-center justify-between gap-4 p-3 rounded-lg bg-surface-container border border-white/5 hover:border-danger-axe/30 transition-colors">
+<div class="flex-1 min-w-0">
+<h4 class="font-body-sm text-body-sm font-semibold text-on-surface truncate">Shadow Realm Acad...</h4>
+<div class="flex items-center gap-2 mt-1">
+<span class="font-label-sm text-label-sm text-danger-axe bg-danger-axe/10 px-1.5 py-0.5 rounded flex items-center gap-0.5">
+<span class="material-symbols-outlined text-[10px]">trending_down</span> -18%
+                                    </span>
+<span class="text-xs text-on-surface-variant truncate">Wk 4 Drop</span>
+</div>
+</div>
+<button class="shrink-0 bg-surface-bright hover:bg-danger-axe text-on-surface hover:text-white transition-colors border border-white/10 hover:border-danger-axe px-3 py-1.5 rounded font-label-md text-label-md text-xs">
+                                Review
+                            </button>
+</div>
+<!-- Axe Item 2 -->
+<div class="flex items-center justify-between gap-4 p-3 rounded-lg bg-surface-container border border-white/5 hover:border-danger-axe/30 transition-colors">
+<div class="flex-1 min-w-0">
+<h4 class="font-body-sm text-body-sm font-semibold text-on-surface truncate">The Last Alchemist</h4>
+<div class="flex items-center gap-2 mt-1">
+<span class="font-label-sm text-label-sm text-danger-axe bg-danger-axe/10 px-1.5 py-0.5 rounded flex items-center gap-0.5">
+<span class="material-symbols-outlined text-[10px]">trending_down</span> -22%
+                                    </span>
+<span class="text-xs text-on-surface-variant truncate">Sub loss</span>
+</div>
+</div>
+<button class="shrink-0 bg-surface-bright hover:bg-danger-axe text-on-surface hover:text-white transition-colors border border-white/10 hover:border-danger-axe px-3 py-1.5 rounded font-label-md text-label-md text-xs">
+                                Review
+                            </button>
+</div>
+</div>
+</div>
+<!-- Editorial Meetings Widget -->
+<div class="glass-card rounded-xl overflow-hidden">
+<div class="p-5 border-b border-white/5 flex items-center justify-between">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-primary/10 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-[18px]" style="font-variation-settings: 'FILL' 1;">event</span>
+</div>
+<h3 class="font-headline-md text-headline-md text-on-surface text-[18px] leading-tight">Upcoming Sessions</h3>
+</div>
+<button class="text-primary hover:text-primary-fixed transition-colors">
+<span class="material-symbols-outlined text-[20px]">add_circle</span>
+</button>
+</div>
+<div class="max-h-[400px] overflow-y-auto divide-y divide-white/5 custom-scrollbar">
+    <!-- Session Card 1 -->
+    <div class="p-5 hover:bg-white/[0.02] transition-colors">
+        <div class="flex flex-col gap-2 mb-4">
+            <div class="flex items-start justify-between gap-2">
+                <h4 class="font-body-md text-body-md font-semibold text-on-surface leading-tight">Q3 New Series Pitch Review</h4>
+                <span class="shrink-0 bg-primary/10 text-primary font-label-sm text-[10px] px-2 py-0.5 rounded-full border border-primary/20">[Shonen Weekly]</span>
+            </div>
+            <div class="flex items-center gap-2 text-on-surface-variant font-label-md text-label-md">
+                <span class="material-symbols-outlined text-[14px]">schedule</span> Today, 14:00 EST
+            </div>
+        </div>
+        <button class="w-full bg-primary/10 hover:bg-primary-container text-primary hover:text-white transition-colors border border-primary/20 px-4 py-2 rounded-lg font-label-md text-label-md">
+            Vote Now (9 Pending)
+        </button>
+    </div>
+    <!-- Session Card 2 -->
+    <div class="p-5 hover:bg-white/[0.02] transition-colors">
+        <div class="flex flex-col gap-2 mb-4">
+            <div class="flex items-start justify-between gap-2">
+                <h4 class="font-body-md text-body-md font-semibold text-on-surface leading-tight">Weekly Editorial Sync</h4>
+                <span class="shrink-0 bg-accent-gold/10 text-accent-gold font-label-sm text-[10px] px-2 py-0.5 rounded-full border border-accent-gold/20">[Digital App]</span>
+            </div>
+            <div class="flex items-center gap-2 text-on-surface-variant font-label-md text-label-md">
+                <span class="material-symbols-outlined text-[14px]">schedule</span> Tomorrow, 10:00 EST
+            </div>
+        </div>
+        <button class="w-full bg-transparent hover:bg-surface-bright text-on-surface transition-colors border border-white/10 px-4 py-2 rounded-lg font-label-md text-label-md">
+            Join Room
+        </button>
+    </div>
+    <!-- Session Card 3 -->
+    <div class="p-5 hover:bg-white/[0.02] transition-colors">
+        <div class="flex flex-col gap-2 mb-4">
+            <div class="flex items-start justify-between gap-2">
+                <h4 class="font-body-md text-body-md font-semibold text-on-surface leading-tight">Global Expansion Strategy</h4>
+                <span class="shrink-0 bg-accent-peach/10 text-accent-peach font-label-sm text-[10px] px-2 py-0.5 rounded-full border border-accent-peach/20">[Executive]</span>
+            </div>
+            <div class="flex items-center gap-2 text-on-surface-variant font-label-md text-label-md">
+                <span class="material-symbols-outlined text-[14px]">schedule</span> Oct 24, 09:00 EST
+            </div>
+        </div>
+        <button class="w-full bg-transparent hover:bg-surface-bright text-on-surface transition-colors border border-white/10 px-4 py-2 rounded-lg font-label-md text-label-md">
+            Join Room
+        </button>
+    </div>
+    <!-- Session Card 4 (Scrollable) -->
+    <div class="p-5 hover:bg-white/[0.02] transition-colors">
+        <div class="flex flex-col gap-2 mb-4">
+            <div class="flex items-start justify-between gap-2">
+                <h4 class="font-body-md text-body-md font-semibold text-on-surface leading-tight">Artist Contract Renewals</h4>
+                <span class="shrink-0 bg-primary/10 text-primary font-label-sm text-[10px] px-2 py-0.5 rounded-full border border-primary/20">[Legal]</span>
+            </div>
+            <div class="flex items-center gap-2 text-on-surface-variant font-label-md text-label-md">
+                <span class="material-symbols-outlined text-[14px]">schedule</span> Oct 25, 11:30 EST
+            </div>
+        </div>
+        <button class="w-full bg-transparent hover:bg-surface-bright text-on-surface transition-colors border border-white/10 px-4 py-2 rounded-lg font-label-md text-label-md">
+            Join Room
+        </button>
+    </div>
+</div>
+</div>
+</div>
+</div>
+</main>
+
+
+</body></html>

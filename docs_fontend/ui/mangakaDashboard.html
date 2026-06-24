@@ -1,0 +1,405 @@
+<!DOCTYPE html><html class="dark" lang="en" style=""><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>MangaFlow - Mangaka Dashboard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&amp;family=JetBrains+Mono:wght@500&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "tertiary-fixed-dim": "#ffb784",
+                        "surface": "#111125",
+                        "surface-bright": "#37374d",
+                        "surface-deep": "#0F0F1A",
+                        "on-surface": "#e2e0fc",
+                        "on-secondary-fixed": "#210f48",
+                        "secondary": "#d0bcff",
+                        "surface-container-high": "#28283d",
+                        "on-error": "#690005",
+                        "inverse-surface": "#e2e0fc",
+                        "on-secondary-fixed-variant": "#4d3d76",
+                        "tertiary": "#ffb784",
+                        "secondary-container": "#503f79",
+                        "on-secondary-container": "#c2aef0",
+                        "background": "#111125",
+                        "accent-peach": "#FFC9C1",
+                        "on-primary-fixed-variant": "#5a00c6",
+                        "surface-variant": "#333348",
+                        "error-container": "#93000a",
+                        "surface-container-low": "#1a1a2e",
+                        "on-primary-container": "#ede0ff",
+                        "outline": "#958da1",
+                        "on-background": "#e2e0fc",
+                        "on-error-container": "#ffdad6",
+                        "primary-fixed-dim": "#d2bbff",
+                        "inverse-primary": "#732ee4",
+                        "on-primary-fixed": "#25005a",
+                        "danger-axe": "#EF4444",
+                        "success-vibrant": "#10B981",
+                        "on-tertiary-fixed": "#301400",
+                        "error": "#ffb4ab",
+                        "tertiary-fixed": "#ffdcc6",
+                        "on-tertiary-container": "#ffe0cd",
+                        "on-secondary": "#37265e",
+                        "surface-tint": "#d2bbff",
+                        "secondary-fixed": "#e9ddff",
+                        "surface-container-lowest": "#0c0c1f",
+                        "accent-pink": "#CB9FD2",
+                        "on-tertiary": "#4f2500",
+                        "on-tertiary-fixed-variant": "#713700",
+                        "primary": "#d2bbff",
+                        "primary-container": "#7c3aed",
+                        "primary-fixed": "#eaddff",
+                        "on-surface-variant": "#ccc3d8",
+                        "surface-container-highest": "#333348",
+                        "secondary-fixed-dim": "#d0bcff",
+                        "outline-variant": "#4a4455",
+                        "accent-gold": "#FFD066",
+                        "tertiary-container": "#a15100",
+                        "surface-dim": "#111125",
+                        "on-primary": "#3f008e",
+                        "inverse-on-surface": "#2f2e43",
+                        "surface-container": "#1e1e32"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "gutter": "24px",
+                        "unit": "4px",
+                        "margin-mobile": "16px",
+                        "container-max": "1440px",
+                        "margin-desktop": "40px"
+                    },
+                    "fontFamily": {
+                        "body-lg": ["Inter"],
+                        "label-sm": ["JetBrains Mono"],
+                        "headline-md": ["Inter"],
+                        "body-sm": ["Inter"],
+                        "label-md": ["JetBrains Mono"],
+                        "headline-lg-mobile": ["Inter"],
+                        "headline-xl": ["Inter"],
+                        "body-md": ["Inter"],
+                        "headline-lg": ["Inter"]
+                    },
+                    "fontSize": {
+                        "body-lg": ["18px", { "lineHeight": "28px", "fontWeight": "400" }],
+                        "label-sm": ["10px", { "lineHeight": "14px", "letterSpacing": "0.05em", "fontWeight": "500" }],
+                        "headline-md": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
+                        "body-sm": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "label-md": ["12px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "500" }],
+                        "headline-lg-mobile": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
+                        "headline-xl": ["48px", { "lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "headline-lg": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(8px);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            border-left: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .chart-grid {
+            background-image: linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+                              linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+            background-size: 40px 40px;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body-md min-h-screen overflow-x-hidden selection:bg-primary-container selection:text-white">
+<!-- TopNavBar -->
+<nav class="fixed top-0 right-0 w-full md:w-[calc(100%-320px)] h-16 bg-surface/80 backdrop-blur-xl border-b border-white/5 shadow-sm z-40 hidden md:flex justify-between items-center px-margin-desktop ml-80">
+<div class="flex items-center gap-4">
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant font-label-md text-label-md">search</span>
+<input class="bg-surface-container-low border border-white/10 rounded-full py-2 pl-10 pr-4 text-on-surface font-label-md text-label-md focus:border-primary focus:ring-1 focus:ring-primary outline-none w-64 transition-all" placeholder="Search chapters, assistants..." type="text">
+</div>
+</div>
+<div class="flex items-center gap-6">
+<div class="flex items-center gap-4">
+<button class="text-on-surface-variant hover:text-primary transition-colors cursor-pointer active:opacity-80 relative">
+<span class="material-symbols-outlined font-headline-md text-headline-md">notifications</span>
+<span class="absolute top-1 right-1 w-2 h-2 bg-accent-peach rounded-full"></span>
+</button>
+<button class="text-on-surface-variant hover:text-primary transition-colors cursor-pointer active:opacity-80">
+<span class="material-symbols-outlined font-headline-md text-headline-md">history</span>
+</button>
+<button class="text-on-surface-variant hover:text-primary transition-colors cursor-pointer active:opacity-80">
+<span class="material-symbols-outlined font-headline-md text-headline-md">help</span>
+</button>
+</div>
+<div class="h-8 w-px bg-white/10"></div>
+<div class="flex items-center gap-3 cursor-pointer">
+<img alt="User Avatar" class="w-8 h-8 rounded-full border border-white/20 object-cover" data-alt="A cinematic, high-contrast portrait of a professional manga artist in a dimly lit studio setting. The lighting is dramatic, with deep shadows and subtle violet highlights illuminating their face and the creative tools around them. The style is hyper-realistic and sophisticated, reflecting a modern creative professional aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAEiWlXbaP-eJX0TXOQB2ckuBOBYh_fsL65TfSQjqnktMeE_IDClbB_cCuZIHdnLuX1d8Jh8tAPZCybVT6VVlNLj6wrJHZbnNoAc8m1p2YbkPUMGMm2Tl-jcQCmX9PcQR2b8ip_rIEX_9jXsOMIx0KpX8LLes5XmiueRdh9zHo6WZXbuHoNvDHi-ROxyv9xzItNyL37X2gU5LP_VlF5LsKDvw8fKxkUhvHo4AvQSA6nFZzCvqBk0Yb0H8a00Xg355V0vaa9rpVWj6I">
+</div>
+</div>
+</nav>
+<!-- SideNavBar -->
+<aside class="w-80 h-full fixed left-0 top-0 bg-surface-deep dark:bg-surface-deep border-r border-outline-variant/10 shadow-none hidden md:flex flex-col py-gutter z-50">
+<!-- Header -->
+<div class="px-6 mb-8 flex items-center gap-4">
+<div class="w-10 h-10 rounded-lg bg-primary-container flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-white font-headline-md text-headline-md">draw</span>
+</div>
+<div>
+<h1 class="font-headline-md text-headline-md font-bold text-primary dark:text-primary tracking-tight">MangaFlow</h1>
+<p class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Production Studio</p>
+</div>
+</div>
+<!-- Primary Actions -->
+<div class="px-6 mb-8">
+<button class="w-full bg-primary-container hover:bg-primary-fixed hover:text-on-primary-fixed text-white font-label-md text-label-md py-3 rounded-lg flex items-center justify-center gap-2 transition-all shadow-[0_0_24px_rgba(124,58,237,0.15)]">
+<span class="material-symbols-outlined text-[18px]">add</span>
+                New Project
+            </button>
+</div>
+<!-- Navigation -->
+<nav class="flex-1 space-y-1">
+<a class="flex items-center gap-3 bg-primary/10 text-primary border-r-2 border-primary px-6 py-3 font-body-md text-body-md active:scale-95 transition-transform" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">dashboard</span>
+                Dashboard
+            </a>
+<a class="flex items-center gap-3 text-on-surface-variant hover:text-on-surface px-6 py-3 font-body-md text-body-md hover:bg-surface-container-high transition-colors duration-200 active:scale-95" href="#">
+<span class="material-symbols-outlined">auto_stories</span>
+                Manga Series
+            </a>
+<a class="flex items-center gap-3 text-on-surface-variant hover:text-on-surface px-6 py-3 font-body-md text-body-md hover:bg-surface-container-high transition-colors duration-200 active:scale-95" href="#">
+<span class="material-symbols-outlined">layers</span>
+                Chapters
+            </a>
+<a class="flex items-center gap-3 text-on-surface-variant hover:text-on-surface px-6 py-3 font-body-md text-body-md hover:bg-surface-container-high transition-colors duration-200 active:scale-95" href="#">
+<span class="material-symbols-outlined">insights</span>
+                Analytics
+            </a>
+<a class="flex items-center gap-3 text-on-surface-variant hover:text-on-surface px-6 py-3 font-body-md text-body-md hover:bg-surface-container-high transition-colors duration-200 active:scale-95" href="#">
+<span class="material-symbols-outlined">group</span>
+                Team
+            </a>
+</nav>
+<!-- Footer -->
+<div class="mt-auto px-6 space-y-1 pt-6 border-t border-white/5">
+<a class="flex items-center gap-3 text-on-surface-variant hover:text-on-surface py-2 font-body-sm text-body-sm transition-colors" href="#">
+<span class="material-symbols-outlined text-[18px]">settings</span>
+                Settings
+            </a>
+<a class="flex items-center gap-3 text-on-surface-variant hover:text-on-surface py-2 font-body-sm text-body-sm transition-colors" href="#">
+<span class="material-symbols-outlined text-[18px]">help</span>
+                Support
+            </a>
+</div>
+</aside>
+<!-- Main Content Canvas -->
+<main class="md:ml-80 pt-16 md:pt-24 p-margin-mobile md:p-margin-desktop min-h-screen max-w-container-max mx-auto space-y-8">
+<!-- Critical Alert Banner -->
+<div class="bg-danger-axe/10 border border-danger-axe/30 rounded-xl p-4 flex items-start gap-4 backdrop-blur-sm relative overflow-hidden">
+<div class="absolute inset-0 bg-gradient-to-r from-danger-axe/5 to-transparent pointer-events-none"></div>
+<span class="material-symbols-outlined text-danger-axe font-headline-md text-headline-md mt-0.5" style="font-variation-settings: 'FILL' 1;">warning</span>
+<div class="flex-1 relative z-10">
+<h3 class="text-danger-axe font-headline-md text-headline-md">Critical Risk Detected</h3>
+<p class="text-on-surface font-body-md text-body-md mt-1">[CẢNH BÁO]: Series có nguy cơ bị huỷ do xếp hạng thấp. Vui lòng chuẩn bị hồ sơ bảo vệ.</p>
+</div>
+<button class="bg-danger-axe text-white font-label-md text-label-md px-4 py-2 rounded-lg hover:bg-red-600 transition-colors z-10">
+                Prepare Defense
+            </button>
+</div>
+<!-- Dashboard Header -->
+<header class="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-10">
+<div>
+<p class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-widest mb-1">Studio Overview</p>
+<h2 class="font-headline-xl text-headline-xl text-on-surface">Production War Room</h2>
+</div>
+<div class="flex gap-3"><button class="bg-transparent border border-outline-variant text-on-surface font-label-md text-label-md px-4 py-2 rounded-lg hover:bg-surface-container-high hover:border-primary/50 transition-colors flex items-center gap-2">
+    <span class="">Filter: All Projects</span>
+    <span class="material-symbols-outlined text-[18px]">expand_more</span>
+</button>
+<button class="bg-transparent border border-outline-variant text-on-surface font-label-md text-label-md px-4 py-2 rounded-lg hover:bg-surface-container-high transition-colors">
+                    Generate Report
+                </button>
+</div>
+</header>
+<!-- KPI Grid -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+<!-- Card 1 -->
+<div class="glass-panel rounded-xl p-6 relative overflow-hidden group">
+<div class="absolute -right-6 -top-6 w-24 h-24 bg-primary/10 rounded-full blur-2xl group-hover:bg-primary/20 transition-all"></div>
+<div class="flex justify-between items-start mb-4">
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">auto_stories</span>
+<span class="font-label-sm text-label-sm text-success-vibrant flex items-center gap-1">
+<span class="w-1.5 h-1.5 rounded-full bg-success-vibrant"></span> Running
+                    </span>
+</div>
+<p class="font-label-md text-label-md text-on-surface-variant uppercase mb-1">Active Series</p>
+<h3 class="font-headline-xl text-headline-xl text-on-surface font-light">2</h3>
+</div>
+<!-- Card 2 -->
+<div class="glass-panel rounded-xl p-6 relative overflow-hidden group">
+<div class="absolute -right-6 -top-6 w-24 h-24 bg-accent-gold/10 rounded-full blur-2xl group-hover:bg-accent-gold/20 transition-all"></div>
+<div class="flex justify-between items-start mb-4">
+<span class="material-symbols-outlined text-accent-gold" style="font-variation-settings: 'FILL' 1;">assignment</span>
+<span class="font-label-sm text-label-sm text-accent-gold flex items-center gap-1">
+<span class="w-1.5 h-1.5 rounded-full bg-accent-gold"></span> In Queue
+                    </span>
+</div>
+<p class="font-label-md text-label-md text-on-surface-variant uppercase mb-1">Pending Assistant Tasks</p>
+<h3 class="font-headline-xl text-headline-xl text-on-surface font-light">12</h3>
+</div>
+<!-- Card 3 -->
+<div class="glass-panel rounded-xl p-6 relative overflow-hidden group"><div class="absolute -right-6 -top-6 w-24 h-24 bg-accent-peach/10 rounded-full blur-2xl group-hover:bg-accent-peach/20 transition-all"></div>
+<div class="flex justify-between items-start mb-4">
+    <span class="material-symbols-outlined text-accent-peach" style="font-variation-settings: 'FILL' 1;">timer</span>
+    <p class="font-label-md text-label-md text-on-surface-variant uppercase">Deadlines</p>
+</div>
+<div class="space-y-3 relative z-10">
+    <div class="flex justify-between items-center">
+        <span class="font-body-sm text-body-sm text-on-surface">Ch. 25 - Series B</span>
+        <span class="font-label-md text-label-md text-danger-axe font-bold">3 Days</span>
+    </div>
+    <div class="flex justify-between items-center">
+        <span class="font-body-sm text-body-sm text-on-surface">Ch. 12 - Series A</span>
+        <span class="font-label-md text-label-md text-accent-gold font-bold">5 Days</span>
+    </div>
+    <div class="flex justify-between items-center">
+        <span class="font-body-sm text-body-sm text-on-surface">Ch. 26 - Series B</span>
+        <span class="font-label-md text-label-md text-on-surface-variant">10 Days</span>
+    </div>
+</div></div>
+</div>
+<!-- Bento Grid Layout for Main Content -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+<!-- Main Chart (Spans 2 columns) -->
+<div class="glass-panel rounded-xl p-6 lg:col-span-2 flex flex-col h-[400px]">
+<div class="flex justify-between items-center mb-6">
+<div>
+<h3 class="font-headline-md text-headline-md text-on-surface">Ranking Trend</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Performance over last 12 issues</p>
+</div>
+<div class="flex items-center gap-2 font-label-sm text-label-sm">
+<span class="flex items-center gap-1 text-on-surface-variant"><span class="w-2 h-2 rounded-full bg-primary"></span> Series A</span>
+<span class="flex items-center gap-1 text-on-surface-variant"><span class="w-2 h-2 rounded-full bg-accent-gold"></span> Series B</span>
+</div>
+</div>
+<!-- Mock Chart Area -->
+<div class="flex-1 w-full relative chart-grid border-l border-b border-white/10 flex items-end px-4 pt-4 pb-1">
+<!-- Y Axis Labels -->
+<div class="absolute left-[-24px] top-0 bottom-0 flex flex-col justify-between text-on-surface-variant font-label-sm text-label-sm py-4">
+<span class="">#1</span>
+<span class="">#5</span>
+<span class="">#10</span>
+<span class="">#15</span>
+</div>
+<!-- SVG Chart Line Mockup -->
+<svg class="w-full h-full overflow-visible" preserveAspectRatio="none" viewBox="0 0 100 100">
+<!-- Warning Threshold Line -->
+<line class="opacity-50" stroke="#EF4444" stroke-dasharray="2,2" stroke-width="0.5" x1="0" x2="100" y1="75" y2="75"></line>
+<!-- Series A Line (Good Performance) -->
+<path d="M0,40 L10,35 L20,38 L30,25 L40,20 L50,15 L60,18 L70,10 L80,5 L90,8 L100,2" fill="none" stroke="#d2bbff" stroke-width="2" vector-effect="non-scaling-stroke"></path>
+<!-- Series B Line (Dropping to rank #10) -->
+<path d="M0,60 L10,65 L20,62 L30,70 L40,68 L50,75 L60,78 L70,82 L80,85 L90,88 L100,75" fill="none" stroke="#FFD066" stroke-width="2" vector-effect="non-scaling-stroke"></path>
+<!-- Data Points Series B -->
+<circle cx="100" cy="75" fill="#111125" r="2" stroke="#FFD066" stroke-width="1" vector-effect="non-scaling-stroke"></circle>
+</svg>
+<!-- Alert Tooltip for Series B -->
+<div class="absolute right-[5%] bottom-[20%] bg-surface-container-high border border-outline-variant/30 rounded p-2 shadow-lg z-10">
+<p class="font-label-sm text-label-sm text-danger-axe">Rank #10 (Critical)</p>
+</div>
+</div>
+<!-- X Axis Labels -->
+<div class="flex justify-between text-on-surface-variant font-label-sm text-label-sm mt-2 ml-4">
+<span class="">Issue 42</span>
+<span class="">Issue 45</span>
+<span class="">Issue 48</span>
+<span class="">Issue 51</span>
+<span class="">Issue 53</span>
+</div>
+</div>
+<!-- Action Widgets Column -->
+<div class="space-y-6 flex flex-col">
+<!-- Active Chapter Progress -->
+<div class="glass-panel rounded-xl p-6"><h3 class="font-headline-md text-headline-md text-on-surface mb-6">Active Progress</h3>
+<div class="space-y-6">
+    <div class="space-y-2">
+        <div class="flex justify-between text-label-sm text-label-sm">
+            <span class="text-on-surface">Series B - Ch. 25 (Line-art)</span>
+            <span class="text-primary">75%</span>
+        </div>
+        <div class="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+            <div class="h-full bg-primary rounded-full" style="width: 75%"></div>
+        </div>
+    </div>
+    <div class="space-y-2">
+        <div class="flex justify-between text-label-sm text-label-sm">
+            <span class="text-on-surface">Series A - Ch. 12 (Coloring)</span>
+            <span class="text-primary">30%</span>
+        </div>
+        <div class="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+            <div class="h-full bg-primary rounded-full" style="width: 30%"></div>
+        </div>
+    </div>
+    <div class="space-y-2">
+        <div class="flex justify-between text-label-sm text-label-sm">
+            <span class="text-on-surface">Series B - Ch. 26 (Storyboard)</span>
+            <span class="text-primary">12%</span>
+        </div>
+        <div class="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+            <div class="h-full bg-primary rounded-full" style="width: 12%"></div>
+        </div>
+    </div>
+</div></div>
+<!-- Approval Queue -->
+<div class="glass-panel rounded-xl p-0 flex-1 flex flex-col overflow-hidden">
+<div class="p-4 border-b border-white/5 flex justify-between items-center bg-surface/50">
+<h3 class="font-headline-md text-body-lg font-semibold text-on-surface">Approval Queue</h3>
+<span class="bg-surface-container-high text-on-surface-variant font-label-sm text-label-sm px-2 py-1 rounded">2 Pending</span>
+</div>
+<div class="flex-1 overflow-y-auto p-2 space-y-2">
+<!-- Queue Item 1 -->
+<div class="bg-surface/50 hover:bg-surface-container-low border border-transparent hover:border-white/5 rounded-lg p-3 flex items-center justify-between transition-colors group">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-surface-container-high flex items-center justify-center text-on-surface-variant font-label-md text-label-md">
+                                    SK
+                                </div>
+<div>
+<p class="font-body-sm text-body-sm text-on-surface font-medium">Sato K.</p>
+<p class="font-label-sm text-label-sm text-on-surface-variant">Background Inks - Pg 12</p>
+</div>
+</div>
+<button class="opacity-0 group-hover:opacity-100 bg-transparent border border-primary text-primary font-label-sm text-label-sm px-3 py-1.5 rounded transition-all hover:bg-primary/10">
+                                Review
+                            </button>
+</div>
+<!-- Queue Item 2 -->
+<div class="bg-surface/50 hover:bg-surface-container-low border border-transparent hover:border-white/5 rounded-lg p-3 flex items-center justify-between transition-colors group">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-surface-container-high flex items-center justify-center text-on-surface-variant font-label-md text-label-md">
+                                    YM
+                                </div>
+<div>
+<p class="font-body-sm text-body-sm text-on-surface font-medium">Yuki M.</p>
+<p class="font-label-sm text-label-sm text-on-surface-variant">SFX Cleanup - Pg 14-18</p>
+</div>
+</div>
+<button class="opacity-0 group-hover:opacity-100 bg-transparent border border-primary text-primary font-label-sm text-label-sm px-3 py-1.5 rounded transition-all hover:bg-primary/10">
+                                Review
+                            </button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+
+
+</body></html>

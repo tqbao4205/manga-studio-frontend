@@ -18,6 +18,7 @@
  */
 
 import api from './api';
+import { logApiCall } from '../shared/utils/telemetry';
 
 const seriesService = {
 
@@ -37,6 +38,7 @@ const seriesService = {
     if (params.size != null) query.size = params.size;
     if (params.sort) query.sort = params.sort;
 
+    logApiCall('series', 'getAll', { params: query });
     return api.get('/series', { params: query });
   },
 
@@ -48,6 +50,7 @@ const seriesService = {
    * @returns {Promise<Object>} SeriesResponse
    */
   getById: async (id) => {
+    logApiCall('series', 'getById', { id });
     return api.get(`/series/${id}`);
   },
 
@@ -59,6 +62,9 @@ const seriesService = {
    * @returns {Promise<Object>} SeriesResponse
    */
   create: async (formData) => {
+    logApiCall('series', 'create', {
+      hasFile: Boolean(formData?.get?.('file')),
+    });
     return api.post('/series', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
@@ -73,6 +79,10 @@ const seriesService = {
    * @returns {Promise<Object>} SeriesResponse
    */
   update: async (id, formData) => {
+    logApiCall('series', 'update', {
+      id,
+      hasFile: Boolean(formData?.get?.('file')),
+    });
     return api.put(`/series/${id}`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
@@ -86,6 +96,7 @@ const seriesService = {
    * @returns {Promise<void>}
    */
   delete: async (id) => {
+    logApiCall('series', 'delete', { id });
     return api.delete(`/series/${id}`);
   },
 
@@ -97,6 +108,7 @@ const seriesService = {
    * @returns {Promise<Object>} SeriesResponse
    */
   submitForApproval: async (id) => {
+    logApiCall('series', 'submitForApproval', { id });
     return api.post(`/series/${id}/submit`);
   },
 
@@ -109,6 +121,7 @@ const seriesService = {
    * @returns {Promise<Object>} SeriesResponse
    */
   approve: async (id, request) => {
+    logApiCall('series', 'approve', { id, tantouEditorId: request?.tantouEditorId });
     return api.post(`/series/${id}/approve`, request);
   },
 
@@ -121,6 +134,7 @@ const seriesService = {
    * @returns {Promise<Object>} SeriesResponse
    */
   reject: async (id, request) => {
+    logApiCall('series', 'reject', { id, noteLength: request?.notes?.length || 0 });
     return api.post(`/series/${id}/reject`, request);
   },
 
@@ -133,6 +147,7 @@ const seriesService = {
    * @returns {Promise<Object>} SeriesResponse
    */
   updateStatus: async (id, request) => {
+    logApiCall('series', 'updateStatus', { id, status: request?.status });
     return api.patch(`/series/${id}/status`, request);
   },
 

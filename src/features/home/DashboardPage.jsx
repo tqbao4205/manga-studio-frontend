@@ -33,7 +33,12 @@ import {
 import { useSeriesStore } from "../../app/stores/seriesStore";
 import { useRankingStore } from "../../app/stores/rankingStore";
 import { useScheduleStore } from "../../app/stores/scheduleStore";
-import { mockUsers, mockChapters, mockPages, mockRegions } from "../../shared/constants/mock-data";
+import {
+  mockUsers,
+  mockChapters,
+  mockPages,
+  mockRegions,
+} from "../../shared/constants/mock-data";
 import {
   Card,
   CardContent,
@@ -45,7 +50,15 @@ import { Button } from "../../shared/components/ui/button";
 import { StatusBadge } from "../../shared/components/shared/StatusBadge";
 import { PageLoading } from "../../shared/components/shared/LoadingSpinner";
 import { Dialog } from "../../shared/components/ui/dialog";
-import { formatRelativeTime, formatDate, cn, getRankColor, computeNextRelease } from "../../shared/utils";
+import {
+  formatRelativeTime,
+  formatDate,
+  cn,
+  getRankColor,
+  computeNextRelease,
+} from "../../shared/utils";
+import { MangakaDashboardPanel } from "./components/MangakaDashboardPanel";
+import { EditorialBoardDashboardPanel } from "./components/EditorialBoardDashboardPanel";
 
 const quickActions = [
   {
@@ -166,15 +179,9 @@ function MangakaDashboard() {
 
   if (statsLoading || activitiesLoading || tasksLoading) return <PageLoading />;
 
-  const submittedTasks = (tasksData || []).filter(
-    (t) => t.status === "DONE",
-  );
-  const mySeries = seriesList.filter(
-    (s) => s.mangakaId === user?.id,
-  );
-  const inReviewSeries = mySeries.filter(
-    (s) => s.status === "IN_REVIEW",
-  );
+  const submittedTasks = (tasksData || []).filter((t) => t.status === "DONE");
+  const mySeries = seriesList.filter((s) => s.mangakaId === user?.id);
+  const inReviewSeries = mySeries.filter((s) => s.status === "IN_REVIEW");
   const publishedSeries = mySeries.filter((s) => s.status === "PUBLISHED");
   const draftSeries = mySeries.filter((s) => s.status === "DRAFT");
 
@@ -200,8 +207,8 @@ function MangakaDashboard() {
   };
 
   const getUserName = (id) => {
-    const u = mockUsers.find(u => u.id === id);
-    return u ? u.displayName : 'Unknown';
+    const u = mockUsers.find((u) => u.id === id);
+    return u ? u.displayName : "Unknown";
   };
 
   return (
@@ -241,9 +248,7 @@ function MangakaDashboard() {
           {submittedTasks.length > 0 && (
             <Card className="border-b-status-warning">
               <CardHeader>
-                <CardTitle>
-                  Completed Tasks ({submittedTasks.length})
-                </CardTitle>
+                <CardTitle>Completed Tasks ({submittedTasks.length})</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
                 {submittedTasks.map((task) => (
@@ -441,7 +446,6 @@ function AssistantDashboard() {
   const { data: tasksData, isLoading: tasksLoading } = useTasks();
   const seriesList = useSeriesStore((s) => s.seriesList);
 
-
   if (tasksLoading) return <PageLoading />;
 
   const myTasks = (tasksData || []).filter((t) => t.assistantId === user?.id);
@@ -603,12 +607,8 @@ function EditorDashboard() {
   if (statsLoading || seriesLoading) return <PageLoading />;
 
   const assignedSeries =
-    seriesData?.content?.filter(
-      (s) => s.tantouEditorId === user?.id,
-    ) || [];
-  const inReviewSeries = assignedSeries.filter(
-    (s) => s.status === "IN_REVIEW",
-  );
+    seriesData?.content?.filter((s) => s.tantouEditorId === user?.id) || [];
+  const inReviewSeries = assignedSeries.filter((s) => s.status === "IN_REVIEW");
 
   return (
     <div className="space-y-6">
@@ -751,12 +751,8 @@ function EditorialBoardDashboard() {
 
   if (statsLoading) return <PageLoading />;
 
-  const inReviewSeries = seriesListRef.filter(
-    (s) => s.status === "IN_REVIEW",
-  );
-  const approvedSeries = seriesListRef.filter(
-    (s) => s.status === "APPROVED",
-  );
+  const inReviewSeries = seriesListRef.filter((s) => s.status === "IN_REVIEW");
+  const approvedSeries = seriesListRef.filter((s) => s.status === "APPROVED");
   const upcomingSchedules =
     (schedules || schedulesList).filter((s) => s.status === "ACTIVE") || [];
 
@@ -764,14 +760,15 @@ function EditorialBoardDashboard() {
   const rankedCount = monthlyRankings.length;
   const riskThreshold = Math.ceil(rankedCount * 0.7);
   const atRisk = monthlyRankings
-    .filter(r => r.rank >= riskThreshold)
-    .map(r => {
-      const series = seriesListRef.find(s => s.id === r.seriesId);
+    .filter((r) => r.rank >= riskThreshold)
+    .map((r) => {
+      const series = seriesListRef.find((s) => s.id === r.seriesId);
       return series ? { ...series, rank: r } : null;
-    }).filter(Boolean);
+    })
+    .filter(Boolean);
 
   const handleApproveSeries = (id, title) => {
-    updateSeries(id, { status: 'APPROVED', tantouEditorId: user?.id });
+    updateSeries(id, { status: "APPROVED", tantouEditorId: user?.id });
     addToast({
       type: "success",
       title: "Series approved",
@@ -963,7 +960,8 @@ function EditorialBoardDashboard() {
                             {s.title}
                           </p>
                           <p className="text-xs text-on-surface-variant">
-                            #{s.rank.rank} · {(s.rank.totalVotes ?? 0).toLocaleString()} votes
+                            #{s.rank.rank} ·{" "}
+                            {(s.rank.totalVotes ?? 0).toLocaleString()} votes
                           </p>
                         </div>
                       </div>
@@ -1000,7 +998,9 @@ function EditorialBoardDashboard() {
                         {s.seriesTitle} — Ch.{s.nextChapterNumber}
                       </span>
                       <span className="text-xs text-on-surface-variant">
-                        {nextRelease ? formatDate(nextRelease.toISOString().split('T')[0]) : '-'}
+                        {nextRelease
+                          ? formatDate(nextRelease.toISOString().split("T")[0])
+                          : "-"}
                       </span>
                     </div>
                   );
@@ -1045,11 +1045,11 @@ export function DashboardPage() {
       </div>
 
       {user.role === "MANGAKA" ? (
-        <MangakaDashboard />
+        <MangakaDashboardPanel />
       ) : user.role === "ASSISTANT" ? (
         <AssistantDashboard />
       ) : user.role === "EDITORIAL_BOARD" || user.role === "CHIEF_EDITOR" ? (
-        <EditorialBoardDashboard />
+        <EditorialBoardDashboardPanel />
       ) : (
         <EditorDashboard />
       )}

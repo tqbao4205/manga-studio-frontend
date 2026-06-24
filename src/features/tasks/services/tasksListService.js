@@ -5,10 +5,60 @@ import chapterService from '../../../services/chapterService'
 import pageService from '../../../services/pageService'
 import regionService from '../../../services/regionService'
 
+export function toArray(payload) {
+  if (Array.isArray(payload)) return payload
+  if (Array.isArray(payload?.content)) return payload.content
+  return []
+}
+
+export function toNumberId(value) {
+  const numeric = Number(value)
+  return Number.isFinite(numeric) ? numeric : null
+}
+
+export function extractTaskRegionIds(task) {
+  const ids = new Set()
+
+  const directRegionId =
+    toNumberId(task?.regionId) ||
+    toNumberId(task?.region?.id)
+
+  if (directRegionId) ids.add(directRegionId)
+
+  ;(task?.regions || []).forEach((region) => {
+    const id = toNumberId(region?.id)
+    if (id) ids.add(id)
+  })
+
+  return Array.from(ids)
+}
+
+export function resolveTotalPages(payload) {
+  const fromRoot = Number(payload?.totalPages)
+  if (Number.isInteger(fromRoot) && fromRoot > 0) return fromRoot
+
+  const fromPage = Number(payload?.page?.totalPages)
+  if (Number.isInteger(fromPage) && fromPage > 0) return fromPage
+
+  return 1
+}
+
 export const tasksListService = {
   fetchTasks: async (params = {}) => {
-    const response = await taskService.getAll({ page: 0, size: 100, ...params })
-    return response?.content || []
+    const firstPage = await taskService.getAll({ page: 0, size: 100, ...params })
+    const totalPages = resolveTotalPages(firstPage)
+
+    if (totalPages <= 1) {
+      return toArray(firstPage)
+    }
+
+    const remainingPages = await Promise.all(
+      Array.from({ length: totalPages - 1 }, (_, index) =>
+        taskService.getAll({ page: index + 1, size: 100, ...params }),
+      ),
+    )
+
+    return [firstPage, ...remainingPages].flatMap((page) => toArray(page))
   },
 
   fetchTaskDetail: async (taskId) => {
@@ -30,7 +80,7 @@ export const tasksListService = {
   resolveRegionSeriesLookup: async (tasks = [], seriesItems = []) => {
     const neededRegionIds = new Set(
       tasks
-        .flatMap((task) => (task?.regions || []).map((r) => r.id))
+        .flatMap((task) => extractTaskRegionIds(task))
         .filter(Boolean)
         .map((id) => Number(id)),
     )
