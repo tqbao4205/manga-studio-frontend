@@ -22,7 +22,7 @@ import {
 import meetingService from "../../../services/meetingService";
 
 // ── Slider hiển thị điểm tiêu chí ──
-function ScoreSlider({ label, weight, value, onChange, id }) {
+function ScoreSlider({ label, weight, value, onChange, id, disabled }) {
   return (
     <div className="bg-surface-container-low border border-outline-variant/30 p-4 rounded-xl">
       <div className="flex justify-between items-center mb-4">
@@ -35,13 +35,14 @@ function ScoreSlider({ label, weight, value, onChange, id }) {
         <span className="text-2xl font-semibold text-primary">{value}</span>
       </div>
       <input
-        className="w-full accent-primary cursor-pointer"
+        className={`w-full accent-primary ${disabled ? "cursor-not-allowed opacity-40" : "cursor-pointer"}`}
         type="range"
         min="1"
         max="10"
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
         id={id}
+        disabled={disabled}
       />
       <div className="flex justify-between text-[10px] text-on-surface-variant mt-1">
         <span>1</span>
@@ -100,16 +101,29 @@ export function VotingPage() {
   // scores lưu dưới dạng Map<criterionId, score>
   const [scores, setScores] = useState({});
   const [submitting, setSubmitting] = useState(false);
+  const [hasVoted, setHasVoted] = useState(false);
 
-  // Load meeting + criteria khi mount
+  // Load meeting + criteria + previous vote khi mount
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
       try {
-        // Fetch meeting detail từ API (đảm bảo có data mới nhất)
         await fetchMeetingById(meetingId)
-        // Fetch criteria
         await fetchCriteria()
+        // Khôi phục vote trước đó (nếu có)
+        const voteResult = await meetingService.getVoteResults(meetingId);
+        if (voteResult?.myVote) {
+          setHasVoted(true);
+          setVoteChoice(voteResult.myVote);
+          setComment(voteResult.myComment || "");
+          if (voteResult.myScores?.length > 0) {
+            const restored = {};
+            voteResult.myScores.forEach((s) => {
+              restored[s.criterionId] = s.score;
+            });
+            setScores(restored);
+          }
+        }
       } catch (err) {
         console.error('Failed to load meeting:', err)
       } finally {
@@ -293,13 +307,15 @@ export function VotingPage() {
           <div className="flex gap-4">
             {/* YES */}
             <button
-              className={`flex-1 flex flex-col items-center justify-center p-6 border rounded-xl cursor-pointer transition-all duration-200 ${
+              className={`flex-1 flex flex-col items-center justify-center p-6 border rounded-xl transition-all duration-200 ${
                 voteChoice === "YES"
                   ? "border-green-500 bg-green-500/10 text-green-400 shadow-[0_0_20px_rgba(74,222,128,0.15)]"
-                  : "border-outline-variant/30 text-on-surface-variant hover:bg-surface-bright/5 hover:border-green-500/40"
-              }`}
+                  : hasVoted
+                    ? "border-outline-variant/20 text-on-surface-variant/40"
+                    : "border-outline-variant/30 text-on-surface-variant hover:bg-surface-bright/5 hover:border-green-500/40"
+              } ${hasVoted ? "cursor-default" : "cursor-pointer"}`}
               type="button"
-              onClick={() => setVoteChoice("YES")}
+              onClick={hasVoted ? undefined : () => setVoteChoice("YES")}
             >
               <span
                 className="material-symbols-outlined text-5xl mb-2"
@@ -319,13 +335,15 @@ export function VotingPage() {
 
             {/* NO */}
             <button
-              className={`flex-1 flex flex-col items-center justify-center p-6 border rounded-xl cursor-pointer transition-all duration-200 ${
+              className={`flex-1 flex flex-col items-center justify-center p-6 border rounded-xl transition-all duration-200 ${
                 voteChoice === "NO"
                   ? "border-red-500 bg-red-500/10 text-red-400 shadow-[0_0_20px_rgba(248,113,113,0.15)]"
-                  : "border-outline-variant/30 text-on-surface-variant hover:bg-surface-bright/5 hover:border-red-500/40"
-              }`}
+                  : hasVoted
+                    ? "border-outline-variant/20 text-on-surface-variant/40"
+                    : "border-outline-variant/30 text-on-surface-variant hover:bg-surface-bright/5 hover:border-red-500/40"
+              } ${hasVoted ? "cursor-default" : "cursor-pointer"}`}
               type="button"
-              onClick={() => setVoteChoice("NO")}
+              onClick={hasVoted ? undefined : () => setVoteChoice("NO")}
             >
               <span
                 className="material-symbols-outlined text-5xl mb-2"
@@ -350,7 +368,8 @@ export function VotingPage() {
               Reviewer Feedback
             </label>
             <textarea
-              className="w-full bg-surface-container-low border border-outline-variant/30 rounded-xl p-4 text-base text-on-surface focus:outline-none focus:border-primary min-h-[120px] transition-all resize-none"
+              disabled={hasVoted}
+              className="w-full bg-surface-container-low border border-outline-variant/30 rounded-xl p-4 text-base text-on-surface focus:outline-none focus:border-primary min-h-[120px] transition-all resize-none disabled:opacity-50 disabled:cursor-not-allowed"
               placeholder="Provide detailed editorial notes for the creator..."
               value={comment}
               onChange={(e) => setComment(e.target.value)}
@@ -374,21 +393,29 @@ export function VotingPage() {
                 onChange={(v) =>
                   setScores((s) => ({ ...s, [c.id]: v }))
                 }
+                disabled={hasVoted}
               />
             ))}
           </div>
         )}
 
-        {/* ── Submit Button ── */}
+        {/* ── Submit Button / Vote Recorded ── */}
         <div className="mt-2">
-          <button
-            disabled={!isValid || submitting}
-            className="w-full py-5 bg-primary text-on-primary font-semibold text-lg rounded-2xl shadow-xl shadow-primary/10 hover:brightness-110 active:scale-[0.99] transition-all flex items-center justify-center gap-3 disabled:opacity-40 disabled:cursor-not-allowed"
-            onClick={handleSubmit}
-          >
-            <span className="material-symbols-outlined">send</span>
-            {submitting ? "Đang gửi..." : "Submit Vote to Board"}
-          </button>
+          {hasVoted ? (
+            <div className="w-full py-5 bg-surface-container-high text-on-surface font-semibold text-lg rounded-2xl flex items-center justify-center gap-3">
+              <span className="material-symbols-outlined text-green-400">check_circle</span>
+              Vote Recorded — You have already voted in this meeting.
+            </div>
+          ) : (
+            <button
+              disabled={!isValid || submitting}
+              className="w-full py-5 bg-primary text-on-primary font-semibold text-lg rounded-2xl shadow-xl shadow-primary/10 hover:brightness-110 active:scale-[0.99] transition-all flex items-center justify-center gap-3 disabled:opacity-40 disabled:cursor-not-allowed"
+              onClick={handleSubmit}
+            >
+              <span className="material-symbols-outlined">send</span>
+              {submitting ? "Submitting..." : "Submit Vote to Board"}
+            </button>
+          )}
           <p className="text-center mt-3 text-xs text-on-surface-variant">
             This action cannot be undone once submitted to the Board.
           </p>

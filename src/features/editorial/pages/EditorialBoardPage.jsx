@@ -343,7 +343,7 @@ export function EditorialBoardPage() {
                 className="mt-2 text-primary text-sm hover:underline"
                 onClick={() => setShowCreateModal(true)}
               >
-                Tạo cuộc họp đầu tiên →
+                Create first meeting →
               </button>
             )}
           </div>

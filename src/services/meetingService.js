@@ -84,6 +84,17 @@ const meetingService = {
   getCriteria: async () => {
     return api.get('/criteria');
   },
+
+  /**
+   * Lấy kết quả vote của user hiện tại cho 1 meeting.
+   * Endpoint: GET /api/meetings/{id}/votes
+   *
+   * @param {number} meetingId
+   * @returns {Promise<Object>} VoteResponse { myVote, myComment, myScores, ... }
+   */
+  getVoteResults: async (meetingId) => {
+    return api.get(`/meetings/${meetingId}/votes`);
+  },
 };
 
 export default meetingService;

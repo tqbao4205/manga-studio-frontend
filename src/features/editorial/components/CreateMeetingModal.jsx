@@ -47,7 +47,7 @@ function RoleBadge({ role }) {
   );
 }
 
-export function CreateMeetingModal({ onClose }) {
+export function CreateMeetingModal({ onClose, preselectedSeriesId }) {
   const user = useAuthStore((s) => s.user);
   const addToast = useUIStore((s) => s.addToast);
   const addMeeting = useEditorialStore((s) => s.addMeeting);
@@ -98,7 +98,7 @@ export function CreateMeetingModal({ onClose }) {
   }, []);
 
   const [form, setForm] = useState({
-    seriesId: "",
+    seriesId: preselectedSeriesId ? String(preselectedSeriesId) : "",
     title: "",
     description: "",
     meetingLink: "meet.google.com/mng-flow-ync",

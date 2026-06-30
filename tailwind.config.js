@@ -56,6 +56,7 @@ export default {
         'on-secondary': '#303032',
         'on-background': '#e5e1e4',
 
+        'accent-gold': '#FFD066',
         'accent-cyan': '#00d4aa',
         'accent-purple': '#7c3aed',
         'accent-orange': '#f97316',

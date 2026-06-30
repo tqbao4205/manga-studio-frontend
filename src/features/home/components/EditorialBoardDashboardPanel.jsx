@@ -35,6 +35,7 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   ChevronRight,
+  PenLine,
 } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -202,11 +203,11 @@ function MeetingCard({ meeting }) {
           {isPending ? (
             <Button
               size="sm"
-              className="h-8 bg-accent-gold px-4 text-xs font-bold text-black hover:bg-accent-gold/90"
+              className="h-8 px-4 text-xs font-bold"
               onClick={() => navigate(`/editorial/${meeting.id}/vote`)}
             >
-              <Gavel size={13} className="mr-1.5" />
-              Bỏ phiếu ngay
+              <PenLine size={13} className="mr-1.5" />
+              Vote Now
             </Button>
           ) : (
             <Button
@@ -215,7 +216,7 @@ function MeetingCard({ meeting }) {
               className="h-8 border-sky-400/40 px-4 text-xs text-sky-300 hover:bg-sky-500/10"
               onClick={() => navigate("/editorial")}
             >
-              Vào phòng họp
+              Join Meeting
               <ChevronRight size={13} className="ml-1" />
             </Button>
           )}
@@ -283,7 +284,7 @@ function ExecutiveQueueItem({ item, onCreateMeeting, onFinalizeDecision }) {
             className="bg-primary px-4 text-xs font-semibold text-on-primary hover:bg-primary/90"
             onClick={() => onCreateMeeting(item)}
           >
-            Tạo cuộc họp
+            Create Meeting
           </Button>
         ) : (
           <Button
@@ -291,7 +292,7 @@ function ExecutiveQueueItem({ item, onCreateMeeting, onFinalizeDecision }) {
             className="bg-rose-200 px-4 text-xs font-semibold text-rose-900 hover:bg-rose-300"
             onClick={() => onFinalizeDecision(item)}
           >
-            Quyết định cuối
+            Final Decision
           </Button>
         )}
       </div>
@@ -595,6 +596,7 @@ export function EditorialBoardDashboardPanel() {
   const [timeTab, setTimeTab] = useState("month");
   const [viewTab, setViewTab] = useState("series");
   const [showCreateMeeting, setShowCreateMeeting] = useState(false);
+  const [selectedSeriesForMeeting, setSelectedSeriesForMeeting] = useState(null);
   const [selectedDecisionItem, setSelectedDecisionItem] = useState(null);
 
   const isChiefEditor = user?.role === "CHIEF_EDITOR";
@@ -691,6 +693,7 @@ export function EditorialBoardDashboardPanel() {
 
     const hasMeetingSeries = new Set(
       sortedMeetings
+        .filter((meeting) => !meeting.decision)
         .map((meeting) => toNumberId(meeting.seriesId))
         .filter((v) => v != null),
     );
@@ -730,7 +733,8 @@ export function EditorialBoardDashboardPanel() {
     return [...ebPending, ...votingCompleted];
   }, [allSeries, sortedMeetings]);
 
-  const handleCreateMeeting = () => {
+  const handleCreateMeeting = (item) => {
+    setSelectedSeriesForMeeting(item.seriesId);
     setShowCreateMeeting(true);
   };
 
@@ -840,7 +844,7 @@ export function EditorialBoardDashboardPanel() {
               </CardHeader>
               <CardContent className="pb-6 pt-5">
                 <DecisionHub
-                  meetings={sortedMeetings}
+                  meetings={sortedMeetings.filter((m) => m.status !== "COMPLETED")}
                   isLoading={meetingsLoading}
                 />
               </CardContent>
@@ -895,8 +899,10 @@ export function EditorialBoardDashboardPanel() {
       </div>
       {isChiefEditor && showCreateMeeting && (
         <CreateMeetingModal
+          preselectedSeriesId={selectedSeriesForMeeting}
           onClose={() => {
             setShowCreateMeeting(false);
+            setSelectedSeriesForMeeting(null);
             queryClient.invalidateQueries({
               queryKey: ["dashboard", "meetings"],
             });
