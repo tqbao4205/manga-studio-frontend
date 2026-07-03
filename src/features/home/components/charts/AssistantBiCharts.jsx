@@ -79,6 +79,28 @@ const MOCK_WEEKLY_THROUGHPUT = [
   { week: "This week", Completed: 5, Submitted: 7 },
 ];
 
+// Sample data for empty-state visualization:
+const MOCK_TASK_TYPE_DATA = [
+  { name: "Background", value: 18, color: C.primary },
+  { name: "Character", value: 15, color: C.gold },
+  { name: "Effects", value: 8, color: C.success },
+  { name: "Text", value: 5, color: C.blue },
+  { name: "Tones", value: 4, color: C.pink },
+];
+const MOCK_QUALITY_DATA = [
+  { name: "Black Thorn", Approved: 8, Revise: 2, rate: 80 },
+  { name: "Neon Legacy", Approved: 6, Revise: 1, rate: 86 },
+  { name: "Studio Chron", Approved: 4, Revise: 3, rate: 57 },
+];
+
+function SampleBadge() {
+  return (
+    <span className="inline-flex items-center rounded border border-[#a078ff]/30 bg-[#a078ff]/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-[#a078ff]/70">
+      Sample
+    </span>
+  );
+}
+
 // ── Shared UI atoms ───────────────────────────────────────────────────────────
 function SectionDivider() {
   return (
@@ -164,7 +186,9 @@ function EmptyChart({ label, height = "h-[160px]" }) {
 
 // ── 1. Task Type Breakdown Donut ──────────────────────────────────────────────
 function TaskTypeDonut({ allTasks }) {
+  const usingSample = allTasks.length === 0;
   const data = useMemo(() => {
+    if (usingSample) return MOCK_TASK_TYPE_DATA;
     const m = {};
     allTasks.forEach((t) => {
       const type = t.regionType || "OTHER";
@@ -177,69 +201,74 @@ function TaskTypeDonut({ allTasks }) {
         color: REGION_TYPE_COLORS[i % REGION_TYPE_COLORS.length],
       }))
       .sort((a, b) => b.value - a.value);
-  }, [allTasks]);
+  }, [allTasks, usingSample]);
 
-  const total = allTasks.length;
-
-  if (!total) return <EmptyChart label="No task data yet" />;
+  const total = data.reduce((s, d) => s + d.value, 0);
 
   return (
-    <div className="flex items-center gap-5">
-      <div className="h-[160px] w-[160px] shrink-0">
-        <ResponsiveContainer width="100%" height="100%">
-          <PieChart>
-            <Pie
-              data={data}
-              cx="50%"
-              cy="50%"
-              innerRadius={44}
-              outerRadius={70}
-              paddingAngle={2}
-              dataKey="value"
-              strokeWidth={0}
-            >
-              {data.map((e, i) => (
-                <Cell key={i} fill={e.color} />
-              ))}
-            </Pie>
-            <Tooltip
-              content={({ active, payload }) => {
-                if (!active || !payload?.length) return null;
-                const d = payload[0].payload;
-                return (
-                  <div className="rounded-lg border border-outline-variant/50 bg-surface-container-high px-3 py-2 text-xs shadow-lg">
-                    <p className="font-semibold text-on-surface">{d.name}</p>
-                    <p style={{ color: d.color }}>
-                      {d.value} tasks (
-                      {total > 0 ? Math.round((d.value / total) * 100) : 0}%)
-                    </p>
-                  </div>
-                );
-              }}
-            />
-          </PieChart>
-        </ResponsiveContainer>
-      </div>
-      <div className="flex-1 space-y-2 min-w-0">
-        {data.slice(0, 5).map((d, i) => (
-          <div key={i} className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2 min-w-0">
-              <span
-                className="w-2 h-2 rounded-full shrink-0"
-                style={{ background: d.color }}
+    <div>
+      {usingSample && (
+        <div className="mb-2 flex justify-end">
+          <SampleBadge />
+        </div>
+      )}
+      <div className="flex items-center gap-5">
+        <div className="h-[160px] w-[160px] shrink-0">
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie
+                data={data}
+                cx="50%"
+                cy="50%"
+                innerRadius={44}
+                outerRadius={70}
+                paddingAngle={2}
+                dataKey="value"
+                strokeWidth={0}
+              >
+                {data.map((e, i) => (
+                  <Cell key={i} fill={e.color} />
+                ))}
+              </Pie>
+              <Tooltip
+                content={({ active, payload }) => {
+                  if (!active || !payload?.length) return null;
+                  const d = payload[0].payload;
+                  return (
+                    <div className="rounded-lg border border-outline-variant/50 bg-surface-container-high px-3 py-2 text-xs shadow-lg">
+                      <p className="font-semibold text-on-surface">{d.name}</p>
+                      <p style={{ color: d.color }}>
+                        {d.value} tasks (
+                        {total > 0 ? Math.round((d.value / total) * 100) : 0}%)
+                      </p>
+                    </div>
+                  );
+                }}
               />
-              <span className="text-xs text-on-surface-variant truncate">
-                {d.name}
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+        <div className="flex-1 space-y-2 min-w-0">
+          {data.slice(0, 5).map((d, i) => (
+            <div key={i} className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2 min-w-0">
+                <span
+                  className="w-2 h-2 rounded-full shrink-0"
+                  style={{ background: d.color }}
+                />
+                <span className="text-xs text-on-surface-variant truncate">
+                  {d.name}
+                </span>
+              </div>
+              <span className="text-xs font-semibold text-on-surface tabular-nums">
+                {d.value}
               </span>
             </div>
-            <span className="text-xs font-semibold text-on-surface tabular-nums">
-              {d.value}
-            </span>
+          ))}
+          <div className="pt-1.5 border-t border-outline-variant/20 flex justify-between">
+            <span className="text-xs text-on-surface-variant">Total</span>
+            <span className="text-sm font-bold text-on-surface">{total}</span>
           </div>
-        ))}
-        <div className="pt-1.5 border-t border-outline-variant/20 flex justify-between">
-          <span className="text-xs text-on-surface-variant">Total</span>
-          <span className="text-sm font-bold text-on-surface">{total}</span>
         </div>
       </div>
     </div>
@@ -277,71 +306,75 @@ function QualityScoreChart({ allTasks }) {
       .slice(0, 6);
   }, [allTasks]);
 
-  if (!data.length)
-    return (
-      <EmptyChart
-        label="Complete some tasks to see quality stats"
-        height="h-[180px]"
-      />
-    );
+  const usingSample = !data.length;
+  const displayData = usingSample ? MOCK_QUALITY_DATA : data;
 
   return (
-    <div className="h-[180px]">
-      <ResponsiveContainer width="100%" height="100%">
-        <BarChart
-          data={data}
-          margin={{ left: 0, right: 4, top: 4, bottom: 4 }}
-          barSize={12}
-          barGap={1}
-        >
-          <CartesianGrid
-            strokeDasharray="3 3"
-            stroke={C.grid}
-            vertical={false}
-          />
-          <XAxis
-            dataKey="name"
-            tick={{ fontSize: 10, fill: C.tick }}
-            axisLine={false}
-            tickLine={false}
-          />
-          <YAxis
-            tick={{ fontSize: 10, fill: C.tick }}
-            axisLine={false}
-            tickLine={false}
-            width={24}
-          />
-          <Tooltip
-            cursor={{ fill: "rgba(255,255,255,0.04)" }}
-            content={({ active, payload, label }) => {
-              if (!active || !payload?.length) return null;
-              return (
-                <div className="rounded-lg border border-outline-variant/50 bg-surface-container-high px-3 py-2 text-xs shadow-lg">
-                  <p className="font-semibold text-on-surface mb-1">{label}</p>
-                  {payload.map((p, i) => (
-                    <p key={i} style={{ color: p.color }}>
-                      {p.name}: {p.value}
+    <div>
+      {usingSample && (
+        <div className="mb-2 flex justify-end">
+          <SampleBadge />
+        </div>
+      )}
+      <div className="h-[180px]">
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart
+            data={displayData}
+            margin={{ left: 0, right: 4, top: 4, bottom: 4 }}
+            barSize={12}
+            barGap={1}
+          >
+            <CartesianGrid
+              strokeDasharray="3 3"
+              stroke={C.grid}
+              vertical={false}
+            />
+            <XAxis
+              dataKey="name"
+              tick={{ fontSize: 10, fill: C.tick }}
+              axisLine={false}
+              tickLine={false}
+            />
+            <YAxis
+              tick={{ fontSize: 10, fill: C.tick }}
+              axisLine={false}
+              tickLine={false}
+              width={24}
+            />
+            <Tooltip
+              cursor={{ fill: "rgba(255,255,255,0.04)" }}
+              content={({ active, payload, label }) => {
+                if (!active || !payload?.length) return null;
+                return (
+                  <div className="rounded-lg border border-outline-variant/50 bg-surface-container-high px-3 py-2 text-xs shadow-lg">
+                    <p className="font-semibold text-on-surface mb-1">
+                      {label}
                     </p>
-                  ))}
-                </div>
-              );
-            }}
-          />
-          <Legend wrapperStyle={{ fontSize: 10 }} />
-          <Bar
-            dataKey="Approved"
-            stackId="a"
-            fill={C.success}
-            radius={[0, 0, 0, 0]}
-          />
-          <Bar
-            dataKey="Revise"
-            stackId="a"
-            fill={C.danger}
-            radius={[3, 3, 0, 0]}
-          />
-        </BarChart>
-      </ResponsiveContainer>
+                    {payload.map((p, i) => (
+                      <p key={i} style={{ color: p.color }}>
+                        {p.name}: {p.value}
+                      </p>
+                    ))}
+                  </div>
+                );
+              }}
+            />
+            <Legend wrapperStyle={{ fontSize: 10 }} />
+            <Bar
+              dataKey="Approved"
+              stackId="a"
+              fill={C.success}
+              radius={[0, 0, 0, 0]}
+            />
+            <Bar
+              dataKey="Revise"
+              stackId="a"
+              fill={C.danger}
+              radius={[3, 3, 0, 0]}
+            />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
     </div>
   );
 }

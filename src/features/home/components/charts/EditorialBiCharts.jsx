@@ -96,6 +96,30 @@ const MOCK_AT_RISK_TREND = [
   { week: "Now", "At Risk": 2, Ongoing: 14 },
 ];
 
+// Sample data for empty-state visualization:
+const MOCK_PORTFOLIO_DATA = [
+  { name: "ongoing", value: 14, color: C.primary },
+  { name: "at risk", value: 3, color: C.danger },
+  { name: "pending board vote", value: 4, color: C.warning },
+  { name: "approved", value: 8, color: C.success },
+  { name: "rejected", value: 2, color: "#374151" },
+  { name: "hiatus", value: 1, color: C.blue },
+];
+const MOCK_VOTING_DATA = [
+  { name: "Black Thorn", Yes: 6, No: 1, Pending: 0 },
+  { name: "Neon Legacy", Yes: 4, No: 3, Pending: 0 },
+  { name: "Studio Chron", Yes: 5, No: 2, Pending: 0 },
+  { name: "Cosmic Dawn", Yes: 0, No: 0, Pending: 7 },
+];
+const MOCK_GENRE_DATA = [
+  { name: "Action", count: 12, fill: C.primary },
+  { name: "Romance", count: 8, fill: C.pink },
+  { name: "Fantasy", count: 7, fill: C.gold },
+  { name: "Sci-Fi", count: 5, fill: C.blue },
+  { name: "Horror", count: 3, fill: C.danger },
+  { name: "Slice of Life", count: 3, fill: C.success },
+];
+
 // ── Shared UI atoms ───────────────────────────────────────────────────────────
 function SectionDivider() {
   return (
@@ -166,6 +190,14 @@ function MockBadge() {
   );
 }
 
+function SampleBadge() {
+  return (
+    <span className="shrink-0 rounded border border-[#a078ff]/30 bg-[#a078ff]/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-[#a078ff]/70">
+      Sample
+    </span>
+  );
+}
+
 function EmptyChart({ label, height = "h-[160px]" }) {
   return (
     <div
@@ -181,7 +213,9 @@ function EmptyChart({ label, height = "h-[160px]" }) {
 
 // ── 1. Series Portfolio Donut ─────────────────────────────────────────────────
 function SeriesPortfolioDonut({ allSeries }) {
+  const usingSample = allSeries.length === 0;
   const data = useMemo(() => {
+    if (usingSample) return MOCK_PORTFOLIO_DATA;
     const m = {};
     allSeries.forEach((s) => {
       const k = s.status || "UNKNOWN";
@@ -194,71 +228,76 @@ function SeriesPortfolioDonut({ allSeries }) {
         color: SERIES_STATUS_COLORS[status] || C.muted,
       }))
       .sort((a, b) => b.value - a.value);
-  }, [allSeries]);
+  }, [allSeries, usingSample]);
 
   const total = data.reduce((s, d) => s + d.value, 0);
 
-  if (!total) return <EmptyChart label="No series data" />;
-
   return (
-    <div className="flex items-center gap-5">
-      <div className="h-[160px] w-[160px] shrink-0">
-        <ResponsiveContainer width="100%" height="100%">
-          <PieChart>
-            <Pie
-              data={data}
-              cx="50%"
-              cy="50%"
-              innerRadius={44}
-              outerRadius={70}
-              paddingAngle={2}
-              dataKey="value"
-              strokeWidth={0}
-            >
-              {data.map((e, i) => (
-                <Cell key={i} fill={e.color} />
-              ))}
-            </Pie>
-            <Tooltip
-              content={({ active, payload }) => {
-                if (!active || !payload?.length) return null;
-                const d = payload[0].payload;
-                return (
-                  <div className="rounded-lg border border-outline-variant/50 bg-surface-container-high px-3 py-2 text-xs shadow-lg">
-                    <p className="font-semibold text-on-surface capitalize">
-                      {d.name.toLowerCase()}
-                    </p>
-                    <p style={{ color: d.color }}>
-                      {d.value} series (
-                      {total > 0 ? Math.round((d.value / total) * 100) : 0}%)
-                    </p>
-                  </div>
-                );
-              }}
-            />
-          </PieChart>
-        </ResponsiveContainer>
-      </div>
-      <div className="flex-1 space-y-2 min-w-0">
-        {data.map((d, i) => (
-          <div key={i} className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2 min-w-0">
-              <span
-                className="w-2 h-2 rounded-full shrink-0"
-                style={{ background: d.color }}
+    <div>
+      {usingSample && (
+        <div className="mb-2 flex justify-end">
+          <SampleBadge />
+        </div>
+      )}
+      <div className="flex items-center gap-5">
+        <div className="h-[160px] w-[160px] shrink-0">
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie
+                data={data}
+                cx="50%"
+                cy="50%"
+                innerRadius={44}
+                outerRadius={70}
+                paddingAngle={2}
+                dataKey="value"
+                strokeWidth={0}
+              >
+                {data.map((e, i) => (
+                  <Cell key={i} fill={e.color} />
+                ))}
+              </Pie>
+              <Tooltip
+                content={({ active, payload }) => {
+                  if (!active || !payload?.length) return null;
+                  const d = payload[0].payload;
+                  return (
+                    <div className="rounded-lg border border-outline-variant/50 bg-surface-container-high px-3 py-2 text-xs shadow-lg">
+                      <p className="font-semibold text-on-surface capitalize">
+                        {d.name.toLowerCase()}
+                      </p>
+                      <p style={{ color: d.color }}>
+                        {d.value} series (
+                        {total > 0 ? Math.round((d.value / total) * 100) : 0}%)
+                      </p>
+                    </div>
+                  );
+                }}
               />
-              <span className="text-xs text-on-surface-variant truncate capitalize">
-                {d.name.toLowerCase()}
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+        <div className="flex-1 space-y-2 min-w-0">
+          {data.map((d, i) => (
+            <div key={i} className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2 min-w-0">
+                <span
+                  className="w-2 h-2 rounded-full shrink-0"
+                  style={{ background: d.color }}
+                />
+                <span className="text-xs text-on-surface-variant truncate capitalize">
+                  {d.name.toLowerCase()}
+                </span>
+              </div>
+              <span className="text-xs font-semibold text-on-surface tabular-nums">
+                {d.value}
               </span>
             </div>
-            <span className="text-xs font-semibold text-on-surface tabular-nums">
-              {d.value}
-            </span>
+          ))}
+          <div className="pt-1.5 border-t border-outline-variant/20 flex justify-between">
+            <span className="text-xs text-on-surface-variant">Total</span>
+            <span className="text-sm font-bold text-on-surface">{total}</span>
           </div>
-        ))}
-        <div className="pt-1.5 border-t border-outline-variant/20 flex justify-between">
-          <span className="text-xs text-on-surface-variant">Total</span>
-          <span className="text-sm font-bold text-on-surface">{total}</span>
         </div>
       </div>
     </div>
@@ -287,75 +326,91 @@ function VotingTrackRecord({ meetings }) {
     });
   }, [meetings]);
 
-  if (!data.length)
-    return <EmptyChart label="No completed votes yet" height="h-[180px]" />;
+  const usingSample = !data.length;
+  const displayData = usingSample ? MOCK_VOTING_DATA : data;
 
   return (
-    <div className="h-[180px]">
-      <ResponsiveContainer width="100%" height="100%">
-        <BarChart
-          data={data}
-          margin={{ left: 0, right: 4, top: 4, bottom: 4 }}
-          barSize={18}
-          barGap={1}
-        >
-          <CartesianGrid
-            strokeDasharray="3 3"
-            stroke={C.grid}
-            vertical={false}
-          />
-          <XAxis
-            dataKey="name"
-            tick={{ fontSize: 10, fill: C.tick }}
-            axisLine={false}
-            tickLine={false}
-          />
-          <YAxis
-            allowDecimals={false}
-            tick={{ fontSize: 10, fill: C.tick }}
-            axisLine={false}
-            tickLine={false}
-            width={22}
-          />
-          <Tooltip
-            cursor={{ fill: "rgba(255,255,255,0.04)" }}
-            content={({ active, payload, label }) => {
-              if (!active || !payload?.length) return null;
-              return (
-                <div className="rounded-lg border border-outline-variant/50 bg-surface-container-high px-3 py-2 text-xs shadow-lg">
-                  <p className="font-semibold text-on-surface mb-1">{label}</p>
-                  {payload.map((p, i) => (
-                    <p key={i} style={{ color: p.color }}>
-                      {p.name}: {p.value}
+    <div>
+      {usingSample && (
+        <div className="mb-2 flex justify-end">
+          <SampleBadge />
+        </div>
+      )}
+      <div className="h-[180px]">
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart
+            data={displayData}
+            margin={{ left: 0, right: 4, top: 4, bottom: 4 }}
+            barSize={18}
+            barGap={1}
+          >
+            <CartesianGrid
+              strokeDasharray="3 3"
+              stroke={C.grid}
+              vertical={false}
+            />
+            <XAxis
+              dataKey="name"
+              tick={{ fontSize: 10, fill: C.tick }}
+              axisLine={false}
+              tickLine={false}
+            />
+            <YAxis
+              allowDecimals={false}
+              tick={{ fontSize: 10, fill: C.tick }}
+              axisLine={false}
+              tickLine={false}
+              width={22}
+            />
+            <Tooltip
+              cursor={{ fill: "rgba(255,255,255,0.04)" }}
+              content={({ active, payload, label }) => {
+                if (!active || !payload?.length) return null;
+                return (
+                  <div className="rounded-lg border border-outline-variant/50 bg-surface-container-high px-3 py-2 text-xs shadow-lg">
+                    <p className="font-semibold text-on-surface mb-1">
+                      {label}
                     </p>
-                  ))}
-                </div>
-              );
-            }}
-          />
-          <Legend wrapperStyle={{ fontSize: 10 }} />
-          <Bar
-            dataKey="Yes"
-            stackId="a"
-            fill={C.success}
-            radius={[0, 0, 0, 0]}
-          />
-          <Bar
-            dataKey="Pending"
-            stackId="a"
-            fill={C.muted}
-            radius={[0, 0, 0, 0]}
-          />
-          <Bar dataKey="No" stackId="a" fill={C.danger} radius={[3, 3, 0, 0]} />
-        </BarChart>
-      </ResponsiveContainer>
+                    {payload.map((p, i) => (
+                      <p key={i} style={{ color: p.color }}>
+                        {p.name}: {p.value}
+                      </p>
+                    ))}
+                  </div>
+                );
+              }}
+            />
+            <Legend wrapperStyle={{ fontSize: 10 }} />
+            <Bar
+              dataKey="Yes"
+              stackId="a"
+              fill={C.success}
+              radius={[0, 0, 0, 0]}
+            />
+            <Bar
+              dataKey="Pending"
+              stackId="a"
+              fill={C.muted}
+              radius={[0, 0, 0, 0]}
+            />
+            <Bar
+              dataKey="No"
+              stackId="a"
+              fill={C.danger}
+              radius={[3, 3, 0, 0]}
+            />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
     </div>
   );
 }
 
 // ── 3. Genre Mix Bar ──────────────────────────────────────────────────────────
 function GenreMixChart({ allSeries }) {
+  const usingSample = allSeries.length === 0;
   const data = useMemo(() => {
+    if (usingSample) return MOCK_GENRE_DATA;
     const m = {};
     allSeries.forEach((s) => {
       const genre = s.genre || s.genres?.[0] || "Unknown";
@@ -369,54 +424,58 @@ function GenreMixChart({ allSeries }) {
       }))
       .sort((a, b) => b.count - a.count)
       .slice(0, 8);
-  }, [allSeries]);
-
-  if (!data.length)
-    return <EmptyChart label="No genre data" height="h-[160px]" />;
+  }, [allSeries, usingSample]);
 
   return (
-    <div className="h-[160px]">
-      <ResponsiveContainer width="100%" height="100%">
-        <BarChart
-          data={data}
-          layout="vertical"
-          margin={{ left: 0, right: 32, top: 0, bottom: 0 }}
-        >
-          <XAxis
-            type="number"
-            tick={{ fontSize: 10, fill: C.tick }}
-            axisLine={false}
-            tickLine={false}
-          />
-          <YAxis
-            type="category"
-            dataKey="name"
-            tick={{ fontSize: 11, fill: "#c8c6c8" }}
-            axisLine={false}
-            tickLine={false}
-            width={82}
-          />
-          <Tooltip
-            cursor={{ fill: "rgba(255,255,255,0.04)" }}
-            content={({ active, payload, label }) => {
-              if (!active || !payload?.length) return null;
-              return (
-                <div className="rounded-lg border border-outline-variant/50 bg-surface-container-high px-3 py-2 text-xs shadow-lg">
-                  <p className="font-semibold text-on-surface">{label}</p>
-                  <p style={{ color: payload[0].payload.fill }}>
-                    {payload[0].value} series
-                  </p>
-                </div>
-              );
-            }}
-          />
-          <Bar dataKey="count" radius={[0, 4, 4, 0]} maxBarSize={18}>
-            {data.map((e, i) => (
-              <Cell key={i} fill={e.fill} />
-            ))}
-          </Bar>
-        </BarChart>
-      </ResponsiveContainer>
+    <div>
+      {usingSample && (
+        <div className="mb-2 flex justify-end">
+          <SampleBadge />
+        </div>
+      )}
+      <div className="h-[160px]">
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart
+            data={data}
+            layout="vertical"
+            margin={{ left: 0, right: 32, top: 0, bottom: 0 }}
+          >
+            <XAxis
+              type="number"
+              tick={{ fontSize: 10, fill: C.tick }}
+              axisLine={false}
+              tickLine={false}
+            />
+            <YAxis
+              type="category"
+              dataKey="name"
+              tick={{ fontSize: 11, fill: "#c8c6c8" }}
+              axisLine={false}
+              tickLine={false}
+              width={82}
+            />
+            <Tooltip
+              cursor={{ fill: "rgba(255,255,255,0.04)" }}
+              content={({ active, payload, label }) => {
+                if (!active || !payload?.length) return null;
+                return (
+                  <div className="rounded-lg border border-outline-variant/50 bg-surface-container-high px-3 py-2 text-xs shadow-lg">
+                    <p className="font-semibold text-on-surface">{label}</p>
+                    <p style={{ color: payload[0].payload.fill }}>
+                      {payload[0].value} series
+                    </p>
+                  </div>
+                );
+              }}
+            />
+            <Bar dataKey="count" radius={[0, 4, 4, 0]} maxBarSize={18}>
+              {data.map((e, i) => (
+                <Cell key={i} fill={e.fill} />
+              ))}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
     </div>
   );
 }
@@ -502,11 +561,24 @@ function AtRiskTrendChart() {
 
 // ── 5. Chief Editor — Portfolio Health KPIs ───────────────────────────────────
 function ChiefEditorHealthKPIs({ allSeries }) {
+  const usingSample = allSeries.length === 0;
   const kpis = useMemo(() => {
+    if (usingSample) {
+      return [
+        { label: "Total Series", value: 32, color: C.primary, icon: BookOpen },
+        { label: "Active", value: 14, color: C.success, icon: CheckCircle2 },
+        { label: "At Risk", value: 3, color: C.danger, icon: XCircle },
+        {
+          label: "On-Track Rate",
+          value: "91%",
+          color: C.success,
+          icon: TrendingUp,
+        },
+      ];
+    }
     const total = allSeries.length;
     const ongoing = allSeries.filter((s) => s.status === "ONGOING").length;
     const atRisk = allSeries.filter((s) => s.status === "AT_RISK").length;
-    const approved = allSeries.filter((s) => s.status === "APPROVED").length;
     const onTimeRate =
       total > 0 ? Math.round(((total - atRisk) / total) * 100) : 100;
     return [
@@ -520,34 +592,41 @@ function ChiefEditorHealthKPIs({ allSeries }) {
         icon: TrendingUp,
       },
     ];
-  }, [allSeries]);
+  }, [allSeries, usingSample]);
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-      {kpis.map((kpi, i) => {
-        const KpiIcon = kpi.icon;
-        return (
-          <div
-            key={i}
-            className="rounded-xl border border-outline-variant/30 bg-surface-container/60 p-4 flex items-center gap-3"
-          >
+    <div>
+      {usingSample && (
+        <div className="mb-2 flex justify-end">
+          <SampleBadge />
+        </div>
+      )}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {kpis.map((kpi, i) => {
+          const KpiIcon = kpi.icon;
+          return (
             <div
-              className="p-2 rounded-lg shrink-0"
-              style={{ background: `${kpi.color}18` }}
+              key={i}
+              className="rounded-xl border border-outline-variant/30 bg-surface-container/60 p-4 flex items-center gap-3"
             >
-              <KpiIcon size={18} style={{ color: kpi.color }} />
+              <div
+                className="p-2 rounded-lg shrink-0"
+                style={{ background: `${kpi.color}18` }}
+              >
+                <KpiIcon size={18} style={{ color: kpi.color }} />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs text-on-surface-variant truncate">
+                  {kpi.label}
+                </p>
+                <p className="text-xl font-bold tabular-nums text-on-surface">
+                  {kpi.value}
+                </p>
+              </div>
             </div>
-            <div className="min-w-0">
-              <p className="text-xs text-on-surface-variant truncate">
-                {kpi.label}
-              </p>
-              <p className="text-xl font-bold tabular-nums text-on-surface">
-                {kpi.value}
-              </p>
-            </div>
-          </div>
-        );
-      })}
+          );
+        })}
+      </div>
     </div>
   );
 }
