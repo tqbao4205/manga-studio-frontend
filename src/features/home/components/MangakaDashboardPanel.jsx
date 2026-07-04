@@ -48,6 +48,7 @@ import taskService from "../../../services/taskService";
 import seriesService from "../../../services/seriesService";
 import rankingService from "../../../services/rankingService";
 import { resolveSeriesOwnerId } from "../dashboardMappings";
+import { MangakaBiCharts } from "./charts/MangakaBiCharts";
 
 // ─────────────────────────────────────────────
 // Helpers
@@ -90,7 +91,13 @@ function currentMonthStr() {
 // Shared UI atoms
 // ─────────────────────────────────────────────
 
-function BlockHeader({ icon: Icon, title, badge, iconClass = "text-primary", subtitle }) {
+function BlockHeader({
+  icon: Icon,
+  title,
+  badge,
+  iconClass = "text-primary",
+  subtitle,
+}) {
   return (
     <div className="mb-1">
       <div className="flex items-center justify-between">
@@ -558,6 +565,9 @@ export function MangakaDashboardPanel() {
           </CardContent>
         </Card>
       </div>
+
+      {/* ── BI Analytics Section ── */}
+      <MangakaBiCharts mySeries={mySeries} userId={userId} />
     </div>
   );
 }

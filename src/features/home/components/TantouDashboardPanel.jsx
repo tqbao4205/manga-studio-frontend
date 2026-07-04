@@ -44,6 +44,7 @@ import { cn, formatDate, formatRelativeTime } from "../../../shared/utils";
 import dashboardService from "../../../services/dashboardService";
 import seriesService from "../../../services/seriesService";
 import chapterService from "../../../services/chapterService";
+import { TantouBiCharts } from "./charts/TantouBiCharts";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 function daysLeftLabel(daysLeft) {
@@ -447,6 +448,12 @@ export function TantouDashboardPanel() {
         assignedSeriesCount: assignedSeries.length,
         chaptersInReview,
         lateStudios,
+        allChapters: mappedChapters,
+        seriesStatusBreakdown: assignedSeries.reduce((acc, s) => {
+          const k = s.status || "UNKNOWN";
+          acc[k] = (acc[k] || 0) + 1;
+          return acc;
+        }, {}),
       };
     },
   });
@@ -797,6 +804,13 @@ export function TantouDashboardPanel() {
           </CardContent>
         </Card>
       </div>
+
+      {/* ── BI Analytics Section ── */}
+      <TantouBiCharts
+        allChapters={tantouData?.allChapters ?? []}
+        chaptersInReview={chaptersInReview}
+        seriesStatusBreakdown={tantouData?.seriesStatusBreakdown ?? {}}
+      />
     </div>
   );
 }

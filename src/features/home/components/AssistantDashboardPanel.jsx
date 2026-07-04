@@ -49,6 +49,7 @@ import { PageLoading } from "../../../shared/components/shared/LoadingSpinner";
 import { cn, formatDate, formatRelativeTime } from "../../../shared/utils";
 import taskService from "../../../services/taskService";
 import dashboardService from "../../../services/dashboardService";
+import { AssistantBiCharts } from "./charts/AssistantBiCharts";
 
 // ─── Custom Tooltip cho Recharts ────────────────────────────────────────────
 function EarningsTooltip({ active, payload, label }) {
@@ -468,6 +469,9 @@ export function AssistantDashboardPanel() {
           </Card>
         </div>
       </div>
+
+      {/* ── BI Analytics Section ── */}
+      <AssistantBiCharts allTasks={allTasks} />
     </div>
   );
 }

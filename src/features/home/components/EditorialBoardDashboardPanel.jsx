@@ -38,6 +38,7 @@ import {
   PenLine,
 } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { EditorialBiCharts } from "./charts/EditorialBiCharts";
 import {
   Card,
   CardContent,
@@ -596,7 +597,8 @@ export function EditorialBoardDashboardPanel() {
   const [timeTab, setTimeTab] = useState("month");
   const [viewTab, setViewTab] = useState("series");
   const [showCreateMeeting, setShowCreateMeeting] = useState(false);
-  const [selectedSeriesForMeeting, setSelectedSeriesForMeeting] = useState(null);
+  const [selectedSeriesForMeeting, setSelectedSeriesForMeeting] =
+    useState(null);
   const [selectedDecisionItem, setSelectedDecisionItem] = useState(null);
 
   const isChiefEditor = user?.role === "CHIEF_EDITOR";
@@ -844,7 +846,9 @@ export function EditorialBoardDashboardPanel() {
               </CardHeader>
               <CardContent className="pb-6 pt-5">
                 <DecisionHub
-                  meetings={sortedMeetings.filter((m) => m.status !== "COMPLETED")}
+                  meetings={sortedMeetings.filter(
+                    (m) => m.status !== "COMPLETED",
+                  )}
                   isLoading={meetingsLoading}
                 />
               </CardContent>
@@ -897,6 +901,13 @@ export function EditorialBoardDashboardPanel() {
           </Card>
         </div>
       </div>
+      {/* ── BI Analytics Section ── */}
+      <EditorialBiCharts
+        meetings={sortedMeetings}
+        allSeries={allSeries}
+        isChiefEditor={isChiefEditor}
+      />
+
       {isChiefEditor && showCreateMeeting && (
         <CreateMeetingModal
           preselectedSeriesId={selectedSeriesForMeeting}
