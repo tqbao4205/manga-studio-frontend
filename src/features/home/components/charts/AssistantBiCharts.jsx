@@ -4,17 +4,13 @@
  * Charts:
  *  1. Task Type Breakdown Donut   — REAL  (derived from task.regionType)
  *  2. Quality Score Bar           — REAL  (derived from task statuses per series)
- *  3. Weekly Throughput Line      — ⚠️ MOCK — needs backend:
- *       GET /api/v1/dashboard/task-history?groupBy=week
- *       Response: [{ week: 'W-3', completed: 8, submitted: 10, period: '2026-W24' }]
+ *  3. Weekly Throughput Bar       — REAL  (derived from task.createdAt)
  */
 
 import { useMemo } from "react";
 import {
   BarChart,
   Bar,
-  LineChart,
-  Line,
   PieChart,
   Pie,
   Cell,
@@ -25,13 +21,13 @@ import {
   ResponsiveContainer,
   Legend,
 } from "recharts";
-import { BarChart2, Target, TrendingUp, Wrench } from "lucide-react";
+import { BarChart2, Target } from "lucide-react";
 import {
   Card,
   CardContent,
   CardHeader,
 } from "../../../../shared/components/ui/card";
-import { cn } from "../../../../shared/utils";
+import { cn, getPeriodLabel } from "../../../../shared/utils";
 
 // ── Chart palette ─────────────────────────────────────────────────────────────
 const C = {
@@ -68,17 +64,6 @@ const REGION_TYPE_COLORS = [
   C.muted,
 ];
 
-// ⚠️ MOCK DATA — Replace when backend implements:
-//   GET /api/v1/dashboard/task-history?groupBy=week
-//   Response: [{ week: 'W-3', completed: 8, submitted: 10, period: '2026-W24' }]
-//   Backend note: compute from task.updatedAt WHERE status changed to APPROVED within the week bucket.
-const MOCK_WEEKLY_THROUGHPUT = [
-  { week: "W-3", Completed: 8, Submitted: 10 },
-  { week: "W-2", Completed: 12, Submitted: 14 },
-  { week: "W-1", Completed: 10, Submitted: 11 },
-  { week: "This week", Completed: 5, Submitted: 7 },
-];
-
 // Sample data for empty-state visualization:
 const MOCK_TASK_TYPE_DATA = [
   { name: "Background", value: 18, color: C.primary },
@@ -87,11 +72,7 @@ const MOCK_TASK_TYPE_DATA = [
   { name: "Text", value: 5, color: C.blue },
   { name: "Tones", value: 4, color: C.pink },
 ];
-const MOCK_QUALITY_DATA = [
-  { name: "Black Thorn", Approved: 8, Revise: 2, rate: 80 },
-  { name: "Neon Legacy", Approved: 6, Revise: 1, rate: 86 },
-  { name: "Studio Chron", Approved: 4, Revise: 3, rate: 57 },
-];
+
 
 function SampleBadge() {
   return (
@@ -163,14 +144,6 @@ function ChartCard({
   );
 }
 
-function MockBadge() {
-  return (
-    <span className="shrink-0 rounded border border-[#ffb869]/40 bg-[#ffb869]/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-[#ffb869]">
-      Mock
-    </span>
-  );
-}
-
 function EmptyChart({ label, height = "h-[160px]" }) {
   return (
     <div
@@ -185,7 +158,7 @@ function EmptyChart({ label, height = "h-[160px]" }) {
 }
 
 // ── 1. Task Type Breakdown Donut ──────────────────────────────────────────────
-function TaskTypeDonut({ allTasks }) {
+export function TaskTypeDonut({ allTasks }) {
   const usingSample = allTasks.length === 0;
   const data = useMemo(() => {
     if (usingSample) return MOCK_TASK_TYPE_DATA;
@@ -281,7 +254,10 @@ function QualityScoreChart({ allTasks }) {
     const bySeries = {};
     allTasks.forEach((t) => {
       const name =
-        t.seriesTitle || (t.seriesId ? `Series #${t.seriesId}` : null);
+        t.seriesTitle ||
+        (t.seriesId ? `Series #${t.seriesId}` : null) ||
+        t.assignedBy?.displayName ||
+        null;
       if (!name) return;
       if (!bySeries[name])
         bySeries[name] = { approved: 0, revise: 0, other: 0 };
@@ -306,20 +282,14 @@ function QualityScoreChart({ allTasks }) {
       .slice(0, 6);
   }, [allTasks]);
 
-  const usingSample = !data.length;
-  const displayData = usingSample ? MOCK_QUALITY_DATA : data;
+  if (!data.length) return <EmptyChart label="No quality data yet" height="h-[180px]" />;
 
   return (
     <div>
-      {usingSample && (
-        <div className="mb-2 flex justify-end">
-          <SampleBadge />
-        </div>
-      )}
       <div className="h-[180px]">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart
-            data={displayData}
+            data={data}
             margin={{ left: 0, right: 4, top: 4, bottom: 4 }}
             barSize={12}
             barGap={1}
@@ -379,28 +349,70 @@ function QualityScoreChart({ allTasks }) {
   );
 }
 
-// ── 3. Weekly Throughput ──────────────────────────────────────────────────────
-// ⚠️ MOCK DATA — see note at top of file
-function WeeklyThroughputChart() {
+// ── 3. Weekly Throughput — Tasks created per week ────────────────────────────
+function WeeklyThroughputChart({ allTasks }) {
+  const data = useMemo(() => {
+    const byWeek = {};
+    allTasks.forEach((t) => {
+      if (!t.createdAt) return;
+      const week = getPeriodLabel(t.createdAt.slice(0, 10));
+      byWeek[week] = (byWeek[week] || 0) + 1;
+    });
+
+    const weeks = Object.entries(byWeek)
+      .map(([week, count]) => ({ week, tasks: count }))
+      .sort((a, b) => a.week.localeCompare(b.week));
+
+    // Show last 12 weeks with data
+    const sliced = weeks.slice(-12);
+
+    // Ensure at least one entry so Tooltip has a hit zone
+    if (!sliced.length) return [];
+
+    // Fill gaps: build a continuous range of weeks
+    const [lastYear, lastWkStr] = sliced[sliced.length - 1].week.split("-W");
+    const lastWkN = Number(lastWkStr);
+    const lastYearN = Number(lastYear);
+
+    const filled = [];
+
+    // Walk from current week back up to 12 weeks
+    let y = lastYearN;
+    let w = lastWkN;
+    for (let i = 0; i < 12; i++) {
+      const key = `${y}-W${String(w).padStart(2, "0")}`;
+      filled.unshift({
+        week: key,
+        // Short label like "Jun 1"
+        label: getShortWeekLabel(y, w),
+        tasks: byWeek[key] || 0,
+      });
+      w--;
+      if (w < 1) { w = 52; y--; }
+    }
+
+    return filled;
+  }, [allTasks]);
+
+  function getShortWeekLabel(year, week) {
+    // Approximate the Monday of the given ISO week
+    const jan4 = new Date(year, 0, 4);
+    const dayOffset = (week - 1) * 7;
+    const monday = new Date(jan4);
+    monday.setDate(jan4.getDate() + dayOffset - (jan4.getDay() || 7) + 1);
+    return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" }).format(monday);
+  }
+
+  if (!data.length) return <EmptyChart label="No weekly data yet" height="h-[180px]" />;
+
   return (
     <div>
-      {/* Mock notice */}
-      <div className="mb-3 flex items-center gap-2 rounded-lg border border-[#ffb869]/30 bg-[#ffb869]/5 px-3 py-2">
-        <Wrench size={11} className="text-[#ffb869] shrink-0" />
-        <p className="text-[10px] text-[#ffb869]/80 leading-relaxed">
-          <span className="font-semibold">Mock data displayed.</span> Backend
-          cần implement{" "}
-          <code className="text-[#a078ff]/80">
-            GET /api/v1/dashboard/task-history?groupBy=week
-          </code>{" "}
-          để tính từ timestamps thực.
-        </p>
-      </div>
-      <div className="h-[160px]">
+      <div className="h-[180px]">
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart
-            data={MOCK_WEEKLY_THROUGHPUT}
-            margin={{ left: 0, right: 8, top: 4, bottom: 4 }}
+          <BarChart
+            data={data}
+            margin={{ left: -16, right: 4, top: 4, bottom: 4 }}
+            barSize={16}
           >
             <CartesianGrid
               strokeDasharray="3 3"
@@ -408,52 +420,40 @@ function WeeklyThroughputChart() {
               vertical={false}
             />
             <XAxis
-              dataKey="week"
-              tick={{ fontSize: 11, fill: C.tick }}
+              dataKey="label"
+              tick={{ fontSize: 10, fill: C.tick }}
               axisLine={false}
               tickLine={false}
+              interval="preserveStartEnd"
             />
             <YAxis
+              allowDecimals={false}
               tick={{ fontSize: 10, fill: C.tick }}
               axisLine={false}
               tickLine={false}
               width={24}
             />
             <Tooltip
-              cursor={{ stroke: "rgba(255,255,255,0.06)" }}
+              cursor={{ fill: "rgba(255,255,255,0.04)" }}
               content={({ active, payload, label }) => {
                 if (!active || !payload?.length) return null;
+                const d = payload[0].payload;
                 return (
                   <div className="rounded-lg border border-outline-variant/50 bg-surface-container-high px-3 py-2 text-xs shadow-lg">
-                    <p className="font-semibold text-on-surface mb-1">
-                      {label}
+                    <p className="font-semibold text-on-surface">{label}</p>
+                    <p style={{ color: C.primary }}>
+                      {d.tasks} task{d.tasks !== 1 ? "s" : ""}
                     </p>
-                    {payload.map((p, i) => (
-                      <p key={i} style={{ color: p.color }}>
-                        {p.name}: {p.value} tasks
-                      </p>
-                    ))}
                   </div>
                 );
               }}
             />
-            <Legend wrapperStyle={{ fontSize: 10, paddingTop: 4 }} />
-            <Line
-              type="monotone"
-              dataKey="Completed"
-              stroke={C.success}
-              strokeWidth={2}
-              dot={{ r: 4, fill: C.success, strokeWidth: 0 }}
+            <Bar
+              dataKey="tasks"
+              fill={C.primary}
+              radius={[3, 3, 0, 0]}
             />
-            <Line
-              type="monotone"
-              dataKey="Submitted"
-              stroke={C.primary}
-              strokeWidth={2}
-              strokeDasharray="4 2"
-              dot={{ r: 3, fill: C.primary, strokeWidth: 0 }}
-            />
-          </LineChart>
+          </BarChart>
         </ResponsiveContainer>
       </div>
     </div>
@@ -466,37 +466,23 @@ export function AssistantBiCharts({ allTasks = [] }) {
     <div className="space-y-6">
       <SectionDivider />
 
-      <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-        {/* 1. Task Type Donut */}
-        <ChartCard
-          title="Task Type Breakdown"
-          subtitle="My tasks by artwork region"
-          icon={BarChart2}
-        >
-          <TaskTypeDonut allTasks={allTasks} />
-        </ChartCard>
+      <ChartCard
+        title="Weekly Throughput"
+        subtitle="Tasks created per week"
+        icon={BarChart2}
+        iconClass="text-primary"
+      >
+        <WeeklyThroughputChart allTasks={allTasks} />
+      </ChartCard>
 
-        {/* 2. Quality Score */}
-        <ChartCard
-          title="Quality Score"
-          subtitle="Approved vs revise per series"
-          icon={Target}
-          iconClass="text-[#4ade80]"
-        >
-          <QualityScoreChart allTasks={allTasks} />
-        </ChartCard>
-
-        {/* 3. Weekly Throughput (mock) */}
-        <ChartCard
-          title="Weekly Throughput"
-          subtitle="Tasks completed per week"
-          icon={TrendingUp}
-          iconClass="text-[#a078ff]"
-          badge={<MockBadge />}
-        >
-          <WeeklyThroughputChart />
-        </ChartCard>
-      </div>
+      <ChartCard
+        title="Quality Score"
+        subtitle="Approved vs revise rate"
+        icon={Target}
+        iconClass="text-[#4ade80]"
+      >
+        <QualityScoreChart allTasks={allTasks} />
+      </ChartCard>
     </div>
   );
 }

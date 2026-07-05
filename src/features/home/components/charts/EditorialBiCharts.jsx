@@ -5,16 +5,15 @@
  *  1. Series Portfolio Donut      — REAL  (all series by status)
  *  2. Voting Track Record         — REAL  (meetings — YES/NO/PENDING counts)
  *  3. Genre Mix Bar               — REAL  (series grouped by genre)
- *  4. At-Risk Trend Line          — ⚠️ MOCK — needs backend:
- *       GET /api/v1/dashboard/at-risk-history?groupBy=week
- *       Response: [{ week: 'W-3', atRisk: 3, ongoing: 12 }]
+ *  4. Monthly Ranking Trend       — REAL  (GET /api/ranking/monthly ×4 months)
+ *  5. Weekly Ranking Trend        — REAL  (GET /api/ranking/weekly ×4 weeks)
  *
  * Chief Editor exclusive section:
- *  5. Portfolio Health KPIs       — REAL  (derived from allSeries)
- *  6. Top Genres by Votes         — REAL  (from monthlyRanks + series genres)
+ *  6. Portfolio Health KPIs       — REAL  (derived from allSeries)
  */
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import {
   BarChart,
   Bar,
@@ -36,8 +35,8 @@ import {
   BookOpen,
   CheckCircle2,
   Crown,
+  Search,
   TrendingUp,
-  Wrench,
   XCircle,
 } from "lucide-react";
 import {
@@ -46,6 +45,7 @@ import {
   CardHeader,
 } from "../../../../shared/components/ui/card";
 import { cn } from "../../../../shared/utils";
+import rankingService from "../../../../services/rankingService";
 
 // ── Chart palette ─────────────────────────────────────────────────────────────
 const C = {
@@ -84,41 +84,7 @@ const GENRE_COLORS = [
   C.danger,
 ];
 
-// ⚠️ MOCK DATA — Replace when backend implements:
-//   GET /api/v1/dashboard/at-risk-history?groupBy=week
-//   Response: [{ week: 'W-3', atRisk: 3, ongoing: 12, period: '2026-W23' }]
-//   Backend note: log snapshot weekly from series WHERE status = 'AT_RISK' count.
-const MOCK_AT_RISK_TREND = [
-  { week: "W-4", "At Risk": 2, Ongoing: 14 },
-  { week: "W-3", "At Risk": 3, Ongoing: 13 },
-  { week: "W-2", "At Risk": 4, Ongoing: 12 },
-  { week: "W-1", "At Risk": 3, Ongoing: 13 },
-  { week: "Now", "At Risk": 2, Ongoing: 14 },
-];
 
-// Sample data for empty-state visualization:
-const MOCK_PORTFOLIO_DATA = [
-  { name: "ongoing", value: 14, color: C.primary },
-  { name: "at risk", value: 3, color: C.danger },
-  { name: "pending board vote", value: 4, color: C.warning },
-  { name: "approved", value: 8, color: C.success },
-  { name: "rejected", value: 2, color: "#374151" },
-  { name: "hiatus", value: 1, color: C.blue },
-];
-const MOCK_VOTING_DATA = [
-  { name: "Black Thorn", Yes: 6, No: 1, Pending: 0 },
-  { name: "Neon Legacy", Yes: 4, No: 3, Pending: 0 },
-  { name: "Studio Chron", Yes: 5, No: 2, Pending: 0 },
-  { name: "Cosmic Dawn", Yes: 0, No: 0, Pending: 7 },
-];
-const MOCK_GENRE_DATA = [
-  { name: "Action", count: 12, fill: C.primary },
-  { name: "Romance", count: 8, fill: C.pink },
-  { name: "Fantasy", count: 7, fill: C.gold },
-  { name: "Sci-Fi", count: 5, fill: C.blue },
-  { name: "Horror", count: 3, fill: C.danger },
-  { name: "Slice of Life", count: 3, fill: C.success },
-];
 
 // ── Shared UI atoms ───────────────────────────────────────────────────────────
 function SectionDivider() {
@@ -182,22 +148,6 @@ function ChartCard({
   );
 }
 
-function MockBadge() {
-  return (
-    <span className="shrink-0 rounded border border-[#ffb869]/40 bg-[#ffb869]/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-[#ffb869]">
-      Mock
-    </span>
-  );
-}
-
-function SampleBadge() {
-  return (
-    <span className="shrink-0 rounded border border-[#a078ff]/30 bg-[#a078ff]/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-[#a078ff]/70">
-      Sample
-    </span>
-  );
-}
-
 function EmptyChart({ label, height = "h-[160px]" }) {
   return (
     <div
@@ -213,9 +163,7 @@ function EmptyChart({ label, height = "h-[160px]" }) {
 
 // ── 1. Series Portfolio Donut ─────────────────────────────────────────────────
 function SeriesPortfolioDonut({ allSeries }) {
-  const usingSample = allSeries.length === 0;
   const data = useMemo(() => {
-    if (usingSample) return MOCK_PORTFOLIO_DATA;
     const m = {};
     allSeries.forEach((s) => {
       const k = s.status || "UNKNOWN";
@@ -228,17 +176,14 @@ function SeriesPortfolioDonut({ allSeries }) {
         color: SERIES_STATUS_COLORS[status] || C.muted,
       }))
       .sort((a, b) => b.value - a.value);
-  }, [allSeries, usingSample]);
+  }, [allSeries]);
+
+  if (!data.length) return <EmptyChart label="No series data" height="h-[160px]" />;
 
   const total = data.reduce((s, d) => s + d.value, 0);
 
   return (
     <div>
-      {usingSample && (
-        <div className="mb-2 flex justify-end">
-          <SampleBadge />
-        </div>
-      )}
       <div className="flex items-center gap-5">
         <div className="h-[160px] w-[160px] shrink-0">
           <ResponsiveContainer width="100%" height="100%">
@@ -326,20 +271,14 @@ function VotingTrackRecord({ meetings }) {
     });
   }, [meetings]);
 
-  const usingSample = !data.length;
-  const displayData = usingSample ? MOCK_VOTING_DATA : data;
+  if (!data.length) return <EmptyChart label="No voting data yet" height="h-[180px]" />;
 
   return (
     <div>
-      {usingSample && (
-        <div className="mb-2 flex justify-end">
-          <SampleBadge />
-        </div>
-      )}
       <div className="h-[180px]">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart
-            data={displayData}
+            data={data}
             margin={{ left: 0, right: 4, top: 4, bottom: 4 }}
             barSize={18}
             barGap={1}
@@ -408,9 +347,7 @@ function VotingTrackRecord({ meetings }) {
 
 // ── 3. Genre Mix Bar ──────────────────────────────────────────────────────────
 function GenreMixChart({ allSeries }) {
-  const usingSample = allSeries.length === 0;
   const data = useMemo(() => {
-    if (usingSample) return MOCK_GENRE_DATA;
     const m = {};
     allSeries.forEach((s) => {
       const genre = s.genre || s.genres?.[0] || "Unknown";
@@ -424,15 +361,12 @@ function GenreMixChart({ allSeries }) {
       }))
       .sort((a, b) => b.count - a.count)
       .slice(0, 8);
-  }, [allSeries, usingSample]);
+  }, [allSeries]);
+
+  if (!data.length) return <EmptyChart label="No genre data" height="h-[160px]" />;
 
   return (
     <div>
-      {usingSample && (
-        <div className="mb-2 flex justify-end">
-          <SampleBadge />
-        </div>
-      )}
       <div className="h-[160px]">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart
@@ -480,26 +414,71 @@ function GenreMixChart({ allSeries }) {
   );
 }
 
-// ── 4. At-Risk Trend (MOCK) ───────────────────────────────────────────────────
-function AtRiskTrendChart() {
+// ── Ranking helpers ───────────────────────────────────────────────────────────
+const LINE_COLORS = [C.primary, C.gold, C.success, C.blue, C.danger, '#f472b6', '#34d399', '#fbbf24', '#818cf8', '#e879f9'];
+
+function getLast4Months() {
+  return [3, 2, 1, 0].map((n) => {
+    const d = new Date();
+    d.setDate(1);
+    d.setMonth(d.getMonth() - n);
+    return {
+      key: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`,
+      label: d.toLocaleString("en", { month: "short" }),
+    };
+  });
+}
+
+function getISOWeek(date) {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const dayNum = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  return Math.ceil(((d - yearStart) / 86400000 + 1) / 7);
+}
+
+function getLast4Weeks() {
+  return [3, 2, 1, 0].map((n) => {
+    const d = new Date();
+    d.setDate(d.getDate() - n * 7);
+    const wk = getISOWeek(d);
+    return {
+      key: `${d.getFullYear()}-W${String(wk).padStart(2, "0")}`,
+      label: `W${wk}`,
+    };
+  });
+}
+
+function toArray(payload) {
+  if (Array.isArray(payload)) return payload;
+  if (Array.isArray(payload?.content)) return payload.content;
+  return [];
+}
+
+// ── 5. Ranking Trend Line (shared rendering) ──────────────────────────────────
+function RankingTrendLineChart({ displayData, keys }) {
+  const [hoveredKey, setHoveredKey] = useState(null);
+  const [hiddenKeys, setHiddenKeys] = useState(new Set());
+
+  const toggleKey = (key) => {
+    setHiddenKeys((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
+
+  const visibleKeys = keys.filter((k) => !hiddenKeys.has(k));
+  if (visibleKeys.length === 0) return <EmptyChart label="No ranking data yet" />;
+
   return (
     <div>
-      <div className="mb-3 flex items-center gap-2 rounded-lg border border-[#ffb869]/30 bg-[#ffb869]/5 px-3 py-2">
-        <Wrench size={11} className="text-[#ffb869] shrink-0" />
-        <p className="text-[10px] text-[#ffb869]/80 leading-relaxed">
-          <span className="font-semibold">Mock data displayed.</span> Backend
-          cần implement{" "}
-          <code className="text-[#a078ff]/80">
-            GET /api/v1/dashboard/at-risk-history?groupBy=week
-          </code>{" "}
-          — lưu snapshot số series AT_RISK theo tuần.
-        </p>
-      </div>
-      <div className="h-[140px]">
+      <div className="h-[280px]">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart
-            data={MOCK_AT_RISK_TREND}
-            margin={{ left: 0, right: 8, top: 4, bottom: 4 }}
+            data={displayData}
+            margin={{ left: 0, right: 8, top: 8, bottom: 4 }}
           >
             <CartesianGrid
               strokeDasharray="3 3"
@@ -507,16 +486,18 @@ function AtRiskTrendChart() {
               vertical={false}
             />
             <XAxis
-              dataKey="week"
+              dataKey="month"
               tick={{ fontSize: 11, fill: C.tick }}
               axisLine={false}
               tickLine={false}
             />
             <YAxis
+              reversed
               tick={{ fontSize: 10, fill: C.tick }}
               axisLine={false}
               tickLine={false}
-              width={24}
+              tickFormatter={(v) => `#${v}`}
+              width={28}
             />
             <Tooltip
               cursor={{ stroke: "rgba(255,255,255,0.06)" }}
@@ -527,31 +508,65 @@ function AtRiskTrendChart() {
                     <p className="font-semibold text-on-surface mb-1">
                       {label}
                     </p>
-                    {payload.map((p, i) => (
-                      <p key={i} style={{ color: p.color }}>
-                        {p.name}: {p.value}
-                      </p>
-                    ))}
+                    {payload
+                      .filter((p) => p.value != null)
+                      .map((p, i) => (
+                        <p key={i} style={{ color: p.color }}>
+                          {p.name}: #{p.value}
+                        </p>
+                      ))}
                   </div>
                 );
               }}
             />
-            <Legend wrapperStyle={{ fontSize: 10, paddingTop: 4 }} />
-            <Line
-              type="monotone"
-              dataKey="At Risk"
-              stroke={C.danger}
-              strokeWidth={2}
-              dot={{ r: 3 }}
+            <Legend
+              content={({ payload }) => (
+                <div className="flex flex-wrap gap-x-3 gap-y-1 justify-center pt-2">
+                  {payload.map((entry) => {
+                    const isHidden = hiddenKeys.has(entry.dataKey);
+                    const isDimmed = hoveredKey && hoveredKey !== entry.dataKey;
+                    return (
+                      <button
+                        key={entry.dataKey}
+                        type="button"
+                        onClick={() => toggleKey(entry.dataKey)}
+                        className="flex items-center gap-1 text-xs transition-opacity"
+                        style={{
+                          color: isHidden ? "#6b7280" : entry.color,
+                          textDecoration: isHidden ? "line-through" : "none",
+                          opacity: isDimmed ? 0.4 : 1,
+                        }}
+                      >
+                        <span
+                          className="w-2 h-2 rounded-full shrink-0"
+                          style={{ background: entry.color }}
+                        />
+                        {entry.value}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
             />
-            <Line
-              type="monotone"
-              dataKey="Ongoing"
-              stroke={C.primary}
-              strokeWidth={2}
-              dot={{ r: 3 }}
-              strokeDasharray="4 2"
-            />
+            {keys.map((k, i) => {
+              const isHidden = hiddenKeys.has(k);
+              const isDimmed = hoveredKey && hoveredKey !== k;
+              return (
+                <Line
+                  key={k}
+                  type="monotone"
+                  dataKey={k}
+                  stroke={LINE_COLORS[i % LINE_COLORS.length]}
+                  strokeWidth={isHidden ? 0 : isDimmed ? 1.5 : 2.5}
+                  strokeOpacity={isHidden ? 0 : isDimmed ? 0.15 : 1}
+                  dot={isHidden ? false : { r: isDimmed ? 2 : 4, fill: LINE_COLORS[i % LINE_COLORS.length], strokeWidth: 0 }}
+                  activeDot={isHidden ? false : { r: 5, fill: LINE_COLORS[i % LINE_COLORS.length], strokeWidth: 0 }}
+                  connectNulls={false}
+                  onMouseEnter={() => setHoveredKey(k)}
+                  onMouseLeave={() => setHoveredKey(null)}
+                />
+              );
+            })}
           </LineChart>
         </ResponsiveContainer>
       </div>
@@ -559,23 +574,151 @@ function AtRiskTrendChart() {
   );
 }
 
-// ── 5. Chief Editor — Portfolio Health KPIs ───────────────────────────────────
+// ── 5a. Monthly Ranking Trend ─────────────────────────────────────────────────
+function MonthlyRankingTrendChart({ allSeries }) {
+  const [searchTerm, setSearchTerm] = useState("");
+  const months = useMemo(() => getLast4Months(), []);
+
+  const { data: historyData = [], isLoading } = useQuery({
+    queryKey: ["bi", "editorial-ranking-history-4mo"],
+    queryFn: async () => {
+      const results = await Promise.all(
+        months.map(({ key }) => rankingService.getMonthly(key).catch(() => [])),
+      );
+      return months.map(({ label }, i) => {
+        const ranks = toArray(results[i]);
+        const row = { month: label };
+        allSeries.forEach((s) => {
+          const r = ranks.find(
+            (r) =>
+              (r.seriesId != null && r.seriesId === s.id) ||
+              (r.series?.id != null && r.series.id === s.id),
+          );
+          row[s.title?.slice(0, 14) || `S${s.id}`] = r?.rank ?? null;
+        });
+        return row;
+      });
+    },
+    staleTime: 120_000,
+    enabled: allSeries.length > 0,
+  });
+
+  const hasSeries = allSeries.length > 0;
+  if (hasSeries && isLoading) return <SkeletonBox height="h-[280px]" />;
+
+  const keys = allSeries.map((s) => s.title?.slice(0, 14) || `S${s.id}`);
+  const activeKeys = keys.filter(k => historyData.some(row => row[k] != null));
+  const isEmpty = !hasSeries || historyData.length === 0 || activeKeys.length === 0;
+  if (isEmpty) return <EmptyChart label="No ranking data yet" height="h-[280px]" />;
+
+  const latestRow = historyData[historyData.length - 1];
+  const topDefaultKeys = [...activeKeys]
+    .sort((a, b) => (latestRow[a] ?? 999) - (latestRow[b] ?? 999))
+    .slice(0, 5);
+
+  const trimmed = searchTerm.trim().toLowerCase();
+  const visibleKeys = trimmed
+    ? activeKeys.filter((k) => k.toLowerCase().includes(trimmed))
+    : topDefaultKeys;
+
+  return (
+    <div>
+      {activeKeys.length > 5 && (
+        <div className="relative mb-3">
+          <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-on-surface-variant/60" />
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Filter series…"
+            className="w-full rounded-lg border border-outline-variant/30 bg-surface-container/80 py-1.5 pl-7 pr-3 text-xs text-on-surface placeholder:text-on-surface-variant/40 outline-none focus:border-primary/50 transition-colors"
+          />
+        </div>
+      )}
+      <div className="text-[10px] text-on-surface-variant/60 mb-2 text-right">
+        Showing {visibleKeys.length} of {activeKeys.length} series
+      </div>
+      {visibleKeys.length === 0
+        ? <EmptyChart label="No series match your search" height="h-[160px]" />
+        : <RankingTrendLineChart displayData={historyData} keys={visibleKeys} />}
+    </div>
+  );
+}
+
+// ── 5b. Weekly Ranking Trend ──────────────────────────────────────────────────
+function WeeklyRankingTrendChart({ allSeries }) {
+  const [searchTerm, setSearchTerm] = useState("");
+  const weeks = useMemo(() => getLast4Weeks(), []);
+
+  const { data: historyData = [], isLoading } = useQuery({
+    queryKey: ["bi", "editorial-ranking-history-4wk"],
+    queryFn: async () => {
+      const results = await Promise.all(
+        weeks.map(({ key }) => rankingService.getWeekly(key).catch(() => [])),
+      );
+      return weeks.map(({ label }, i) => {
+        const ranks = toArray(results[i]);
+        const row = { month: label };
+        allSeries.forEach((s) => {
+          const r = ranks.find(
+            (r) =>
+              (r.seriesId != null && r.seriesId === s.id) ||
+              (r.series?.id != null && r.series.id === s.id),
+          );
+          row[s.title?.slice(0, 14) || `S${s.id}`] = r?.rank ?? null;
+        });
+        return row;
+      });
+    },
+    staleTime: 120_000,
+    enabled: allSeries.length > 0,
+  });
+
+  const hasSeries = allSeries.length > 0;
+  if (hasSeries && isLoading) return <SkeletonBox height="h-[280px]" />;
+
+  const keys = allSeries.map((s) => s.title?.slice(0, 14) || `S${s.id}`);
+  const activeKeys = keys.filter(k => historyData.some(row => row[k] != null));
+  const isEmpty = !hasSeries || historyData.length === 0 || activeKeys.length === 0;
+  if (isEmpty) return <EmptyChart label="No ranking data yet" height="h-[280px]" />;
+
+  const latestRow = historyData[historyData.length - 1];
+  const topDefaultKeys = [...activeKeys]
+    .sort((a, b) => (latestRow[a] ?? 999) - (latestRow[b] ?? 999))
+    .slice(0, 5);
+
+  const trimmed = searchTerm.trim().toLowerCase();
+  const visibleKeys = trimmed
+    ? activeKeys.filter((k) => k.toLowerCase().includes(trimmed))
+    : topDefaultKeys;
+
+  return (
+    <div>
+      {activeKeys.length > 5 && (
+        <div className="relative mb-3">
+          <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-on-surface-variant/60" />
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Filter series…"
+            className="w-full rounded-lg border border-outline-variant/30 bg-surface-container/80 py-1.5 pl-7 pr-3 text-xs text-on-surface placeholder:text-on-surface-variant/40 outline-none focus:border-primary/50 transition-colors"
+          />
+        </div>
+      )}
+      <div className="text-[10px] text-on-surface-variant/60 mb-2 text-right">
+        Showing {visibleKeys.length} of {activeKeys.length} series
+      </div>
+      {visibleKeys.length === 0
+        ? <EmptyChart label="No series match your search" height="h-[160px]" />
+        : <RankingTrendLineChart displayData={historyData} keys={visibleKeys} />}
+    </div>
+  );
+}
+
+// ── 6. Chief Editor — Portfolio Health KPIs ───────────────────────────────────
 function ChiefEditorHealthKPIs({ allSeries }) {
-  const usingSample = allSeries.length === 0;
   const kpis = useMemo(() => {
-    if (usingSample) {
-      return [
-        { label: "Total Series", value: 32, color: C.primary, icon: BookOpen },
-        { label: "Active", value: 14, color: C.success, icon: CheckCircle2 },
-        { label: "At Risk", value: 3, color: C.danger, icon: XCircle },
-        {
-          label: "On-Track Rate",
-          value: "91%",
-          color: C.success,
-          icon: TrendingUp,
-        },
-      ];
-    }
     const total = allSeries.length;
     const ongoing = allSeries.filter((s) => s.status === "ONGOING").length;
     const atRisk = allSeries.filter((s) => s.status === "AT_RISK").length;
@@ -592,15 +735,12 @@ function ChiefEditorHealthKPIs({ allSeries }) {
         icon: TrendingUp,
       },
     ];
-  }, [allSeries, usingSample]);
+  }, [allSeries]);
+
+  if (!allSeries.length) return <EmptyChart label="No series data for KPIs" height="h-[100px]" />;
 
   return (
     <div>
-      {usingSample && (
-        <div className="mb-2 flex justify-end">
-          <SampleBadge />
-        </div>
-      )}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {kpis.map((kpi, i) => {
           const KpiIcon = kpi.icon;
@@ -681,8 +821,8 @@ export function EditorialBiCharts({
         </ChartCard>
       </div>
 
-      {/* Row 2: Genre Mix + At-Risk Trend */}
-      <div className="grid gap-6 md:grid-cols-2">
+      {/* Row 2: Genre Mix */}
+      <div className="grid gap-6 md:grid-cols-1">
         <ChartCard
           title="Genre Mix"
           subtitle="Number of series per genre"
@@ -691,15 +831,26 @@ export function EditorialBiCharts({
         >
           <GenreMixChart allSeries={allSeries} />
         </ChartCard>
+      </div>
+
+      {/* Row 3: Monthly + Weekly Ranking Trend */}
+      <div className="grid gap-6 md:grid-cols-2">
+        <ChartCard
+          title="Monthly Trend"
+          subtitle="Monthly rank · last 4 months · lower = better"
+          icon={TrendingUp}
+          iconClass="text-[#4ade80]"
+        >
+          <MonthlyRankingTrendChart allSeries={allSeries} />
+        </ChartCard>
 
         <ChartCard
-          title="At-Risk Trend"
-          subtitle="Series at risk vs active — weekly snapshot"
+          title="Weekly Trend"
+          subtitle="Weekly rank · last 4 weeks · lower = better"
           icon={TrendingUp}
-          iconClass="text-[#f87171]"
-          badge={<MockBadge />}
+          iconClass="text-[#fb923c]"
         >
-          <AtRiskTrendChart />
+          <WeeklyRankingTrendChart allSeries={allSeries} />
         </ChartCard>
       </div>
     </div>

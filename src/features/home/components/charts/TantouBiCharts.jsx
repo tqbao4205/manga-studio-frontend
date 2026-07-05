@@ -26,7 +26,6 @@ import {
   Tooltip,
   ResponsiveContainer,
   ReferenceLine,
-  ReferenceDot,
 } from "recharts";
 import { AlertTriangle, BarChart2, Clock, Target } from "lucide-react";
 import {
@@ -58,85 +57,7 @@ const SERIES_STATUS_COLORS = {
   REJECTED: "#374151",
 };
 
-// ── Sample badge ───────────────────────────────────────────────────────────────
-function SampleBadge() {
-  return (
-    <span className="inline-flex items-center rounded border border-[#a078ff]/30 bg-[#a078ff]/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-[#a078ff]/70">
-      Sample
-    </span>
-  );
-}
 
-// ── Mock data constants ───────────────────────────────────────────────────────
-const MOCK_SCATTER_DATA = [
-  {
-    progress: 80,
-    days: 10,
-    color: C.success,
-    name: "Black Thorn — Ch.12",
-    author: "Ichikawa",
-  },
-  {
-    progress: 65,
-    days: 6,
-    color: C.gold,
-    name: "Neon Legacy — Ch.8",
-    author: "Fujimoto",
-  },
-  {
-    progress: 40,
-    days: 3,
-    color: C.warning,
-    name: "Studio Z — Ch.5",
-    author: "Ito",
-  },
-  {
-    progress: 20,
-    days: 1,
-    color: C.danger,
-    name: "Cosmic Dawn — Ch.3",
-    author: "Taniguchi",
-  },
-  {
-    progress: 10,
-    days: -1,
-    color: C.danger,
-    name: "Night Owl — Ch.7",
-    author: "Kimura",
-  },
-  {
-    progress: 90,
-    days: 14,
-    color: C.success,
-    name: "Dark Matter — Ch.20",
-    author: "Nishida",
-  },
-  {
-    progress: 55,
-    days: 5,
-    color: C.gold,
-    name: "Blade Legacy — Ch.15",
-    author: "Sato",
-  },
-  {
-    progress: 30,
-    days: 2,
-    color: C.warning,
-    name: "Ghost Protocol — Ch.2",
-    author: "Yamamoto",
-  },
-];
-const MOCK_SERIES_STATUS_BREAKDOWN = {
-  ONGOING: 5,
-  AT_RISK: 2,
-  PENDING_TANTOU: 1,
-};
-const MOCK_REVIEW_AGING_DATA = [
-  { label: "< 1 day", count: 2, fill: C.success },
-  { label: "1-3 days", count: 4, fill: C.gold },
-  { label: "3-7 days", count: 3, fill: C.warning },
-  { label: "> 7 days", count: 1, fill: C.danger },
-];
 
 // ── Shared UI atoms ───────────────────────────────────────────────────────────
 function SectionDivider() {
@@ -210,33 +131,30 @@ function EmptyChart({ label, height = "h-[200px]" }) {
 // ── 1. Risk Matrix Scatter ────────────────────────────────────────────────────
 // X: progressPercent (0-100), Y: daysLeft, color by urgency
 function RiskScatterChart({ allChapters = [] }) {
-  const usingSample = !allChapters.length;
-  const data = usingSample
-    ? MOCK_SCATTER_DATA
-    : allChapters
-        .filter(
-          (ch) =>
-            ch.progressPercent != null &&
-            ch.daysLeft != null &&
-            isFinite(ch.daysLeft),
-        )
-        .map((ch) => {
-          const progress = Math.min(100, Math.max(0, ch.progressPercent ?? 0));
-          const days = Math.min(30, Math.max(-5, ch.daysLeft ?? 0));
-          let color = C.success;
-          if (days < 0 || progress < 25) color = C.danger;
-          else if (days <= 3 || progress < 50) color = C.warning;
-          else if (days <= 7) color = C.gold;
-          return {
-            progress,
-            days,
-            color,
-            name: `${ch.seriesTitle || "Series"} — Ch.${ch.chapterNumber ?? ch.chapterId}`,
-            author: ch.authorName || ch.displayName,
-          };
-        });
+  const data = allChapters
+    .filter(
+      (ch) =>
+        ch.progressPercent != null &&
+        ch.daysLeft != null &&
+        isFinite(ch.daysLeft),
+    )
+    .map((ch) => {
+      const progress = Math.min(100, Math.max(0, ch.progressPercent ?? 0));
+      const days = Math.min(30, Math.max(-5, ch.daysLeft ?? 0));
+      let color = C.success;
+      if (days < 0 || progress < 25) color = C.danger;
+      else if (days <= 3 || progress < 50) color = C.warning;
+      else if (days <= 7) color = C.gold;
+      return {
+        progress,
+        days,
+        color,
+        name: `${ch.seriesTitle || "Series"} — Ch.${ch.chapterNumber ?? ch.chapterId}`,
+        author: ch.authorName || ch.displayName,
+      };
+    });
 
-  if (!usingSample && !data.length)
+  if (!data.length)
     return <EmptyChart label="No chapter progress data" />;
 
   const CustomDot = ({ cx, cy, payload }) => (
@@ -254,11 +172,6 @@ function RiskScatterChart({ allChapters = [] }) {
 
   return (
     <div>
-      {usingSample && (
-        <div className="mb-2 flex justify-end">
-          <SampleBadge />
-        </div>
-      )}
       {/* Legend */}
       <div className="flex flex-wrap gap-3 mb-3">
         {[
@@ -360,29 +273,22 @@ function RiskScatterChart({ allChapters = [] }) {
 
 // ── 2. Series Status Donut ────────────────────────────────────────────────────
 function SeriesStatusDonut({ seriesStatusBreakdown = {} }) {
-  const usingSample = !Object.values(seriesStatusBreakdown).some((v) => v > 0);
-  const breakdown = usingSample
-    ? MOCK_SERIES_STATUS_BREAKDOWN
-    : seriesStatusBreakdown;
   const data = useMemo(() => {
-    return Object.entries(breakdown)
+    return Object.entries(seriesStatusBreakdown)
       .filter(([, count]) => count > 0)
       .map(([status, count]) => ({
         name: status.replace(/_/g, " "),
         value: count,
         color: SERIES_STATUS_COLORS[status] || C.muted,
       }));
-  }, [breakdown]);
+  }, [seriesStatusBreakdown]);
 
   const total = data.reduce((s, d) => s + d.value, 0);
 
+  if (!total) return <EmptyChart label="No series status data" height="h-[160px]" />;
+
   return (
     <div>
-      {usingSample && (
-        <div className="mb-2 flex justify-end">
-          <SampleBadge />
-        </div>
-      )}
       <div className="flex items-center gap-5">
         <div className="h-[160px] w-[160px] shrink-0">
           <ResponsiveContainer width="100%" height="100%">
@@ -471,20 +377,14 @@ function ReviewQueueAgingChart({ chaptersInReview = [] }) {
     return buckets.filter((b) => b.count > 0);
   }, [chaptersInReview]);
 
-  const usingSample = !data.length;
-  const displayData = usingSample ? MOCK_REVIEW_AGING_DATA : data;
+  if (!data.length) return <EmptyChart label="No chapters in review" height="h-[160px]" />;
 
   return (
     <div>
-      {usingSample && (
-        <div className="mb-2 flex justify-end">
-          <SampleBadge />
-        </div>
-      )}
       <div className="h-[160px]">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart
-            data={displayData}
+            data={data}
             margin={{ left: 0, right: 12, top: 4, bottom: 4 }}
             barSize={32}
           >
@@ -523,7 +423,7 @@ function ReviewQueueAgingChart({ chaptersInReview = [] }) {
               }}
             />
             <Bar dataKey="count" radius={[4, 4, 0, 0]}>
-              {displayData.map((e, i) => (
+              {data.map((e, i) => (
                 <Cell key={i} fill={e.fill} />
               ))}
             </Bar>
