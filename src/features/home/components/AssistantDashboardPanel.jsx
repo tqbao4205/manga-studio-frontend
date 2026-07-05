@@ -2,41 +2,24 @@
  * AssistantDashboardPanel.jsx
  *
  * Dashboard dành cho ASSISTANT:
- *   - Cột trái: Rework Orders — danh sách task bị Mangaka reject (status = REVISE)
+ *   - Rework Orders — danh sách task bị Mangaka reject (status = REVISE)
  *     API: GET /api/tasks?status=REVISE  (taskService.getAll — EXISTING)
  *     ⚠️ Field `task.revisionNote` cần backend thêm vào TaskResponse
- *
- *   - Cột phải: Earning Statement — bar chart thu nhập từ task đã APPROVED
- *     API: GET /api/v1/dashboard/earnings  (dashboardService.getEarnings — MISSING)
- *     ⚠️ Hiển thị empty state với hướng dẫn khi API chưa sẵn sàng
  */
 
-import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  Cell,
-} from "recharts";
 import {
   AlertCircle,
   ArrowRight,
-  BarChart3,
+  BarChart2,
   CheckCircle2,
   Clock,
   ListTodo,
   RotateCcw,
-  TrendingUp,
   Wrench,
 } from "lucide-react";
 import { useAuthStore } from "../../../app/stores/authStore";
-import { useUIStore } from "../../../app/stores/uiStore";
 import {
   Card,
   CardContent,
@@ -46,27 +29,9 @@ import {
 import { Button } from "../../../shared/components/ui/button";
 import { StatusBadge } from "../../../shared/components/shared/StatusBadge";
 import { PageLoading } from "../../../shared/components/shared/LoadingSpinner";
-import { cn, formatDate, formatRelativeTime } from "../../../shared/utils";
+import { cn, formatDate } from "../../../shared/utils";
 import taskService from "../../../services/taskService";
-import dashboardService from "../../../services/dashboardService";
-import { AssistantBiCharts } from "./charts/AssistantBiCharts";
-
-// ─── Custom Tooltip cho Recharts ────────────────────────────────────────────
-function EarningsTooltip({ active, payload, label }) {
-  if (!active || !payload?.length) return null;
-  const item = payload[0]?.payload;
-  return (
-    <div className="bg-surface-container-high border border-outline-variant/50 rounded-lg px-3 py-2 text-xs shadow-lg">
-      <p className="font-semibold text-on-surface mb-1">{label}</p>
-      <p className="text-primary">
-        {(item?.amount ?? 0).toLocaleString("vi-VN")} ₫
-      </p>
-      <p className="text-on-surface-variant">
-        {item?.taskCount ?? 0} tasks approved
-      </p>
-    </div>
-  );
-}
+import { AssistantBiCharts, TaskTypeDonut } from "./charts/AssistantBiCharts";
 
 // ─── StatCard ────────────────────────────────────────────────────────────────
 function StatCard({ label, value, icon: Icon, tone = "default" }) {
@@ -168,117 +133,10 @@ function ReworkOrderItem({ task, onFixNow }) {
   );
 }
 
-// ─── EarningsChart ────────────────────────────────────────────────────────────
-function EarningsChart({ data, isLoading, error }) {
-  const currentWeekIndex = data ? data.length - 1 : -1;
-
-  if (isLoading) {
-    return (
-      <div className="flex-1 flex items-center justify-center min-h-[200px]">
-        <div className="text-xs text-on-surface-variant animate-pulse">
-          Loading earnings…
-        </div>
-      </div>
-    );
-  }
-
-  // ⚠️ API not yet implemented — show informative empty state
-  if (error || !data || data.length === 0) {
-    return (
-      <div className="flex-1 flex flex-col items-center justify-center min-h-[200px] gap-2">
-        <BarChart3 size={32} className="text-outline-variant" />
-        <p className="text-xs text-on-surface-variant text-center">
-          Earnings data not available
-        </p>
-        <p className="text-[10px] text-on-surface-variant/50 text-center max-w-[200px]">
-          ⚠️ Waiting for backend:{" "}
-          <code className="text-primary/70">
-            GET /api/v1/dashboard/earnings
-          </code>
-        </p>
-      </div>
-    );
-  }
-
-  const totalAmount = data.reduce((sum, d) => sum + (d.amount ?? 0), 0);
-  const totalTasks = data.reduce((sum, d) => sum + (d.taskCount ?? 0), 0);
-
-  return (
-    <>
-      {/* Summary row */}
-      <div className="flex items-baseline justify-between mb-4">
-        <div>
-          <p className="text-2xl font-bold text-accent-gold tabular-nums">
-            {totalAmount.toLocaleString("vi-VN")} ₫
-          </p>
-          <p className="text-xs text-on-surface-variant mt-0.5">
-            {totalTasks} tasks approved this month
-          </p>
-        </div>
-        <div className="flex items-center gap-1 text-xs text-status-success">
-          <TrendingUp size={13} />
-          <span>This month</span>
-        </div>
-      </div>
-
-      {/* Bar chart */}
-      <div className="flex-1 min-h-[180px]">
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={data} barCategoryGap="28%">
-            <CartesianGrid
-              strokeDasharray="3 3"
-              stroke="rgba(255,255,255,0.05)"
-              vertical={false}
-            />
-            <XAxis
-              dataKey="label"
-              tick={{
-                fontSize: 11,
-                fill: "var(--color-on-surface-variant, #8b8b9e)",
-              }}
-              axisLine={false}
-              tickLine={false}
-            />
-            <YAxis
-              tick={{
-                fontSize: 10,
-                fill: "var(--color-on-surface-variant, #8b8b9e)",
-              }}
-              axisLine={false}
-              tickLine={false}
-              tickFormatter={(v) =>
-                v >= 1000 ? `${(v / 1000).toFixed(0)}k` : v
-              }
-              width={36}
-            />
-            <Tooltip
-              content={<EarningsTooltip />}
-              cursor={{ fill: "rgba(255,255,255,0.04)" }}
-            />
-            <Bar dataKey="amount" radius={[3, 3, 0, 0]} maxBarSize={48}>
-              {data.map((entry, index) => (
-                <Cell
-                  key={`cell-${index}`}
-                  fill={
-                    index === currentWeekIndex
-                      ? "#7c3aed" // primary-container — highlight current period
-                      : "rgba(210,187,255,0.25)"
-                  }
-                />
-              ))}
-            </Bar>
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
-    </>
-  );
-}
-
 // ─── Main Component ───────────────────────────────────────────────────────────
 export function AssistantDashboardPanel() {
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
-  const addToast = useUIStore((s) => s.addToast);
 
   // ── Rework Orders: GET /api/tasks?status=REVISE ─────────────────────────
   const {
@@ -319,19 +177,6 @@ export function AssistantDashboardPanel() {
     enabled: !!user,
   });
 
-  // ── Earnings: GET /api/v1/dashboard/earnings ───────────────────────────
-  // ⚠️ MISSING API — will show empty state if endpoint not available
-  const {
-    data: earningsData,
-    isLoading: earningsLoading,
-    error: earningsError,
-  } = useQuery({
-    queryKey: ["dashboard", "earnings", user?.id],
-    queryFn: () => dashboardService.getEarnings({ groupBy: "week" }),
-    enabled: !!user,
-    retry: false, // don't retry — API might genuinely be missing
-  });
-
   if (reworkLoading || statsLoading) return <PageLoading />;
 
   const reworkTasks = reworkTasksRaw ?? [];
@@ -367,107 +212,74 @@ export function AssistantDashboardPanel() {
         <StatCard label="Done" value={statCounts.done} icon={CheckCircle2} />
       </div>
 
-      {/* ── Main 2-column layout ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* ══ LEFT COLUMN: Rework Orders ══ */}
-        <div className="lg:col-span-7">
-          <Card className="h-full flex flex-col">
-            <CardHeader className="pb-2">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <RotateCcw size={16} className="text-status-danger" />
-                  <CardTitle>Rework Orders</CardTitle>
-                </div>
-                {reworkTasks.length > 0 && (
-                  <span className="text-xs font-medium px-2 py-0.5 rounded-full border border-status-danger/30 text-status-danger bg-status-danger/5">
-                    {reworkTasks.length} pending
-                  </span>
-                )}
+      {/* ── Rework Orders + Task Type Breakdown ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* LEFT: Rework Orders */}
+        <Card className="h-full flex flex-col">
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <RotateCcw size={16} className="text-status-danger" />
+                <CardTitle>Rework Orders</CardTitle>
               </div>
-              <p className="text-xs text-on-surface-variant mt-1">
-                Tasks returned by Mangaka requiring revision
-              </p>
-            </CardHeader>
-
-            <CardContent className="flex-1 overflow-y-auto space-y-3 max-h-[500px] pr-1">
-              {reworkError && (
-                <div className="text-xs text-status-danger text-center py-8">
-                  Failed to load rework orders. Please try again.
-                </div>
+              {reworkTasks.length > 0 && (
+                <span className="text-xs font-medium px-2 py-0.5 rounded-full border border-status-danger/30 text-status-danger bg-status-danger/5">
+                  {reworkTasks.length} pending
+                </span>
               )}
+            </div>
+            <p className="text-xs text-on-surface-variant mt-1">
+              Tasks returned by Mangaka requiring revision
+            </p>
+          </CardHeader>
 
-              {!reworkError && reworkTasks.length === 0 && (
-                <div className="flex flex-col items-center justify-center py-12 gap-3">
-                  <CheckCircle2
-                    size={32}
-                    className="text-status-success opacity-60"
-                  />
-                  <p className="text-sm text-on-surface-variant">
-                    No pending rework orders 🎉
-                  </p>
-                  <p className="text-xs text-on-surface-variant/60">
-                    All tasks are on track
-                  </p>
-                </div>
-              )}
+          <CardContent className="flex-1 overflow-y-auto space-y-3 max-h-[500px] pr-1">
+            {reworkError && (
+              <div className="text-xs text-status-danger text-center py-8">
+                Failed to load rework orders. Please try again.
+              </div>
+            )}
 
-              {reworkTasks.map((task) => (
-                <ReworkOrderItem
-                  key={task.id}
-                  task={task}
-                  onFixNow={handleFixNow}
+            {!reworkError && reworkTasks.length === 0 && (
+              <div className="flex flex-col items-center justify-center py-12 gap-3">
+                <CheckCircle2
+                  size={32}
+                  className="text-status-success opacity-60"
                 />
-              ))}
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* ══ RIGHT COLUMN: Earning Statement ══ */}
-        <div className="lg:col-span-5">
-          <Card className="h-full flex flex-col">
-            <CardHeader className="pb-2">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <BarChart3 size={16} className="text-accent-gold" />
-                  <CardTitle>Earning Statement</CardTitle>
-                </div>
+                <p className="text-sm text-on-surface-variant">
+                  No pending rework orders 🎉
+                </p>
+                <p className="text-xs text-on-surface-variant/60">
+                  All tasks are on track
+                </p>
               </div>
-              <p className="text-xs text-on-surface-variant mt-1">
-                Earnings from approved tasks (current month)
-              </p>
-            </CardHeader>
+            )}
 
-            <CardContent className="flex-1 flex flex-col">
-              <EarningsChart
-                data={
-                  Array.isArray(earningsData)
-                    ? earningsData
-                    : (earningsData?.data ?? null)
-                }
-                isLoading={earningsLoading}
-                error={earningsError}
+            {reworkTasks.map((task) => (
+              <ReworkOrderItem
+                key={task.id}
+                task={task}
+                onFixNow={handleFixNow}
               />
+            ))}
+          </CardContent>
+        </Card>
 
-              {/* Payout info — only if earnings available */}
-              {earningsData && !earningsError && (
-                <div className="mt-4 pt-3 border-t border-outline-variant/20 flex items-center justify-between">
-                  <p className="text-xs text-on-surface-variant">
-                    Next payout:{" "}
-                    <span className="text-on-surface font-medium">
-                      1st of next month
-                    </span>
-                  </p>
-                  <button
-                    className="text-xs text-primary hover:underline"
-                    onClick={() => navigate("/tasks")}
-                  >
-                    View all tasks →
-                  </button>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+        {/* RIGHT: Task Type Breakdown */}
+        <Card className="h-full flex flex-col">
+          <CardHeader className="pb-2">
+            <div className="flex items-center gap-2">
+              <BarChart2 size={16} className="text-primary" />
+              <CardTitle>Task Type Breakdown</CardTitle>
+            </div>
+            <p className="text-xs text-on-surface-variant mt-1">
+              My tasks by artwork region
+            </p>
+          </CardHeader>
+          <CardContent className="flex-1 flex flex-col justify-center">
+            <TaskTypeDonut allTasks={allTasks} />
+          </CardContent>
+        </Card>
       </div>
 
       {/* ── BI Analytics Section ── */}

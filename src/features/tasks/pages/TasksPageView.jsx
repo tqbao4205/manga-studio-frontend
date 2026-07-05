@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { AlertCircle, Plus } from "lucide-react";
+import { AlertCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "../../../app/stores/authStore";
 import { useUIStore } from "../../../app/stores/uiStore";
@@ -41,15 +41,6 @@ export function TasksPageView() {
   useEffect(() => {
     reloadTasks()
   }, [taskTrigger])
-
-  const handleCreateTask = () => {
-    navigate("/workspace/1", {
-      state: {
-        taskCreationFlow: true,
-        returnTo: "/tasks",
-      },
-    });
-  };
 
   const handleOpenWorkspace = (task) => {
     const chapterId = task?.chapterId || 1;
@@ -181,15 +172,6 @@ export function TasksPageView() {
             Manage creative workflow for active series.
           </p>
         </div>
-
-        <button
-          type="button"
-          onClick={handleCreateTask}
-          className="inline-flex items-center gap-2 rounded-xl bg-primary px-6 py-2.5 text-sm font-medium text-on-primary transition-all hover:brightness-110"
-        >
-          <Plus size={16} />
-          Create Task
-        </button>
       </div>
 
       <TasksFilterBar

@@ -8,7 +8,7 @@
  *  4. Assistant Load Balance     — REAL  (derived from tasks per assistant)
  */
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   BarChart,
@@ -26,7 +26,7 @@ import {
   Legend,
   LabelList,
 } from "recharts";
-import { TrendingUp, Activity, Users, BarChart2, Layers } from "lucide-react";
+import { TrendingUp, Activity, Users, BarChart2, Layers, Search } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -96,6 +96,26 @@ function getLast4Months() {
     return {
       key: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`,
       label: d.toLocaleString("en", { month: "short" }),
+    };
+  });
+}
+
+function getISOWeek(date) {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const dayNum = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  return Math.ceil(((d - yearStart) / 86400000 + 1) / 7);
+}
+
+function getLast4Weeks() {
+  return [3, 2, 1, 0].map((n) => {
+    const d = new Date();
+    d.setDate(d.getDate() - n * 7);
+    const wk = getISOWeek(d);
+    return {
+      key: `${d.getFullYear()}-W${String(wk).padStart(2, "0")}`,
+      label: `W${wk}`,
     };
   });
 }
@@ -192,25 +212,6 @@ const MOCK_SERIES_STATUS_DATA = [
   { name: "at risk", value: 1, color: C.danger },
   { name: "pending tantou", value: 1, color: C.gold },
   { name: "approved", value: 1, color: C.success },
-];
-const MOCK_TASK_PIPELINE_DATA = [
-  { name: "To Do", value: 5, fill: C.muted },
-  { name: "In Progress", value: 12, fill: C.primary },
-  { name: "Submitted", value: 8, fill: C.gold },
-  { name: "Approved", value: 23, fill: C.success },
-  { name: "Revise", value: 4, fill: C.danger },
-];
-const MOCK_RANKING_HISTORY = [
-  { month: "Apr", "Black Thorn": 3, "Neon Legacy": 7 },
-  { month: "May", "Black Thorn": 2, "Neon Legacy": 5 },
-  { month: "Jun", "Black Thorn": 1, "Neon Legacy": 4 },
-  { month: "Jul", "Black Thorn": 2, "Neon Legacy": 6 },
-];
-const MOCK_RANKING_KEYS = ["Black Thorn", "Neon Legacy"];
-const MOCK_ASSISTANT_LOAD = [
-  { name: "Tanaka", Active: 4, Done: 15 },
-  { name: "Yamamoto", Active: 3, Done: 12 },
-  { name: "Suzuki", Active: 2, Done: 8 },
 ];
 
 // ── 1. Series Portfolio Donut ─────────────────────────────────────────────────
@@ -329,20 +330,14 @@ function TaskPipelineChart({ userId }) {
   }, [taskPage]);
 
   if (isLoading) return <SkeletonBox height="h-[160px]" />;
-  const usingSample = !data.length;
-  const displayData = usingSample ? MOCK_TASK_PIPELINE_DATA : data;
+  if (!data.length) return <EmptyChart label="No tasks yet" height="h-[160px]" />;
 
   return (
     <div>
-      {usingSample && (
-        <div className="mb-2 flex justify-end">
-          <SampleBadge />
-        </div>
-      )}
       <div className="h-[160px]">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart
-            data={displayData}
+            data={data}
             layout="vertical"
             margin={{ left: 0, right: 36, top: 0, bottom: 0 }}
           >
@@ -391,52 +386,28 @@ function TaskPipelineChart({ userId }) {
   );
 }
 
-// ── 3. Ranking Trend Line (last 4 months) ─────────────────────────────────────
-const LINE_COLORS = [C.primary, C.gold, C.success, C.blue];
+// ── 3. Ranking Trend Line (shared rendering) ───────────────────────────────────
+const LINE_COLORS = [C.primary, C.gold, C.success, C.blue, C.danger, '#f472b6', '#34d399', '#fbbf24', '#818cf8', '#e879f9'];
 
-function RankingTrendChart({ mySeries }) {
-  const months = useMemo(() => getLast4Months(), []);
-  const seriesSlice = useMemo(() => mySeries.slice(0, 4), [mySeries]);
+function RankingTrendLineChart({ displayData, keys }) {
+  const [hoveredKey, setHoveredKey] = useState(null);
+  const [hiddenKeys, setHiddenKeys] = useState(new Set());
 
-  const { data: historyData = [], isLoading } = useQuery({
-    queryKey: ["bi", "ranking-history-4mo"],
-    queryFn: async () => {
-      const results = await Promise.all(
-        months.map(({ key }) => rankingService.getMonthly(key).catch(() => [])),
-      );
-      return months.map(({ label }, i) => {
-        const ranks = toArray(results[i]);
-        const row = { month: label };
-        seriesSlice.forEach((s) => {
-          const r = ranks.find(
-            (r) =>
-              (r.seriesId != null && r.seriesId === s.id) ||
-              (r.series?.id != null && r.series.id === s.id),
-          );
-          row[s.title?.slice(0, 14) || `S${s.id}`] = r?.rank ?? null;
-        });
-        return row;
-      });
-    },
-    staleTime: 120_000,
-    enabled: seriesSlice.length > 0,
-  });
+  const toggleKey = (key) => {
+    setHiddenKeys((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
 
-  const usingSample = !seriesSlice.length;
-  const displayData = usingSample ? MOCK_RANKING_HISTORY : historyData;
-  const keys = usingSample
-    ? MOCK_RANKING_KEYS
-    : seriesSlice.map((s) => s.title?.slice(0, 14) || `S${s.id}`);
-  if (!usingSample && isLoading) return <SkeletonBox height="h-[180px]" />;
+  const visibleKeys = keys.filter((k) => !hiddenKeys.has(k));
+  if (visibleKeys.length === 0) return <EmptyChart label="No ranking data yet" />;
 
   return (
     <div>
-      {usingSample && (
-        <div className="mb-2 flex justify-end">
-          <SampleBadge />
-        </div>
-      )}
-      <div className="h-[180px]">
+      <div className="h-[280px]">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart
             data={displayData}
@@ -481,21 +452,199 @@ function RankingTrendChart({ mySeries }) {
                 );
               }}
             />
-            <Legend wrapperStyle={{ fontSize: 10, paddingTop: 4 }} />
-            {keys.map((k, i) => (
-              <Line
-                key={k}
-                type="monotone"
-                dataKey={k}
-                stroke={LINE_COLORS[i % 4]}
-                strokeWidth={2}
-                dot={{ r: 3, fill: LINE_COLORS[i % 4], strokeWidth: 0 }}
-                connectNulls={false}
-              />
-            ))}
+            <Legend
+              content={({ payload }) => (
+                <div className="flex flex-wrap gap-x-3 gap-y-1 justify-center pt-2">
+                  {payload.map((entry) => {
+                    const isHidden = hiddenKeys.has(entry.dataKey);
+                    const isDimmed = hoveredKey && hoveredKey !== entry.dataKey;
+                    return (
+                      <button
+                        key={entry.dataKey}
+                        type="button"
+                        onClick={() => toggleKey(entry.dataKey)}
+                        className="flex items-center gap-1 text-xs transition-opacity"
+                        style={{
+                          color: isHidden ? "#6b7280" : entry.color,
+                          textDecoration: isHidden ? "line-through" : "none",
+                          opacity: isDimmed ? 0.4 : 1,
+                        }}
+                      >
+                        <span
+                          className="w-2 h-2 rounded-full shrink-0"
+                          style={{ background: entry.color }}
+                        />
+                        {entry.value}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            />
+            {keys.map((k, i) => {
+              const isHidden = hiddenKeys.has(k);
+              const isDimmed = hoveredKey && hoveredKey !== k;
+              return (
+                <Line
+                  key={k}
+                  type="monotone"
+                  dataKey={k}
+                  stroke={LINE_COLORS[i % LINE_COLORS.length]}
+                  strokeWidth={isHidden ? 0 : isDimmed ? 1.5 : 2.5}
+                  strokeOpacity={isHidden ? 0 : isDimmed ? 0.15 : 1}
+                  dot={isHidden ? false : { r: isDimmed ? 2 : 4, fill: LINE_COLORS[i % LINE_COLORS.length], strokeWidth: 0 }}
+                  activeDot={isHidden ? false : { r: 5, fill: LINE_COLORS[i % LINE_COLORS.length], strokeWidth: 0 }}
+                  connectNulls={false}
+                  onMouseEnter={() => setHoveredKey(k)}
+                  onMouseLeave={() => setHoveredKey(null)}
+                />
+              );
+            })}
           </LineChart>
         </ResponsiveContainer>
       </div>
+    </div>
+  );
+}
+
+// ── 3a. Monthly Ranking Trend ─────────────────────────────────────────────────
+function MonthlyRankingTrendChart({ mySeries }) {
+  const [searchTerm, setSearchTerm] = useState("");
+  const months = useMemo(() => getLast4Months(), []);
+
+  const { data: historyData = [], isLoading } = useQuery({
+    queryKey: ["bi", "ranking-history-4mo"],
+    queryFn: async () => {
+      const results = await Promise.all(
+        months.map(({ key }) => rankingService.getMonthly(key).catch(() => [])),
+      );
+      return months.map(({ label }, i) => {
+        const ranks = toArray(results[i]);
+        const row = { month: label };
+        mySeries.forEach((s) => {
+          const r = ranks.find(
+            (r) =>
+              (r.seriesId != null && r.seriesId === s.id) ||
+              (r.series?.id != null && r.series.id === s.id),
+          );
+          row[s.title?.slice(0, 14) || `S${s.id}`] = r?.rank ?? null;
+        });
+        return row;
+      });
+    },
+    staleTime: 120_000,
+    enabled: mySeries.length > 0,
+  });
+
+  const hasSeries = mySeries.length > 0;
+  if (hasSeries && isLoading) return <SkeletonBox height="h-[280px]" />;
+
+  const keys = mySeries.map((s) => s.title?.slice(0, 14) || `S${s.id}`);
+  const activeKeys = keys.filter(k => historyData.some(row => row[k] != null));
+  const isEmpty = !hasSeries || historyData.length === 0 || activeKeys.length === 0;
+  if (isEmpty) return <EmptyChart label="No ranking data yet" height="h-[280px]" />;
+
+  const latestRow = historyData[historyData.length - 1];
+  const topDefaultKeys = [...activeKeys]
+    .sort((a, b) => (latestRow[a] ?? 999) - (latestRow[b] ?? 999))
+    .slice(0, 5);
+
+  const trimmed = searchTerm.trim().toLowerCase();
+  const visibleKeys = trimmed
+    ? activeKeys.filter((k) => k.toLowerCase().includes(trimmed))
+    : topDefaultKeys;
+
+  return (
+    <div>
+      {activeKeys.length > 5 && (
+        <div className="relative mb-3">
+          <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-on-surface-variant/60" />
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Filter series…"
+            className="w-full rounded-lg border border-outline-variant/30 bg-surface-container/80 py-1.5 pl-7 pr-3 text-xs text-on-surface placeholder:text-on-surface-variant/40 outline-none focus:border-primary/50 transition-colors"
+          />
+        </div>
+      )}
+      <div className="text-[10px] text-on-surface-variant/60 mb-2 text-right">
+        Showing {visibleKeys.length} of {activeKeys.length} series
+      </div>
+      {visibleKeys.length === 0
+        ? <EmptyChart label="No series match your search" height="h-[160px]" />
+        : <RankingTrendLineChart displayData={historyData} keys={visibleKeys} />}
+    </div>
+  );
+}
+
+// ── 3b. Weekly Ranking Trend ──────────────────────────────────────────────────
+function WeeklyRankingTrendChart({ mySeries }) {
+  const [searchTerm, setSearchTerm] = useState("");
+  const weeks = useMemo(() => getLast4Weeks(), []);
+
+  const { data: historyData = [], isLoading } = useQuery({
+    queryKey: ["bi", "ranking-history-4wk"],
+    queryFn: async () => {
+      const results = await Promise.all(
+        weeks.map(({ key }) => rankingService.getWeekly(key).catch(() => [])),
+      );
+      return weeks.map(({ label }, i) => {
+        const ranks = toArray(results[i]);
+        const row = { month: label };
+        mySeries.forEach((s) => {
+          const r = ranks.find(
+            (r) =>
+              (r.seriesId != null && r.seriesId === s.id) ||
+              (r.series?.id != null && r.series.id === s.id),
+          );
+          row[s.title?.slice(0, 14) || `S${s.id}`] = r?.rank ?? null;
+        });
+        return row;
+      });
+    },
+    staleTime: 120_000,
+    enabled: mySeries.length > 0,
+  });
+
+  const hasSeries = mySeries.length > 0;
+  if (hasSeries && isLoading) return <SkeletonBox height="h-[280px]" />;
+
+  const keys = mySeries.map((s) => s.title?.slice(0, 14) || `S${s.id}`);
+  const activeKeys = keys.filter(k => historyData.some(row => row[k] != null));
+  const isEmpty = !hasSeries || historyData.length === 0 || activeKeys.length === 0;
+  if (isEmpty) return <EmptyChart label="No ranking data yet" height="h-[280px]" />;
+
+  const latestRow = historyData[historyData.length - 1];
+  const topDefaultKeys = [...activeKeys]
+    .sort((a, b) => (latestRow[a] ?? 999) - (latestRow[b] ?? 999))
+    .slice(0, 5);
+
+  const trimmed = searchTerm.trim().toLowerCase();
+  const visibleKeys = trimmed
+    ? activeKeys.filter((k) => k.toLowerCase().includes(trimmed))
+    : topDefaultKeys;
+
+  return (
+    <div>
+      {activeKeys.length > 5 && (
+        <div className="relative mb-3">
+          <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-on-surface-variant/60" />
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Filter series…"
+            className="w-full rounded-lg border border-outline-variant/30 bg-surface-container/80 py-1.5 pl-7 pr-3 text-xs text-on-surface placeholder:text-on-surface-variant/40 outline-none focus:border-primary/50 transition-colors"
+          />
+        </div>
+      )}
+      <div className="text-[10px] text-on-surface-variant/60 mb-2 text-right">
+        Showing {visibleKeys.length} of {activeKeys.length} series
+      </div>
+      {visibleKeys.length === 0
+        ? <EmptyChart label="No series match your search" height="h-[160px]" />
+        : <RankingTrendLineChart displayData={historyData} keys={visibleKeys} />}
     </div>
   );
 }
@@ -533,20 +682,14 @@ function AssistantLoadChart({ userId }) {
   }, [taskPage]);
 
   if (isLoading) return <SkeletonBox height="h-[180px]" />;
-  const usingSample = !data.length;
-  const displayData = usingSample ? MOCK_ASSISTANT_LOAD : data;
+  if (!data.length) return <EmptyChart label="No assistant task data" height="h-[180px]" />;
 
   return (
     <div>
-      {usingSample && (
-        <div className="mb-2 flex justify-end">
-          <SampleBadge />
-        </div>
-      )}
       <div className="h-[180px]">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart
-            data={displayData}
+            data={data}
             margin={{ left: 0, right: 4, top: 4, bottom: 4 }}
             barSize={14}
             barGap={2}
@@ -634,17 +777,27 @@ export function MangakaBiCharts({ mySeries = [], userId }) {
           <TaskPipelineChart userId={userId} />
         </ChartCard>
 
-        {/* 3. Ranking Trend */}
+        {/* 3a. Monthly Ranking Trend */}
         <ChartCard
-          title="Ranking Trend"
+          title="Monthly Trend"
           subtitle="Monthly rank · last 4 months · lower = better"
           icon={TrendingUp}
           iconClass="text-[#4ade80]"
           className="md:col-span-2"
         >
-          <RankingTrendChart mySeries={mySeries} />
+          <MonthlyRankingTrendChart mySeries={mySeries} />
         </ChartCard>
       </div>
+
+      {/* 3b. Weekly Ranking Trend */}
+      <ChartCard
+        title="Weekly Trend"
+        subtitle="Weekly rank · last 4 weeks · lower = better"
+        icon={TrendingUp}
+        iconClass="text-[#fb923c]"
+      >
+        <WeeklyRankingTrendChart mySeries={mySeries} />
+      </ChartCard>
 
       {/* 4. Assistant Workload */}
       <ChartCard

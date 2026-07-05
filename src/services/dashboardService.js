@@ -139,6 +139,20 @@ const dashboardService = {
     logApiCall('dashboard', 'nudgeAuthor', { authorId });
     return api.post(`/v1/dashboard/nudge/${authorId}`, payload);
   },
+
+  /**
+   * Lấy lịch sử AT_RISK / ONGOING theo tuần cho At-Risk Trend chart.
+   * Endpoint: GET /api/v1/dashboard/at-risk-history?groupBy=week
+   *
+   * Response: [{ week: 'W-3', period: '2026-W25', atRisk: 3, ongoing: 12 }]
+   *
+   * @param {{ groupBy?: 'week' }} [params]
+   * @returns {Promise<Array>} Mảng at-risk trend data
+   */
+  getAtRiskHistory: async (params = { groupBy: 'week' }) => {
+    logApiCall('dashboard', 'getAtRiskHistory', params);
+    return api.get('/v1/dashboard/at-risk-history', { params });
+  },
 };
 
 export default dashboardService;

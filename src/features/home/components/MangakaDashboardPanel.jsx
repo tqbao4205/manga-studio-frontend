@@ -421,7 +421,7 @@ function SurvivalRadar({ mySeries, rankings, isLoading }) {
   if (!mySeries.length)
     return <EmptySlot message="No series found under your account." />;
   return (
-    <div className="space-y-4">
+    <div className="max-h-[360px] space-y-4 overflow-y-auto pr-1">
       {mySeries.map((series) => {
         const rank = rankings.find(
           (r) =>
@@ -511,6 +511,9 @@ export function MangakaDashboardPanel() {
         </p>
       </div>
 
+      {/* ── BI Analytics Section ── */}
+      <MangakaBiCharts mySeries={mySeries} userId={userId} />
+
       {/* 2-column grid */}
       <div className="grid gap-8 xl:grid-cols-2">
         {/* LEFT — Actionable Triggers */}
@@ -566,8 +569,6 @@ export function MangakaDashboardPanel() {
         </Card>
       </div>
 
-      {/* ── BI Analytics Section ── */}
-      <MangakaBiCharts mySeries={mySeries} userId={userId} />
     </div>
   );
 }

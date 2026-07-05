@@ -799,6 +799,13 @@ export function EditorialBoardDashboardPanel() {
           </p>
         </div>
 
+        {/* ── BI Analytics Section ── */}
+        <EditorialBiCharts
+          meetings={sortedMeetings}
+          allSeries={allSeries}
+          isChiefEditor={isChiefEditor}
+        />
+
         {/* 2-column grid */}
         <div className="grid gap-8 xl:grid-cols-2">
           {/* LEFT — Actionable Triggers */}
@@ -901,13 +908,6 @@ export function EditorialBoardDashboardPanel() {
           </Card>
         </div>
       </div>
-      {/* ── BI Analytics Section ── */}
-      <EditorialBiCharts
-        meetings={sortedMeetings}
-        allSeries={allSeries}
-        isChiefEditor={isChiefEditor}
-      />
-
       {isChiefEditor && showCreateMeeting && (
         <CreateMeetingModal
           preselectedSeriesId={selectedSeriesForMeeting}
