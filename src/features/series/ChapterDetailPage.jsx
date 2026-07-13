@@ -1,5 +1,5 @@
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useAuthStore } from "../../app/stores/authStore";
 import { useUIStore } from "../../app/stores/uiStore";
 import seriesService from "../../services/seriesService";
@@ -7,6 +7,7 @@ import chapterService from "../../services/chapterService";
 import pageService from "../../services/pageService";
 import { EmptyState } from "../../shared/components/shared/EmptyState";
 import { Loader } from "lucide-react";
+import { compressImages } from "../../shared/utils/imageCompression";
 import {
   ChevronLeft, ChevronRight, BookOpen, FileText, CheckSquare,
   MessageSquare, Clock, Image, Edit,
@@ -48,6 +49,8 @@ export function ChapterDetailPage() {
   const [selectedFiles, setSelectedFiles] = useState([])
   const [showUploadModal, setShowUploadModal] = useState(false)
   const [uploading, setUploading] = useState(false)
+  const [compressing, setCompressing] = useState(false)
+  const [uploadProgress, setUploadProgress] = useState(0)
 
   useEffect(() => {
     if (!seriesId || !chapterId) return;
@@ -100,21 +103,28 @@ export function ChapterDetailPage() {
     fileInputRef.current?.click()
   }
 
-  const handleFileSelect = (e) => {
-    const files = Array.from(e.target.files || [])
-    if (files.length === 0) return
-    setSelectedFiles(files)
+  const handleFileSelect = async (e) => {
+    const rawFiles = Array.from(e.target.files || [])
+    if (rawFiles.length === 0) return
+    setSelectedFiles(rawFiles)
     setShowUploadModal(true)
+    setCompressing(true)
     e.target.value = ''
+    const compressed = await compressImages(rawFiles)
+    setSelectedFiles(compressed)
+    setCompressing(false)
   }
 
   const handleUploadConfirm = async () => {
     if (selectedFiles.length === 0) return
     setUploading(true)
+    setUploadProgress(0)
+
     const formData = new FormData()
     selectedFiles.forEach((file) => formData.append('files', file))
+
     try {
-      const created = await pageService.uploadBatch(Number(chapterId), formData)
+      const created = await pageService.uploadBatch(Number(chapterId), formData, setUploadProgress)
       addToast({ type: 'success', title: 'Uploaded', message: `${created.length} pages uploaded.` })
       const fresh = await pageService.getByChapter(Number(chapterId))
       setPages(Array.isArray(fresh) ? fresh : [])
@@ -123,6 +133,7 @@ export function ChapterDetailPage() {
       addToast({ type: 'error', title: 'Upload failed', message: 'Could not upload pages.' })
     } finally {
       setUploading(false)
+      setUploadProgress(0)
     }
   }
 
@@ -393,21 +404,34 @@ export function ChapterDetailPage() {
                   ))}
                 </div>
 
+                {(uploading || compressing) && (
+                  <div className="mb-3">
+                    <div className="w-full bg-surface-container-highest rounded-full h-2 overflow-hidden">
+                      <div
+                        className="bg-primary h-full rounded-full transition-all duration-300"
+                        style={{ width: `${uploading ? uploadProgress : 0}%` }}
+                      />
+                    </div>
+                    <p className="text-xs text-on-surface-variant mt-1 text-right">
+                      {uploading ? `${uploadProgress}%` : 'Compressing...'}
+                    </p>
+                  </div>
+                )}
                 <div className="flex justify-end gap-3">
                   <button
                     onClick={closeUploadModal}
-                    disabled={uploading}
+                    disabled={uploading || compressing}
                     className="px-4 py-2 text-sm text-on-surface-variant hover:text-on-surface transition-colors"
                   >
                     Cancel
                   </button>
                   <button
                     onClick={handleUploadConfirm}
-                    disabled={uploading}
+                    disabled={uploading || compressing}
                     className="px-6 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:brightness-110 transition-all flex items-center gap-2 disabled:opacity-40"
                   >
                     {uploading ? <Loader size={16} className="animate-spin" /> : <Upload size={16} />}
-                    {uploading ? `Uploading ${selectedFiles.length} pages...` : `Upload ${selectedFiles.length} Pages`}
+                    {uploading ? `Uploading ${selectedFiles.length} pages...` : compressing ? 'Compressing...' : `Upload ${selectedFiles.length} Pages`}
                   </button>
                 </div>
               </div>

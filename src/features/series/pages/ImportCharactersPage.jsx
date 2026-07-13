@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Loader, Trash2, Upload } from "lucide-react";
 import api from "../../../services/api";
 import seriesService from "../../../services/seriesService";
 import { useUIStore } from "../../../app/stores/uiStore";
 import { CharacterEditorSection } from "../components/CharacterEditorSection";
+import { compressImages } from "../../../shared/utils/imageCompression";
 
 export function ImportCharactersPage() {
   const { seriesId } = useParams();
@@ -16,6 +17,8 @@ export function ImportCharactersPage() {
   const [characters, setCharacters] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [queuedCharacters, setQueuedCharacters] = useState([]);
 
   const [name, setName] = useState("");
   const [motivation, setMotivation] = useState("");
@@ -48,15 +51,18 @@ export function ImportCharactersPage() {
     fetchData();
   }, [id]);
 
-  const handlePickSketch = (files) => {
+  const handlePickSketch = async (files) => {
     if (!files || files.length === 0) return;
     setSketchFiles((prev) => [...prev, ...files]);
-
-    files.forEach((file) => {
-      const reader = new FileReader();
-      reader.onload = () =>
-        setSketchPreviews((prev) => [...prev, String(reader.result || "")]);
-      reader.readAsDataURL(file);
+    files.forEach((file) => setSketchPreviews((prev) => [...prev, URL.createObjectURL(file)]));
+    const compressed = await compressImages(files);
+    setSketchFiles((prev) => {
+      const updated = [...prev];
+      files.forEach((orig, i) => {
+        const idx = updated.indexOf(orig);
+        if (idx !== -1) updated[idx] = compressed[i];
+      });
+      return updated;
     });
   };
 
@@ -72,37 +78,60 @@ export function ImportCharactersPage() {
     setSketchPreviews([]);
   };
 
-  const handleImport = async () => {
+  const handleAddToQueue = () => {
     if (!name.trim()) return;
+    setQueuedCharacters((prev) => [
+      ...prev,
+      {
+        name: name.trim(),
+        motivation,
+        sketchFiles: [...sketchFiles],
+        sketchPreviews: [...sketchPreviews],
+      },
+    ]);
+    resetForm();
+  };
+
+  const handleRemoveFromQueue = (index) => {
+    setQueuedCharacters((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleImportAll = async () => {
+    if (queuedCharacters.length === 0) return;
     setSaving(true);
+    setUploadProgress(0);
 
     try {
+      const batchRequest = {
+        characters: queuedCharacters.map((c) => ({
+          name: c.name,
+          motivation: c.motivation || null,
+          fileCount: c.sketchFiles.length,
+        })),
+      };
+
       const formData = new FormData();
       formData.append(
-        "character",
-        new Blob(
-          [
-            JSON.stringify({
-              name: name.trim(),
-              motivation: motivation || null,
-            }),
-          ],
-          { type: "application/json" },
-        ),
-        "character.json",
+        "batchRequest",
+        new Blob([JSON.stringify(batchRequest)], { type: "application/json" }),
+        "batchRequest.json",
       );
-      sketchFiles.forEach((file) => formData.append("files", file));
+      queuedCharacters.forEach((c) =>
+        c.sketchFiles.forEach((f) => formData.append("files", f)),
+      );
 
-      await api.post(`/series/${id}/characters`, formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
+      await seriesService.createCharactersBatch(
+        Number(id),
+        formData,
+        setUploadProgress,
+      );
 
       addToast({
         type: "success",
-        title: "Character imported",
-        message: `${name.trim()} was imported successfully.`,
+        title: "Characters imported",
+        message: `${queuedCharacters.length} characters were imported successfully.`,
       });
-      resetForm();
+      setQueuedCharacters([]);
       fetchData();
     } catch (err) {
       addToast({
@@ -110,10 +139,11 @@ export function ImportCharactersPage() {
         title: "Import failed",
         message:
           err?.response?.data?.message ||
-          "Character import API is not available yet on backend.",
+          "Failed to import characters.",
       });
     } finally {
       setSaving(false);
+      setUploadProgress(0);
     }
   };
 
@@ -145,21 +175,86 @@ export function ImportCharactersPage() {
         onMotivationChange={setMotivation}
         onSketchPick={handlePickSketch}
         onSketchRemove={handleRemoveSketch}
-        onSubmit={handleImport}
-        saving={saving}
-        submitLabel="Import Character"
+        onSubmit={handleAddToQueue}
+        saving={false}
+        submitLabel="Queue Character"
         loading={loading}
         characters={characters}
-        secondaryAction={
-          <button
-            type="button"
-            onClick={() => navigate(`/series/${id}/import/world-plot`)}
-            className="px-5 py-2.5 rounded-lg border border-outline-variant hover:border-primary"
-          >
-            Next: Import World & Plot
-          </button>
-        }
       />
+
+      {queuedCharacters.length > 0 && (
+        <div className="bg-surface-container border border-outline-variant/30 rounded-xl p-6 space-y-4">
+          <h2 className="text-lg font-semibold text-on-surface">
+            Characters to Import ({queuedCharacters.length})
+          </h2>
+          <div className="space-y-2">
+            {queuedCharacters.map((c, i) => (
+              <div
+                key={i}
+                className="flex items-center justify-between rounded-lg border border-outline-variant/30 p-3 bg-surface-container-low"
+              >
+                <div className="flex items-center gap-3">
+                  {c.sketchPreviews.length > 0 && (
+                    <img
+                      src={c.sketchPreviews[0]}
+                      alt=""
+                      className="w-10 h-10 rounded object-cover"
+                    />
+                  )}
+                  <div>
+                    <p className="text-sm font-semibold text-on-surface">
+                      {c.name}
+                    </p>
+                    <p className="text-xs text-on-surface-variant">
+                      {c.sketchFiles.length} sketch file(s)
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleRemoveFromQueue(i)}
+                  className="text-xs text-error hover:text-error/80"
+                >
+                  <Trash2 size={14} />
+                </button>
+              </div>
+            ))}
+          </div>
+          {saving && (
+            <div className="w-full bg-surface-container-highest rounded-full h-2 overflow-hidden">
+              <div
+                className="bg-primary h-full rounded-full transition-all duration-300"
+                style={{ width: `${uploadProgress}%` }}
+              />
+            </div>
+          )}
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={handleImportAll}
+              disabled={saving}
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-primary text-on-primary disabled:opacity-50"
+            >
+              {saving ? (
+                <Loader size={14} className="animate-spin" />
+              ) : (
+                <Upload size={14} />
+              )}
+              Import All ({queuedCharacters.length})
+            </button>
+          </div>
+        </div>
+      )}
+
+      <div className="flex justify-end">
+        <button
+          type="button"
+          onClick={() => navigate(`/series/${id}/import/world-plot`)}
+          className="px-5 py-2.5 rounded-lg border border-outline-variant hover:border-primary"
+        >
+          Next: Import World & Plot
+        </button>
+      </div>
     </div>
   );
 }

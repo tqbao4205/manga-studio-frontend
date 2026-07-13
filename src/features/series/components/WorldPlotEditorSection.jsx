@@ -21,6 +21,8 @@ export function WorldPlotEditorSection({
   onRefRemove,
   onSave,
   saving,
+  uploadProgress = 0,
+  showProgress = false,
   saveLabel = "Save World & Plot",
   secondaryAction,
 }) {
@@ -190,6 +192,17 @@ export function WorldPlotEditorSection({
         )}
       </div>
 
+      {showProgress && (
+        <div className="w-full">
+          <div className="w-full bg-surface-container-highest rounded-full h-2 overflow-hidden">
+            <div
+              className="bg-primary h-full rounded-full transition-all duration-300"
+              style={{ width: `${uploadProgress}%` }}
+            />
+          </div>
+          <p className="text-xs text-on-surface-variant mt-1 text-right">{uploadProgress}%</p>
+        </div>
+      )}
       <div className="flex items-center justify-between">
         {secondaryAction || <div />}
         <button

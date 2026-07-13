@@ -38,7 +38,13 @@ import axios from 'axios';
  *
  * timeout: 15s — nếu backend không phản hồi trong 15 giây thì request bị huỷ
  * headers: mặc định gửi JSON
+ *
+ * UPLOAD_TIMEOUT: timeout riêng cho multipart/form-data (upload file lên Cloudinary)
+ * - Upload 5 ảnh batch có thể mất 20-60s tuỳ dung lượng
+ * - Dùng hằng này trong config của các request upload file
  */
+export const UPLOAD_TIMEOUT = 120000;
+
 const api = axios.create({
   baseURL: '/api',
   timeout: 15000,

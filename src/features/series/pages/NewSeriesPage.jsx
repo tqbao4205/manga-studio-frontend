@@ -16,6 +16,7 @@ import api from "../../../services/api";
 import { Dialog } from "../../../shared/components/ui/dialog";
 import { CharacterEditorSection } from "../components/CharacterEditorSection";
 import { WorldPlotEditorSection } from "../components/WorldPlotEditorSection";
+import { compressImage, compressImages } from "../../../shared/utils/imageCompression";
 
 const GENRES = ["ACTION", "FANTASY", "ROMANCE", "COMEDY", "DRAMA"];
 const DEMOGRAPHICS = ["SHONEN", "SHOJO", "SEINEN", "JOSEI"];
@@ -129,6 +130,7 @@ export function NewSeriesPage() {
   const [charSketchFiles, setCharSketchFiles] = useState([]);
   const [charSketchPreviews, setCharSketchPreviews] = useState([]);
   const [savingCharacter, setSavingCharacter] = useState(false);
+  const [uploadProgressCharacter, setUploadProgressCharacter] = useState(0);
   const [editingCharId, setEditingCharId] = useState(null);
   const [existingSketchUrls, setExistingSketchUrls] = useState([]);
 
@@ -140,6 +142,7 @@ export function NewSeriesPage() {
   const [visRefFiles, setVisRefFiles] = useState([]);
   const [visRefPreviews, setVisRefPreviews] = useState([]);
   const [savingWorldPlot, setSavingWorldPlot] = useState(false);
+  const [uploadProgressWorldPlot, setUploadProgressWorldPlot] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -349,16 +352,14 @@ export function NewSeriesPage() {
     }
   };
 
-  const handleFileSelect = (e) => {
+  const handleFileSelect = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
     setNewCoverFile(file);
     setCoverImageUrl("");
-
-    const reader = new FileReader();
-    reader.onload = () => setNewCoverPreview(reader.result);
-    reader.readAsDataURL(file);
+    setNewCoverPreview(URL.createObjectURL(file));
+    const compressed = await compressImage(file, { maxSizeMB: 1, maxWidthOrHeight: 1200 });
+    setNewCoverFile(compressed);
   };
 
   const clearNewCover = () => {
@@ -367,17 +368,18 @@ export function NewSeriesPage() {
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  const handlePickCharSketch = (files) => {
+  const handlePickCharSketch = async (files) => {
     if (!files || files.length === 0) return;
     setCharSketchFiles((prev) => [...prev, ...files]);
-
-    files.forEach((file) => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        const result = String(reader.result || "");
-        setCharSketchPreviews((prev) => [...prev, result]);
-      };
-      reader.readAsDataURL(file);
+    files.forEach((file) => setCharSketchPreviews((prev) => [...prev, URL.createObjectURL(file)]));
+    const compressed = await compressImages(files);
+    setCharSketchFiles((prev) => {
+      const updated = [...prev];
+      files.forEach((orig, i) => {
+        const idx = updated.indexOf(orig);
+        if (idx !== -1) updated[idx] = compressed[i];
+      });
+      return updated;
     });
   };
 
@@ -437,6 +439,7 @@ export function NewSeriesPage() {
     if (!isEdit || !seriesId || !charName.trim()) return;
 
     setSavingCharacter(true);
+    setUploadProgressCharacter(0);
     try {
       const formData = new FormData();
       const body = {
@@ -461,10 +464,11 @@ export function NewSeriesPage() {
       // Ch? g?i files m?i (không g?i l?i URLs c?)
       charSketchFiles.forEach((file) => formData.append("files", file));
 
+      const onProgress = setUploadProgressCharacter;
       if (editingCharId) {
-        await seriesService.updateCharacter(Number(seriesId), editingCharId, formData);
+        await seriesService.updateCharacter(Number(seriesId), editingCharId, formData, onProgress);
       } else {
-        await seriesService.createCharacter(Number(seriesId), formData);
+        await seriesService.createCharacter(Number(seriesId), formData, onProgress);
       }
 
       addToast({
@@ -503,16 +507,18 @@ export function NewSeriesPage() {
   const removeReference = (index) =>
     setVisualReferences((prev) => prev.filter((_, idx) => idx !== index));
 
-  const handlePickVisRef = (files) => {
+  const handlePickVisRef = async (files) => {
     if (!files || files.length === 0) return;
     setVisRefFiles((prev) => [...prev, ...files]);
-    files.forEach((file) => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        const result = String(reader.result || "");
-        setVisRefPreviews((prev) => [...prev, result]);
-      };
-      reader.readAsDataURL(file);
+    files.forEach((file) => setVisRefPreviews((prev) => [...prev, URL.createObjectURL(file)]));
+    const compressed = await compressImages(files);
+    setVisRefFiles((prev) => {
+      const updated = [...prev];
+      files.forEach((orig, i) => {
+        const idx = updated.indexOf(orig);
+        if (idx !== -1) updated[idx] = compressed[i];
+      });
+      return updated;
     });
   };
 
@@ -525,6 +531,7 @@ export function NewSeriesPage() {
     if (!isEdit || !seriesId) return;
 
     setSavingWorldPlot(true);
+    setUploadProgressWorldPlot(0);
     try {
       const body = {
         worldLoreContent: worldLore || null,
@@ -540,7 +547,7 @@ export function NewSeriesPage() {
       );
       visRefFiles.forEach((file) => formData.append("files", file));
 
-      await seriesService.saveStoryProfile(Number(seriesId), formData);
+      await seriesService.saveStoryProfile(Number(seriesId), formData, setUploadProgressWorldPlot);
 
       setVisRefFiles([]);
       setVisRefPreviews([]);
@@ -874,6 +881,8 @@ export function NewSeriesPage() {
           onSketchRemove={handleRemoveCharSketch}
           onSubmit={handleSaveCharacter}
           saving={savingCharacter}
+          uploadProgress={uploadProgressCharacter}
+          showProgress={savingCharacter}
           submitLabel={editingCharId ? "Update Character" : "Save Character"}
           loading={loadingProfile}
           characters={characters}
@@ -911,6 +920,8 @@ export function NewSeriesPage() {
           onRefRemove={handleRemoveVisRef}
           onSave={handleSaveWorldPlot}
           saving={savingWorldPlot}
+          uploadProgress={uploadProgressWorldPlot}
+          showProgress={savingWorldPlot}
           saveLabel="Save World & Plot"
           secondaryAction={
             <button

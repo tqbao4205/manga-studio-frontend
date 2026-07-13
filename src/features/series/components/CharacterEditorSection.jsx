@@ -13,6 +13,8 @@ export function CharacterEditorSection({
   onSketchRemove,
   onSubmit,
   saving,
+  uploadProgress = 0,
+  showProgress = false,
   submitLabel = "Save Character",
   loading,
   characters,
@@ -117,6 +119,19 @@ export function CharacterEditorSection({
           )}
         </div>
 
+        {showProgress && (
+          <div className="mb-3">
+            <div className="w-full bg-surface-container-highest rounded-full h-2 overflow-hidden">
+              <div
+                className="bg-primary h-full rounded-full transition-all duration-300"
+                style={{ width: `${uploadProgress}%` }}
+              />
+            </div>
+            <p className="text-xs text-on-surface-variant mt-1 text-right">
+              {uploadProgress}%
+            </p>
+          </div>
+        )}
         <div className="flex items-center gap-3">
           <button
             type="button"

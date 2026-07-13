@@ -5,6 +5,7 @@ import api from "../../../services/api";
 import seriesService from "../../../services/seriesService";
 import { useUIStore } from "../../../app/stores/uiStore";
 import { WorldPlotEditorSection } from "../components/WorldPlotEditorSection";
+import { compressImages } from "../../../shared/utils/imageCompression";
 
 export function ImportWorldPlotPage() {
   const { seriesId } = useParams();
@@ -15,6 +16,7 @@ export function ImportWorldPlotPage() {
   const [series, setSeries] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
 
   const [worldLore, setWorldLore] = useState("");
   const [arcTitle, setArcTitle] = useState("");
@@ -80,16 +82,18 @@ export function ImportWorldPlotPage() {
   const removeReference = (index) =>
     setVisualReferences((prev) => prev.filter((_, idx) => idx !== index));
 
-  const handlePickVisRef = (files) => {
+  const handlePickVisRef = async (files) => {
     if (!files || files.length === 0) return;
     setVisRefFiles((prev) => [...prev, ...files]);
-    files.forEach((file) => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        const result = String(reader.result || "");
-        setVisRefPreviews((prev) => [...prev, result]);
-      };
-      reader.readAsDataURL(file);
+    files.forEach((file) => setVisRefPreviews((prev) => [...prev, URL.createObjectURL(file)]));
+    const compressed = await compressImages(files);
+    setVisRefFiles((prev) => {
+      const updated = [...prev];
+      files.forEach((orig, i) => {
+        const idx = updated.indexOf(orig);
+        if (idx !== -1) updated[idx] = compressed[i];
+      });
+      return updated;
     });
   };
 
@@ -100,6 +104,7 @@ export function ImportWorldPlotPage() {
 
   const handleSave = async () => {
     setSaving(true);
+    setUploadProgress(0);
     try {
       const body = {
         worldLoreContent: worldLore || null,
@@ -115,7 +120,7 @@ export function ImportWorldPlotPage() {
       );
       visRefFiles.forEach((file) => formData.append("files", file));
 
-      await seriesService.saveStoryProfile(Number(id), formData);
+      await seriesService.saveStoryProfile(Number(id), formData, setUploadProgress);
 
       addToast({
         type: "success",
@@ -174,6 +179,8 @@ export function ImportWorldPlotPage() {
         onRefRemove={handleRemoveVisRef}
         onSave={handleSave}
         saving={saving}
+        uploadProgress={uploadProgress}
+        showProgress={saving}
         saveLabel="Save World & Plot"
         secondaryAction={
           <button
