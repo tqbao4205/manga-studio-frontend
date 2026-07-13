@@ -20,7 +20,8 @@
  *   └─────────────────────┴────────────────────────────┴──────────────────┘
  */
 
-import api from './api';
+import api, { UPLOAD_TIMEOUT } from './api';
+import { compressImage } from '../shared/utils/imageCompression';
 
 /**
  * ─────────────────────────────────────────────
@@ -68,18 +69,15 @@ const uploadService = {
    *   - Token JWT được api.js interceptor tự động gắn vào header
    */
   uploadAvatar: async (file) => {
-    // Tạo FormData — bắt buộc cho multipart upload
+    const compressed = await compressImage(file, { maxSizeMB: 1, maxWidthOrHeight: 800 });
     const formData = new FormData();
-    // Key "file" phải khớp với @RequestParam("file") trong UploadController.java
-    formData.append('file', file);
+    formData.append('file', compressed);
 
-    // Gửi POST request với Content-Type: multipart/form-data
-    // axios tự động set đúng header khi thấy FormData
     const data = await api.post('/upload/avatar', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: UPLOAD_TIMEOUT,
     });
 
-    // data = { url: "https://..." }
     return data;
   },
 };

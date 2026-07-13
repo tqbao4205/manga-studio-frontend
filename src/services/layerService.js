@@ -20,7 +20,7 @@
  *   - api.js đã unwrap response.data
  */
 
-import api from './api';
+import api, { UPLOAD_TIMEOUT } from './api';
 
 const layerService = {
 
@@ -65,6 +65,7 @@ const layerService = {
   create: async (pageId, formData) => {
     return api.post(`/v1/pages/${pageId}/layers`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: UPLOAD_TIMEOUT,
     });
   },
 

@@ -1,4 +1,4 @@
-import api from './api'
+import api, { UPLOAD_TIMEOUT } from './api'
 import { logApiCall } from '../shared/utils/telemetry'
 
 const rankingService = {
@@ -18,6 +18,7 @@ const rankingService = {
     return api.post('/ranking/weekly/import', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
       params: { week },
+      timeout: UPLOAD_TIMEOUT,
     })
   },
 
@@ -37,6 +38,7 @@ const rankingService = {
     return api.post('/ranking/monthly/import', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
       params: { month },
+      timeout: UPLOAD_TIMEOUT,
     })
   },
 

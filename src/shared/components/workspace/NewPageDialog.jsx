@@ -2,6 +2,7 @@ import { useRef, useState } from 'react'
 import { Upload, X } from 'lucide-react'
 import { Dialog } from '../ui/dialog'
 import { Button } from '../ui/button'
+import { compressImage } from '../../utils/imageCompression'
 
 /*
  * ===== NewPageDialog Component (workspace) =====
@@ -30,16 +31,14 @@ export function NewPageDialog({ open, onClose, onConfirm }) {
    * Xử lý khi người dùng chọn file ảnh
    * Đọc file dưới dạng DataURL và lưu vào state preview + imageData
    */
-  const handleFile = (e) => {
+  const handleFile = async (e) => {
     const file = e.target.files?.[0]
     if (!file) return
+    setPreview(URL.createObjectURL(file))
+    const compressed = await compressImage(file)
     const reader = new FileReader()
-    reader.onload = () => {
-      const dataUrl = reader.result
-      setPreview(dataUrl)
-      setImageData(dataUrl)
-    }
-    reader.readAsDataURL(file)
+    reader.onload = () => setImageData(reader.result)
+    reader.readAsDataURL(compressed)
   }
 
   /**

@@ -17,7 +17,7 @@
  *   PATCH  /api/series/{id}/status   — Đổi trạng thái
  */
 
-import api from './api';
+import api, { UPLOAD_TIMEOUT } from './api';
 import { logApiCall } from '../shared/utils/telemetry';
 
 const seriesService = {
@@ -67,6 +67,7 @@ const seriesService = {
     });
     return api.post('/series', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: UPLOAD_TIMEOUT,
     });
   },
 
@@ -85,6 +86,7 @@ const seriesService = {
     });
     return api.put(`/series/${id}`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: UPLOAD_TIMEOUT,
     });
   },
 
@@ -230,9 +232,33 @@ const seriesService = {
    * T?o character m?i (multipart: "character" JSON + "files" sketches).
    * POST /api/series/{seriesId}/characters
    */
-  createCharacter: async (seriesId, formData) => {
+  createCharacter: async (seriesId, formData, onProgress) => {
     return api.post(`/series/${seriesId}/characters`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: UPLOAD_TIMEOUT,
+      onUploadProgress: onProgress
+        ? (e) => {
+            const pct = e.total ? Math.round((e.loaded / e.total) * 100) : 0;
+            onProgress(pct);
+          }
+        : undefined,
+    });
+  },
+
+  /**
+   * T?o nhi?u characters trong 1 request (multipart: "batchRequest" JSON + "files").
+   * POST /api/series/{seriesId}/characters/batch
+   */
+  createCharactersBatch: async (seriesId, formData, onProgress) => {
+    return api.post(`/series/${seriesId}/characters/batch`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: UPLOAD_TIMEOUT,
+      onUploadProgress: onProgress
+        ? (e) => {
+            const pct = e.total ? Math.round((e.loaded / e.total) * 100) : 0;
+            onProgress(pct);
+          }
+        : undefined,
     });
   },
 
@@ -240,9 +266,16 @@ const seriesService = {
    * C?p nh?t character (multipart: "character" JSON + "files" optional).
    * PUT /api/series/{seriesId}/characters/{characterId}
    */
-  updateCharacter: async (seriesId, characterId, formData) => {
+  updateCharacter: async (seriesId, characterId, formData, onProgress) => {
     return api.put(`/series/${seriesId}/characters/${characterId}`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: UPLOAD_TIMEOUT,
+      onUploadProgress: onProgress
+        ? (e) => {
+            const pct = e.total ? Math.round((e.loaded / e.total) * 100) : 0;
+            onProgress(pct);
+          }
+        : undefined,
     });
   },
 
@@ -279,9 +312,16 @@ const seriesService = {
    *   - "files" × N: File ảnh visual refs mới
    * @returns {Promise<Object>} StoryProfileResponse
    */
-  saveStoryProfile: async (seriesId, formData) => {
+  saveStoryProfile: async (seriesId, formData, onProgress) => {
     return api.put(`/series/${seriesId}/story-profile`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: UPLOAD_TIMEOUT,
+      onUploadProgress: onProgress
+        ? (e) => {
+            const pct = e.total ? Math.round((e.loaded / e.total) * 100) : 0;
+            onProgress(pct);
+          }
+        : undefined,
     });
   },
 

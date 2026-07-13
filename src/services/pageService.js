@@ -15,7 +15,7 @@
  *   PUT   /api/v1/pages/{id}/status                  — Cập nhật trạng thái page
  */
 
-import api from './api';
+import api, { UPLOAD_TIMEOUT } from './api';
 
 const pageService = {
 
@@ -31,16 +31,39 @@ const pageService = {
   },
 
   /**
+   * Upload 1 page với pageNumber chỉ định.
+   * Endpoint: POST /api/v1/chapters/{chapterId}/pages
+   *
+   * @param {number} chapterId - ID của chapter
+   * @param {FormData} formData - FormData chứa "file" + "pageNumber"
+   * @returns {Promise<Object>} PageResponse
+   */
+  uploadSingle: async (chapterId, formData) => {
+    return api.post(`/v1/chapters/${chapterId}/pages`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: UPLOAD_TIMEOUT,
+    });
+  },
+
+  /**
    * Upload nhiều page cùng lúc.
    * Endpoint: POST /api/v1/chapters/{chapterId}/pages/batch
    *
    * @param {number} chapterId - ID của chapter
    * @param {FormData} formData - FormData chứa field "files"
+   * @param {Function} [onProgress] - Callback nhận progress 0-100
    * @returns {Promise<Array>} Mảng PageResponse đã tạo
    */
-  uploadBatch: async (chapterId, formData) => {
+  uploadBatch: async (chapterId, formData, onProgress) => {
     return api.post(`/v1/chapters/${chapterId}/pages/batch`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: UPLOAD_TIMEOUT,
+      onUploadProgress: onProgress
+        ? (e) => {
+            const pct = e.total ? Math.round((e.loaded / e.total) * 100) : 0;
+            onProgress(pct);
+          }
+        : undefined,
     });
   },
 

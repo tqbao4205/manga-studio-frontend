@@ -14,6 +14,7 @@ import { useRef, useState } from 'react'
 import { Upload, X, Loader2 } from 'lucide-react'
 import { Dialog } from '../ui/dialog'
 import { Button } from '../ui/button'
+import { compressImage } from '../../utils/imageCompression'
 
 /**
  * @param {Object} props
@@ -32,13 +33,13 @@ export function SubmitDialog({ open, onClose, regionLabel, isSubmitting = false,
   /**
    * Xử lý chọn file: lưu File object + tạo preview URL.
    */
-  const handleFile = (e) => {
+  const handleFile = async (e) => {
     const file = e.target.files?.[0]
     if (!file) return
     setSelectedFile(file)
-    const reader = new FileReader()
-    reader.onload = () => setPreview(reader.result)
-    reader.readAsDataURL(file)
+    setPreview(URL.createObjectURL(file))
+    const compressed = await compressImage(file)
+    setSelectedFile(compressed)
   }
 
   /**

@@ -9,6 +9,7 @@ import {
 } from 'lucide-react'
 import { cn } from '../../utils'
 import { Button } from '../ui/button'
+import { compressImage } from '../../utils/imageCompression'
 
 export function LayerPanel({ flattenDisabled, flattening, onFlattenClick }) {
   const currentPageId = useWorkspaceStore((s) => s.currentPageId)
@@ -147,8 +148,9 @@ export function LayerPanel({ flattenDisabled, flattening, onFlattenClick }) {
     input.onchange = async (e) => {
       const file = e.target.files?.[0]
       if (!file) return
+      const compressed = await compressImage(file)
       const formData = new FormData()
-      formData.append('file', file)
+      formData.append('file', compressed)
       formData.append('request', JSON.stringify({
         label: `Layer ${layers.filter(l => !l.virtual).length + 1}`,
         opacity: 1,

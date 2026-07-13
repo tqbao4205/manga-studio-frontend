@@ -31,7 +31,7 @@
  *   - Các GET endpoints có hỗ trợ filter params (status, assignedTo, priority, ...)
  */
 
-import api from './api';
+import api, { UPLOAD_TIMEOUT } from './api';
 import { logApiCall } from '../shared/utils/telemetry';
 
 const taskService = {
@@ -200,7 +200,7 @@ const taskService = {
     logApiCall('task', 'submit', { taskId, hasNote: Boolean(formData?.get?.('note')) });
     return api.post(`/tasks/${taskId}/submissions`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
-      timeout: 120000,
+      timeout: UPLOAD_TIMEOUT,
     });
   },
 
