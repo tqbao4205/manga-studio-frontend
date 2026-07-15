@@ -160,14 +160,7 @@ export function SchedulePage() {
       });
     }
 
-    result.sort((a, b) => {
-      const dateA = computeNextRelease(a);
-      const dateB = computeNextRelease(b);
-      if (!dateA && !dateB) return 0;
-      if (!dateA) return 1;
-      if (!dateB) return -1;
-      return dateA.getTime() - dateB.getTime();
-    });
+    result.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
     return result;
   }, [schedules, search, statusFilter, typeFilter]);

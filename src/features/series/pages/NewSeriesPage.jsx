@@ -557,7 +557,7 @@ export function NewSeriesPage() {
         title: "World & Plot saved",
         message: "World lore and story roadmap were saved successfully.",
       });
-      fetchEditProfileData();
+      navigate(`/series/${seriesId}?tab=worldplot`);
     } catch (err) {
       addToast({
         type: "error",
@@ -844,15 +844,6 @@ export function NewSeriesPage() {
           </div>
 
           <div className="flex justify-end gap-3">
-            {!isEdit && (
-              <button
-                type="button"
-                onClick={() => setActiveTab("characters")}
-                className="px-6 py-3 rounded-lg border border-outline-variant hover:border-primary"
-              >
-                Next: Characters
-              </button>
-            )}
             <button
               type="button"
               onClick={handleSubmitBasic}

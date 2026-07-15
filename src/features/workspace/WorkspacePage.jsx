@@ -525,7 +525,7 @@ export function WorkspacePage() {
             variant="ghost"
             size="icon"
             onClick={() =>
-              navigate(isReviewMode ? "/review" : `/series/${chapter.seriesId}`)
+              navigate(isReviewMode ? "/review" : `/series/${chapter.seriesId}/chapters/${id}`)
             }
             title="Back"
           >

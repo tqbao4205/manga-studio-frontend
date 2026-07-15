@@ -265,7 +265,10 @@ export function SeriesDetailPage() {
   const location = useLocation();
   const [activeDetailBlock, setActiveDetailBlock] = useState(() => {
     const params = new URLSearchParams(location.search);
-    return params.get("tab") === "characters" ? "characters" : "chapters";
+    const tab = params.get("tab");
+    if (tab === "characters") return "characters";
+    if (tab === "worldplot") return "worldplots";
+    return "chapters";
   });
 
   // Characters + World&Plots (use real API when backend provides endpoints)

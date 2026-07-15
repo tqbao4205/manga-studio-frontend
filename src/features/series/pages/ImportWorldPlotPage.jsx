@@ -127,7 +127,7 @@ export function ImportWorldPlotPage() {
         title: "World & Plot saved",
         message: "World lore and plot roadmap were imported successfully.",
       });
-      navigate(`/series/${id}`);
+      navigate(`/series/${id}?tab=worldplot`);
     } catch (err) {
       addToast({
         type: "error",
@@ -182,15 +182,6 @@ export function ImportWorldPlotPage() {
         uploadProgress={uploadProgress}
         showProgress={saving}
         saveLabel="Save World & Plot"
-        secondaryAction={
-          <button
-            type="button"
-            onClick={() => navigate(`/series/${id}/import/characters`)}
-            className="px-5 py-2.5 rounded-lg border border-outline-variant hover:border-primary"
-          >
-            Back: Import Characters
-          </button>
-        }
       />
     </div>
   );

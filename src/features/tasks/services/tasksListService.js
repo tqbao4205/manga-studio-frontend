@@ -130,6 +130,7 @@ export const tasksListService = {
               chapterId: chapter.id,
               chapterNumber: chapter.chapterNumber,
               pageNumber: page.pageNumber,
+              pageId: page.id,
               pageWidth: page.width,
               pageHeight: page.height,
             })

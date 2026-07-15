@@ -29,12 +29,8 @@ import {
   AlertTriangle,
   TrendingDown,
   TrendingUp,
-  Minus,
-  BarChart3,
-  Calendar,
-  ArrowUpRight,
-  ArrowDownRight,
   ChevronRight,
+  Calendar,
   PenLine,
 } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -73,15 +69,6 @@ function toNumberId(value) {
 function currentMonthStr() {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-}
-
-function currentWeekStr() {
-  const now = new Date();
-  const jan1 = new Date(now.getFullYear(), 0, 1);
-  const weekNum = Math.ceil(
-    ((now - jan1) / 86_400_000 + jan1.getDay() + 1) / 7,
-  );
-  return `${now.getFullYear()}-W${String(weekNum).padStart(2, "0")}`;
 }
 
 // ─────────────────────────────────────────────
@@ -370,223 +357,6 @@ function AxeList({ axeList, isLoading }) {
 }
 
 // ─────────────────────────────────────────────
-// Reader Taste Radar — Double Tabs leaderboard
-// ─────────────────────────────────────────────
-
-const TIME_OPTIONS = [
-  { value: "week", label: "This Week" },
-  { value: "month", label: "This Month" },
-];
-
-const VIEW_OPTIONS = [
-  { value: "series", label: "By Series" },
-  { value: "genre", label: "By Genre" },
-];
-
-function DoubleTabs({ timeTab, viewTab, onTime, onView }) {
-  return (
-    <div className="flex flex-wrap items-center gap-3">
-      {/* Time selector */}
-      <div className="flex gap-1 rounded-xl border border-outline-variant/25 bg-surface-container p-1">
-        {TIME_OPTIONS.map(({ value, label }) => (
-          <button
-            key={value}
-            onClick={() => onTime(value)}
-            className={cn(
-              "rounded-lg px-3 py-1.5 text-xs font-medium transition-all",
-              timeTab === value
-                ? "bg-primary text-on-primary shadow-sm"
-                : "text-on-surface-variant hover:bg-white/5 hover:text-on-surface",
-            )}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
-
-      {/* View selector */}
-      <div className="flex gap-1 rounded-xl border border-outline-variant/25 bg-surface-container p-1">
-        {VIEW_OPTIONS.map(({ value, label }) => (
-          <button
-            key={value}
-            onClick={() => onView(value)}
-            className={cn(
-              "rounded-lg px-3 py-1.5 text-xs font-medium transition-all",
-              viewTab === value
-                ? "bg-primary text-on-primary shadow-sm"
-                : "text-on-surface-variant hover:bg-white/5 hover:text-on-surface",
-            )}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function LeaderboardBySeries({ entries }) {
-  return (
-    <div className="overflow-x-auto">
-      <table className="min-w-full text-left">
-        <thead className="border-b border-outline-variant/20 bg-surface-container-low/50">
-          <tr className="text-[10px] uppercase tracking-[0.18em] text-on-surface-variant">
-            <th className="px-4 py-3 text-center">Rank</th>
-            <th className="px-4 py-3">Series</th>
-            <th className="px-4 py-3 text-right">Votes</th>
-            <th className="px-4 py-3 text-center">Trend</th>
-          </tr>
-        </thead>
-        <tbody>
-          {entries.map((entry) => {
-            const up = entry.trend === "UP";
-            const down = entry.trend === "DOWN";
-            return (
-              <tr
-                key={entry.id ?? `${entry.seriesId}-${entry.rank}`}
-                className="border-b border-white/5 transition-colors hover:bg-white/[0.03]"
-              >
-                <td className="px-4 py-3.5 text-center text-sm font-bold text-accent-gold tabular-nums">
-                  #{entry.rank}
-                </td>
-                <td className="px-4 py-3.5">
-                  <p className="line-clamp-1 text-sm font-semibold text-on-surface">
-                    {entry.series?.title ?? "—"}
-                  </p>
-                  <p className="mt-0.5 text-xs text-on-surface-variant">
-                    {entry.series?.genre ?? entry.series?.genres?.[0] ?? "—"}
-                  </p>
-                </td>
-                <td className="px-4 py-3.5 text-right text-sm font-medium tabular-nums text-on-surface">
-                  {(entry.totalVotes ?? 0).toLocaleString()}
-                </td>
-                <td className="px-4 py-3.5 text-center">
-                  <span
-                    className={cn(
-                      "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-semibold",
-                      up
-                        ? "border-status-success/20 bg-status-success/10 text-status-success"
-                        : down
-                          ? "border-status-danger/20 bg-status-danger/10 text-status-danger"
-                          : "border-outline-variant/20 bg-white/5 text-on-surface-variant",
-                    )}
-                  >
-                    {up ? (
-                      <ArrowUpRight size={12} />
-                    ) : down ? (
-                      <ArrowDownRight size={12} />
-                    ) : (
-                      <Minus size={12} />
-                    )}
-                    {entry.trend ?? "FLAT"}
-                  </span>
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-    </div>
-  );
-}
-
-function LeaderboardByGenre({ items }) {
-  return (
-    <div className="space-y-2 p-4">
-      {items.map((item, idx) => (
-        <div
-          key={item.genre}
-          className="flex items-center gap-4 rounded-xl border border-outline-variant/20 bg-surface-container-low/40 px-4 py-3 transition-colors hover:bg-surface-container-high/30"
-        >
-          <span className="w-6 text-center text-sm font-bold tabular-nums text-accent-gold">
-            {idx + 1}
-          </span>
-          <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold text-on-surface">
-              {item.genre}
-            </p>
-            <p className="text-xs text-on-surface-variant">
-              {item.seriesCount} series · Best rank #{item.bestRank}
-            </p>
-          </div>
-          <div className="text-right">
-            <p className="text-sm font-bold tabular-nums text-primary">
-              {item.totalVotes.toLocaleString()}
-            </p>
-            <p className="text-[10px] text-on-surface-variant">votes</p>
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function ReaderTasteRadar({
-  timeTab,
-  viewTab,
-  seriesRows,
-  weeklyRanks,
-  monthlyRanks,
-}) {
-  const ranks = timeTab === "week" ? weeklyRanks : monthlyRanks;
-
-  const tableData = useMemo(() => {
-    if (viewTab === "series") {
-      return ranks
-        .map((r) => {
-          const sid = toNumberId(r.seriesId) || toNumberId(r.series?.id);
-          return {
-            ...r,
-            series: seriesRows.find((s) => s.id === sid),
-          };
-        })
-        .filter((r) => r.series)
-        .sort((a, b) => (a.rank ?? 99) - (b.rank ?? 99))
-        .slice(0, 20);
-    }
-
-    // By Genre: group by genre, aggregate votes
-    const genreMap = {};
-    ranks.forEach((r) => {
-      const sid = toNumberId(r.seriesId) || toNumberId(r.series?.id);
-      const series = seriesRows.find((s) => s.id === sid);
-      if (!series) return;
-      const genre = series.genre ?? series.genres?.[0] ?? "Other";
-      if (!genreMap[genre]) {
-        genreMap[genre] = {
-          genre,
-          totalVotes: 0,
-          seriesCount: 0,
-          bestRank: r.rank ?? 99,
-        };
-      }
-      genreMap[genre].totalVotes += r.totalVotes ?? 0;
-      genreMap[genre].seriesCount += 1;
-      if ((r.rank ?? 99) < genreMap[genre].bestRank) {
-        genreMap[genre].bestRank = r.rank ?? 99;
-      }
-    });
-
-    return Object.values(genreMap)
-      .sort((a, b) => b.totalVotes - a.totalVotes)
-      .slice(0, 10);
-  }, [ranks, seriesRows, viewTab]);
-
-  if (!tableData.length)
-    return (
-      <div className="px-4 py-12 text-center text-sm text-on-surface-variant">
-        No ranking data available for this period.
-      </div>
-    );
-
-  return viewTab === "series" ? (
-    <LeaderboardBySeries entries={tableData} />
-  ) : (
-    <LeaderboardByGenre items={tableData} />
-  );
-}
-
-// ─────────────────────────────────────────────
 // Root export
 // ─────────────────────────────────────────────
 
@@ -594,8 +364,6 @@ export function EditorialBoardDashboardPanel() {
   const queryClient = useQueryClient();
   const user = useAuthStore((s) => s.user);
   const addToast = useUIStore((s) => s.addToast);
-  const [timeTab, setTimeTab] = useState("month");
-  const [viewTab, setViewTab] = useState("series");
   const [showCreateMeeting, setShowCreateMeeting] = useState(false);
   const [selectedSeriesForMeeting, setSelectedSeriesForMeeting] =
     useState(null);
@@ -634,15 +402,6 @@ export function EditorialBoardDashboardPanel() {
     queryKey: ["dashboard", "rankings", "monthly", currentMonthStr()],
     queryFn: async () => {
       const payload = await rankingService.getMonthly(currentMonthStr());
-      return toArray(payload);
-    },
-    staleTime: 120_000,
-  });
-
-  const { data: weeklyRanks = [] } = useQuery({
-    queryKey: ["dashboard", "rankings", "weekly", currentWeekStr()],
-    queryFn: async () => {
-      const payload = await rankingService.getWeekly(currentWeekStr());
       return toArray(payload);
     },
     staleTime: 120_000,
@@ -806,10 +565,7 @@ export function EditorialBoardDashboardPanel() {
           isChiefEditor={isChiefEditor}
         />
 
-        {/* 2-column grid */}
-        <div className="grid gap-8 xl:grid-cols-2">
-          {/* LEFT — Actionable Triggers */}
-          <div className="space-y-8">
+        <div className="space-y-8">
             {isChiefEditor && (
               <Card className="border-primary/25 bg-surface-container-low/40">
                 <CardHeader className="border-b border-outline-variant/20 pb-5">
@@ -878,36 +634,7 @@ export function EditorialBoardDashboardPanel() {
             </Card>
           </div>
 
-          {/* RIGHT — Reader Taste Radar */}
-          <Card className="border-outline-variant/30 bg-surface-container-low/40">
-            <CardHeader className="border-b border-outline-variant/20 pb-5">
-              <BlockHeader
-                icon={BarChart3}
-                title="Reader Taste Radar"
-                iconClass="text-primary"
-                subtitle="Market intelligence — reader preference by period and lens"
-              />
-              <div className="mt-4">
-                <DoubleTabs
-                  timeTab={timeTab}
-                  viewTab={viewTab}
-                  onTime={setTimeTab}
-                  onView={setViewTab}
-                />
-              </div>
-            </CardHeader>
-            <CardContent className="p-0">
-              <ReaderTasteRadar
-                timeTab={timeTab}
-                viewTab={viewTab}
-                seriesRows={allSeries}
-                weeklyRanks={weeklyRanks}
-                monthlyRanks={monthlyRanks}
-              />
-            </CardContent>
-          </Card>
         </div>
-      </div>
       {isChiefEditor && showCreateMeeting && (
         <CreateMeetingModal
           preselectedSeriesId={selectedSeriesForMeeting}

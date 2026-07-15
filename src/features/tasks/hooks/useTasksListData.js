@@ -22,6 +22,7 @@ function decorateTask(task, regionSeriesLookup = new Map()) {
   const seriesTitle = task.seriesTitle || mappedSeries?.seriesTitle || 'Unknown Series'
   const chapterId = task.chapterId || mappedSeries?.chapterId || null
   const chapterNumber = task.chapterNumber || mappedSeries?.chapterNumber || null
+  const pageId = task.pageId || mappedSeries?.pageId || null
   const pageNumber = task.pageNumber || mappedSeries?.pageNumber || null
   const pageWidth = task.pageWidth || mappedSeries?.pageWidth || null
   const pageHeight = task.pageHeight || mappedSeries?.pageHeight || null
@@ -36,6 +37,7 @@ function decorateTask(task, regionSeriesLookup = new Map()) {
     pageWidth,
     pageHeight,
     chapterLabel: chapterNumber ? `Chapter ${chapterNumber}` : null,
+    pageId,
     pageLabel: pageNumber ? `Page ${pageNumber}` : null,
     thumbnailUrl: task.pageImageUrl || task.referenceImageUrl || '',
   }

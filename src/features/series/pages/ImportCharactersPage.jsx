@@ -131,8 +131,7 @@ export function ImportCharactersPage() {
         title: "Characters imported",
         message: `${queuedCharacters.length} characters were imported successfully.`,
       });
-      setQueuedCharacters([]);
-      fetchData();
+      navigate(`/series/${id}?tab=characters`);
     } catch (err) {
       addToast({
         type: "error",
@@ -246,15 +245,7 @@ export function ImportCharactersPage() {
         </div>
       )}
 
-      <div className="flex justify-end">
-        <button
-          type="button"
-          onClick={() => navigate(`/series/${id}/import/world-plot`)}
-          className="px-5 py-2.5 rounded-lg border border-outline-variant hover:border-primary"
-        >
-          Next: Import World & Plot
-        </button>
-      </div>
+
     </div>
   );
 }
