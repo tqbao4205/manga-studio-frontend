@@ -44,7 +44,8 @@ export function TasksPageView() {
 
   const handleOpenWorkspace = (task) => {
     const chapterId = task?.chapterId || 1;
-    navigate(`/workspace/${chapterId}`, {
+    const pageId = task?.pageId || '';
+    navigate(`/workspace/${chapterId}/${pageId}`, {
       state: {
         focusTaskId: task?.id || null,
         returnTo: "/tasks",

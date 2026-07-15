@@ -49,6 +49,7 @@ export function ScheduleFormModal({ mode, open, onClose, onSuccess, scheduleData
   const seriesOptions = useMemo(() => {
     const existing = new Set(schedules.filter((s) => s.status === "ACTIVE").map((s) => s.seriesId));
     return seriesList
+      .filter((s) => s.status === "ONGOING")
       .filter((s) => isEdit || !existing.has(s.id))
       .map((s) => ({ value: String(s.id), label: s.title }));
   }, [seriesList, schedules, isEdit]);

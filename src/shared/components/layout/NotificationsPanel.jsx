@@ -105,6 +105,11 @@ export function NotificationsPanel({ onClose }) {
       case 'SERIES':
         navigate(`/series/${n.referenceId}`)
         break
+      case 'MEETING':
+        navigate(n.type === 'MEETING_INVITATION'
+          ? `/editorial/${n.referenceId}/vote`
+          : `/editorial/${n.referenceId}/results`)
+        break
       case 'COMMENT':
         navigate(`/workspace/${n.referenceId}`)
         break
