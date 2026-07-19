@@ -11,7 +11,7 @@ import { compressImages } from "../../shared/utils/imageCompression";
 import {
   ChevronLeft, ChevronRight, BookOpen, FileText, CheckSquare,
   MessageSquare, Clock, Image, Edit,
-  LayoutGrid, List, Plus, Upload, X, File, Trash2, GripVertical,
+  LayoutGrid, List, Plus, Upload, X, File, Trash2,
 } from "lucide-react";
 import {
   DndContext, closestCenter, PointerSensor, useSensor, useSensors,
@@ -252,11 +252,11 @@ export function ChapterDetailPage() {
 
           <div className="flex items-center gap-3">
             <button
-              onClick={() => navigate(-1)}
+              onClick={() => navigate(`/series/${seriesId}`)}
               className="px-6 py-2 border border-outline-variant rounded-xl text-sm text-on-surface hover:bg-surface-container-highest transition-colors flex items-center gap-2"
             >
               <ChevronLeft size={18} />
-              Back
+              Back to Series
             </button>
             {isMangaka && (
               <Link
@@ -509,22 +509,12 @@ function SortablePageCard({ page, chapterId, isMangaka, onDelete, onMarkDone }) 
     <div
       ref={setNodeRef}
       style={style}
+      {...(isMangaka ? listeners : {})}
+      {...(isMangaka ? attributes : {})}
       onClick={() => navigate(`/workspace/${chapterId}/${page.id}`)}
-      className={`group bg-surface-container-low border border-outline-variant/50 rounded-xl overflow-hidden hover:shadow-[0_8px_30px_rgb(139,92,246,0.1)] transition-all cursor-pointer ${isDragging ? 'opacity-40 z-50' : ''}`}
+      className={`group bg-surface-container-low border border-outline-variant/50 rounded-xl overflow-hidden hover:shadow-[0_8px_30px_rgb(139,92,246,0.1)] transition-all ${isMangaka ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'} ${isDragging ? 'opacity-40 z-50' : ''}`}
     >
       <div className="aspect-[3/4] relative bg-surface-container-highest overflow-hidden">
-        {/* Drag handle */}
-        {isMangaka && (
-          <div
-            {...attributes}
-            {...listeners}
-            onClick={(e) => e.stopPropagation()}
-            className="absolute top-2 left-2 z-20 opacity-0 group-hover:opacity-100 bg-surface/80 backdrop-blur text-on-surface-variant hover:text-primary p-1 rounded-lg transition-all cursor-grab active:cursor-grabbing"
-          >
-            <GripVertical size={14} />
-          </div>
-        )}
-
         {/* Delete button */}
         {isMangaka && (
           <button

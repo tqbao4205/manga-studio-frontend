@@ -75,11 +75,17 @@ export function NewChapterPage() {
     <div className="pb-28 px-container-padding pt-container-padding">
       {/* Back link */}
       <button
-        onClick={() => navigate(`/series/${seriesId}`)}
+        onClick={() => {
+          if (isChapterEdit) {
+            navigate(`/series/${seriesId}/chapters/${chapterId}`)
+          } else {
+            navigate(`/series/${seriesId}`)
+          }
+        }}
         className="inline-flex items-center text-sm text-primary hover:underline mb-4 group"
       >
         <ArrowLeft size={18} className="mr-1.5 group-hover:-translate-x-1 transition-transform" />
-        Back to Series Detail
+        {isChapterEdit ? 'Back to Chapter Detail' : 'Back to Series Detail'}
       </button>
 
       {/* Header */}
