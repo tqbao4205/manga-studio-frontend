@@ -7,7 +7,6 @@ import chapterService from "../../services/chapterService";
 import pageService from "../../services/pageService";
 import { EmptyState } from "../../shared/components/shared/EmptyState";
 import { Loader } from "lucide-react";
-import { compressImages } from "../../shared/utils/imageCompression";
 import {
   ChevronLeft, ChevronRight, BookOpen, FileText, CheckSquare,
   MessageSquare, Clock, Image, Edit,
@@ -49,7 +48,6 @@ export function ChapterDetailPage() {
   const [selectedFiles, setSelectedFiles] = useState([])
   const [showUploadModal, setShowUploadModal] = useState(false)
   const [uploading, setUploading] = useState(false)
-  const [compressing, setCompressing] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
 
   useEffect(() => {
@@ -103,16 +101,12 @@ export function ChapterDetailPage() {
     fileInputRef.current?.click()
   }
 
-  const handleFileSelect = async (e) => {
+  const handleFileSelect = (e) => {
     const rawFiles = Array.from(e.target.files || [])
     if (rawFiles.length === 0) return
     setSelectedFiles(rawFiles)
     setShowUploadModal(true)
-    setCompressing(true)
     e.target.value = ''
-    const compressed = await compressImages(rawFiles)
-    setSelectedFiles(compressed)
-    setCompressing(false)
   }
 
   const handleUploadConfirm = async () => {
@@ -404,34 +398,34 @@ export function ChapterDetailPage() {
                   ))}
                 </div>
 
-                {(uploading || compressing) && (
+                {uploading && (
                   <div className="mb-3">
                     <div className="w-full bg-surface-container-highest rounded-full h-2 overflow-hidden">
                       <div
                         className="bg-primary h-full rounded-full transition-all duration-300"
-                        style={{ width: `${uploading ? uploadProgress : 0}%` }}
+                        style={{ width: `${uploadProgress}%` }}
                       />
                     </div>
                     <p className="text-xs text-on-surface-variant mt-1 text-right">
-                      {uploading ? `${uploadProgress}%` : 'Compressing...'}
+                      {uploadProgress}%
                     </p>
                   </div>
                 )}
                 <div className="flex justify-end gap-3">
                   <button
                     onClick={closeUploadModal}
-                    disabled={uploading || compressing}
+                    disabled={uploading}
                     className="px-4 py-2 text-sm text-on-surface-variant hover:text-on-surface transition-colors"
                   >
                     Cancel
                   </button>
                   <button
                     onClick={handleUploadConfirm}
-                    disabled={uploading || compressing}
+                    disabled={uploading}
                     className="px-6 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:brightness-110 transition-all flex items-center gap-2 disabled:opacity-40"
                   >
                     {uploading ? <Loader size={16} className="animate-spin" /> : <Upload size={16} />}
-                    {uploading ? `Uploading ${selectedFiles.length} pages...` : compressing ? 'Compressing...' : `Upload ${selectedFiles.length} Pages`}
+                    {uploading ? `Uploading ${selectedFiles.length} pages...` : `Upload ${selectedFiles.length} Pages`}
                   </button>
                 </div>
               </div>
