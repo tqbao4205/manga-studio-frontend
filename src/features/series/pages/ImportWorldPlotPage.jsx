@@ -143,6 +143,8 @@ export function ImportWorldPlotPage() {
 
   return (
     <div className="max-w-5xl mx-auto pt-container-padding pb-12 space-y-6">
+
+      {/* ── Nút "Back to Series Detail" — quay lại trang chi tiết series ── */}
       <button
         onClick={() => navigate(`/series/${id}`)}
         className="flex items-center text-on-surface-variant hover:text-primary transition-colors"
@@ -150,6 +152,7 @@ export function ImportWorldPlotPage() {
         <ArrowLeft size={16} className="mr-2" /> Back to Series Detail
       </button>
 
+      {/* ── Header: tiêu đề + mô tả trang ─────────────────────────────── */}
       <div className="bg-surface-container border border-outline-variant/30 rounded-xl p-6">
         <h1 className="text-headline-md font-semibold text-on-surface">
           Import World & Plot {series?.title ? `for ${series.title}` : ""}
@@ -160,6 +163,8 @@ export function ImportWorldPlotPage() {
         </p>
       </div>
 
+      {/* ── WorldPlotEditorSection — form nhập world lore + roadmap + visual refs ── */}
+      {/* Gồm: rich text editor world lore, input arc title/summary, upload ảnh tham khảo, nút Save */}
       <WorldPlotEditorSection
         loading={loading}
         worldLore={worldLore}

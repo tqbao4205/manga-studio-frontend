@@ -148,6 +148,8 @@ export function ImportCharactersPage() {
 
   return (
     <div className="max-w-5xl mx-auto pt-container-padding pb-12 space-y-6">
+
+      {/* ── Nút "Back to Series Detail" — quay lại trang chi tiết series ── */}
       <button
         onClick={() => navigate(`/series/${id}`)}
         className="flex items-center text-on-surface-variant hover:text-primary transition-colors"
@@ -155,6 +157,7 @@ export function ImportCharactersPage() {
         <ArrowLeft size={16} className="mr-2" /> Back to Series Detail
       </button>
 
+      {/* ── Header: tiêu đề + mô tả trang ─────────────────────────────── */}
       <div className="bg-surface-container border border-outline-variant/30 rounded-xl p-6">
         <h1 className="text-headline-md font-semibold text-on-surface">
           Import Characters {series?.title ? `for ${series.title}` : ""}
@@ -165,6 +168,8 @@ export function ImportCharactersPage() {
         </p>
       </div>
 
+      {/* ── CharacterEditorSection — form nhập từng character ────────── */}
+      {/* Gồm: input name, motivation, upload sketch, nút "Queue Character" */}
       <CharacterEditorSection
         name={name}
         motivation={motivation}
@@ -181,17 +186,22 @@ export function ImportCharactersPage() {
         characters={characters}
       />
 
+      {/* ── Danh sách characters đã queue — chờ import batch ──────────── */}
       {queuedCharacters.length > 0 && (
         <div className="bg-surface-container border border-outline-variant/30 rounded-xl p-6 space-y-4">
+          {/* Tiêu đề: số lượng character đang chờ */}
           <h2 className="text-lg font-semibold text-on-surface">
             Characters to Import ({queuedCharacters.length})
           </h2>
+
+          {/* Danh sách các character đã queue */}
           <div className="space-y-2">
             {queuedCharacters.map((c, i) => (
               <div
                 key={i}
                 className="flex items-center justify-between rounded-lg border border-outline-variant/30 p-3 bg-surface-container-low"
               >
+                {/* Ảnh preview + tên + số sketch */}
                 <div className="flex items-center gap-3">
                   {c.sketchPreviews.length > 0 && (
                     <img
@@ -209,6 +219,7 @@ export function ImportCharactersPage() {
                     </p>
                   </div>
                 </div>
+                {/* Nút xóa khỏi queue */}
                 <button
                   type="button"
                   onClick={() => handleRemoveFromQueue(i)}
@@ -219,6 +230,8 @@ export function ImportCharactersPage() {
               </div>
             ))}
           </div>
+
+          {/* ── Progress bar — hiển thị khi đang upload ──────────────── */}
           {saving && (
             <div className="w-full bg-surface-container-highest rounded-full h-2 overflow-hidden">
               <div
@@ -227,6 +240,8 @@ export function ImportCharactersPage() {
               />
             </div>
           )}
+
+          {/* ── Nút "Import All" — gửi batch lên backend ──────────────── */}
           <div className="flex items-center gap-3">
             <button
               type="button"
@@ -244,7 +259,6 @@ export function ImportCharactersPage() {
           </div>
         </div>
       )}
-
 
     </div>
   );

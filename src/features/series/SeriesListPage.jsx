@@ -1,32 +1,33 @@
 /**
- * ─────────────────────────────────────────────
- *  SeriesListPage — Trang danh sách series
- *  Route: /series
- * ─────────────────────────────────────────────
+ * ──────────────────────────────────────────────────────────────────
+ *  SeriesListPage — Trang danh sách Series (Route: /series)
+ * ──────────────────────────────────────────────────────────────────
  *
- * 🎯 Mục đích:
- *   - Hiển thị danh sách series dưới dạng grid card
- *   - Cho phép tìm kiếm, lọc theo genre/status, sắp xếp, phân trang
- *   - Liên kết đến SeriesDetailPage khi click vào card
+ *  📌 Trang này có 2 tab (chế độ xem):
+ *     1. "Browse" 📖  — dành cho tất cả user: xem danh sách dạng grid card
+ *     2. "Management" ⚙️ — chỉ EDITORIAL_BOARD / CHIEF_EDITOR: quản lý trạng thái series
  *
- * 🔄 Luồng dữ liệu (so với bản cũ dùng mock):
- *   - Bản cũ: lấy seriesList từ store (khởi tạo từ mock-data.js),
- *             filter + sort bằng useMemo client-side
- *   - Bản mới: useEffect gọi fetchAll(params) mỗi khi filter thay đổi,
- *              backend xử lý filter + sort + phân trang,
- *              store cập nhật seriesList với kết quả từ API
+ *  🧩 Các thành phần chính trên trang:
+ *     ┌─ Header: tiêu đề + tab Browse/Management
+ *     ├─ Search & Filter Bar: input search + dropdown Genre/Status/Sort
+ *     ├─ Series Grid: danh sách series dạng card (cover + thông tin + actions)
+ *     ├─ Pagination: phân trang (previous, số trang, next, go-to-page)
+ *     └─ Management Table: bảng danh sách cho EB/CE quản lý status
  *
- * 📦 State:
- *   - search, genre, status, sortBy → filter params gửi lên backend
- *   - page → phân trang (backend tính totalPages)
- *   - seriesList, isLoading, error, totalElements, totalPages → từ store
+ *  🔗 API gọi:
+ *     - GET /api/series?status=...&genre=...&search=...&page=...&size=...&sort=...
+ *       → Backend dùng SeriesSpecification động, filter theo role user:
+ *         • MANGAKA → chỉ series của mình
+ *         • TANTOU_EDITOR → chỉ series mình phụ trách
+ *         • EDITORIAL_BOARD / ASSISTANT → tất cả
+ *     - GET /api/ranking/at-risk (cho tab Management)
+ *     - PATCH /api/series/{id}/status (chuyển trạng thái series)
  *
- * 🔗 API gọi:
- *   - GET /api/series?status=...&genre=...&search=...&page=...&size=...&sort=...
- *   - Backend SeriesSpecification filter theo role:
- *     - MANGAKA: chỉ thấy series của mình
- *     - TANTOU_EDITOR: chỉ thấy series mình phụ trách
- *     - EDITORIAL_BOARD / ASSISTANT: thấy tất cả
+ *  🔄 Luồng dữ liệu:
+ *     useEffect gọi fetchAll(params) mỗi khi filter thay đổi
+ *     → Backend xử lý filter + sort + phân trang
+ *     → Store (seriesStore) cập nhật seriesList, totalElements, totalPages
+ *     → Component re-render hiển thị grid mới
  */
 
 import { useState, useEffect } from 'react'
@@ -42,14 +43,22 @@ import { Dialog } from '../../shared/components/ui/dialog'
 import { LoadingSpinner } from '../../shared/components/shared/LoadingSpinner'
 import { seriesPlaceholder } from '../../shared/constants/mock-data'
 
-// ── Danh sách genre / status ──
-// Các giá trị này khớp với enum trong backend:
-//   Genre.java: ACTION, FANTASY, ROMANCE, COMEDY, DRAMA
-//   SeriesStatus.java: DRAFT, PENDING_APPROVAL, APPROVED, ONGOING, HIATUS, ...
+// ═══════════════════════════════════════════════════════════════════
+//  CÁC HẰNG SỐ FILTER & HIỂN THỊ
+// ═══════════════════════════════════════════════════════════════════
+
+// ── Genre list ────────────────────────────────────────────────────
+// Khớp với enum Genre.java backend: ACTION, FANTASY, ROMANCE, COMEDY, DRAMA
+// Các giá trị này được dùng trong dropdown filter "Genre" ở Browse tab
 const genres = ['ACTION', 'FANTASY', 'ROMANCE', 'COMEDY', 'DRAMA']
+
+// ── Status list ───────────────────────────────────────────────────
+// Khớp với enum SeriesStatus.java backend (DRAFT, PENDING_TANTOU, ONGOING, ...)
+// Dùng trong dropdown filter "Status" ở Browse tab + Management tab
 const statuses = ['DRAFT', 'PENDING_APPROVAL', 'APPROVED', 'ONGOING', 'HIATUS', 'CANCELLED', 'COMPLETED', 'AT_RISK', 'PENDING_TANTOU', 'PENDING_BOARD_VOTE']
 
-// Labels hiển thị cho người dùng (tiếng Anh để đồng bộ UI)
+// ── Labels hiển thị trên UI ───────────────────────────────────────
+// Map từ enum value → text hiển thị cho người dùng
 const genreLabels = { ACTION: 'Action', FANTASY: 'Fantasy', ROMANCE: 'Romance', COMEDY: 'Comedy', DRAMA: 'Drama' }
 const statusLabels = {
   DRAFT: 'Draft',
@@ -65,7 +74,9 @@ const statusLabels = {
   PENDING_BOARD_VOTE: 'Pending Editorial Review',
 }
 
-// Màu sắc cho mỗi status badge (dùng Tailwind classes)
+// ── Màu sắc cho Status Badge (Browse tab - grid card) ────────────
+// Mỗi status có màu riêng để dễ nhận biết trực quan
+// Dùng Tailwind classes: bg/text/border với độ trong suốt
 const statusColorMap = {
   ONGOING: 'bg-green-500/10 text-green-400 border-green-500/20',
   APPROVED: 'bg-green-500/10 text-green-400 border-green-500/20',
@@ -80,8 +91,8 @@ const statusColorMap = {
   PENDING_BOARD_VOTE: 'bg-orange-500/10 text-orange-400 border-orange-500/20',
 }
 
-// Options cho sort dropdown
-// Giá trị khớp với enum SeriesSortBy.java:
+// ── Sort Options ──────────────────────────────────────────────────
+// Dropdown sắp xếp — value khớp với enum SeriesSortBy.java:
 //   UPDATED_AT_DESC (mới nhất), TITLE_ASC (A-Z), CHAPTER_COUNT_DESC (nhiều chapter nhất)
 const sortOptions = [
   { value: 'UPDATED_AT_DESC', label: 'Latest' },
@@ -89,6 +100,12 @@ const sortOptions = [
   { value: 'CHAPTER_COUNT_DESC', label: 'Most Chapters' },
 ]
 
+// ═══════════════════════════════════════════════════════════════════
+//  HẰNG SỐ CHO TAB MANAGEMENT (chỉ EDITORIAL_BOARD / CHIEF_EDITOR)
+// ═══════════════════════════════════════════════════════════════════
+
+// ── Màu sắc Status cho Management Table ──────────────────────────
+// Khác với Browse tab (statusColorMap) vì giao diện bảng khác card grid
 const mgmtStatusColors = {
   ONGOING: 'bg-green-500/10 text-green-400 border-green-500/20',
   AT_RISK: 'bg-red-500/10 text-red-400 border-red-500/20',
@@ -98,6 +115,12 @@ const mgmtStatusColors = {
   DRAFT: 'bg-gray-500/10 text-gray-400 border-gray-500/20',
 }
 
+// ── State Machine chuyển trạng thái series ───────────────────────
+// Định nghĩa status nào có thể chuyển sang status nào
+// VD: ONGOING → HIATUS / AT_RISK / CANCELLED / COMPLETED
+//     AT_RISK → ONGOING / CANCELLED
+//     HIATUS  → ONGOING / CANCELLED
+// Các status không có trong map (CANCELLED, COMPLETED, DRAFT) → không thể chuyển
 const mgmtTransitions = {
   ONGOING: ['HIATUS', 'AT_RISK', 'CANCELLED', 'COMPLETED'],
   AT_RISK: ['ONGOING', 'CANCELLED'],
@@ -105,38 +128,61 @@ const mgmtTransitions = {
 }
 
 export function SeriesListPage() {
+  // ═════════════════════════════════════════════════════════════════
+  //  HOOKS & STORES
+  // ═════════════════════════════════════════════════════════════════
+
   const navigate = useNavigate()
-  const user = useAuthStore((s) => s.user)
-  const isEbCe = user?.role === 'EDITORIAL_BOARD' || user?.role === 'CHIEF_EDITOR'
-  const [activeTab, setActiveTab] = useState(isEbCe ? 'management' : 'browse')
+  const user = useAuthStore((s) => s.user)              // User hiện tại (lấy từ auth store)
+  const isEbCe = user?.role === 'EDITORIAL_BOARD' || user?.role === 'CHIEF_EDITOR'  // Check role EB/CE
+  const [activeTab, setActiveTab] = useState(isEbCe ? 'management' : 'browse')  // Tab mặc định
 
+  // ── Series Store ────────────────────────────────────────────────
+  // seriesList: danh sách series từ API (Page<SeriesResponse>)
+  // isLoading: trạng thái loading
+  // error: lỗi từ API
+  // totalElements / totalPages: thông tin phân trang (backend trả về)
+  // fetchAll(params): gọi GET /api/series với params filter
   const { seriesList, isLoading, error, totalElements, totalPages, fetchAll } = useSeriesStore()
-  const { atRiskSeries, fetchAtRisk } = useRankingStore()
-  const addToast = useUIStore((s) => s.addToast)
-  const [mgmtSearch, setMgmtSearch] = useState('')
-  const [confirmOpen, setConfirmOpen] = useState(false)
-  const [pendingAction, setPendingAction] = useState(null)
-  const [updatingId, setUpdatingId] = useState(null)
+  const { atRiskSeries, fetchAtRisk } = useRankingStore()  // Danh sách series "có nguy cơ"
+  const addToast = useUIStore((s) => s.addToast)           // Hiển thị toast thông báo
 
-  // ── Local state cho filter ──
-  // Các state này được dùng để xây dựng params gửi lên backend
-  const [search, setSearch] = useState('')
-  const [genre, setGenre] = useState('ALL')
-  const [status, setStatus] = useState('ALL')
-  const [sortBy, setSortBy] = useState('UPDATED_AT_DESC')
-  const [page, setPage] = useState(0)
-  const [goToPage, setGoToPage] = useState('')
-  const pageSize = 6
-  const isFiltered = search !== '' || genre !== 'ALL' || status !== 'ALL'
+  // ── State cho Management tab ────────────────────────────────────
+  const [mgmtSearch, setMgmtSearch] = useState('')    // Input tìm kiếm trong Management
+  const [confirmOpen, setConfirmOpen] = useState(false) // Dialog xác nhận "Cancel Series"
+  const [pendingAction, setPendingAction] = useState(null) // Action đang chờ xác nhận
+  const [updatingId, setUpdatingId] = useState(null)    // Series ID đang cập nhật status
 
-  // ── useEffect: Browse tab — gọi API khi filter thay đổi ──
+  // ═════════════════════════════════════════════════════════════════
+  //  FILTER STATE (Browse tab)
+  // ═════════════════════════════════════════════════════════════════
+  // Các state này tạo thành params object gửi lên backend:
+  //   { search: string, genre: 'ALL'|enum, status: 'ALL'|enum, page: int, size: int, sort: enum }
+  // Backend dùng SeriesSpecification để build WHERE động + OrderBy + Pageable
+  const [search, setSearch] = useState('')    // Từ khóa tìm kiếm (LIKE %title%)
+  const [genre, setGenre] = useState('ALL')   // Lọc theo genre ('ALL' = không lọc)
+  const [status, setStatus] = useState('ALL') // Lọc theo status ('ALL' = không lọc)
+  const [sortBy, setSortBy] = useState('UPDATED_AT_DESC')  // Sắp xếp
+  const [page, setPage] = useState(0)         // Trang hiện tại (0-indexed)
+  const [goToPage, setGoToPage] = useState('') // Input "Go to page"
+  const pageSize = 6                          // Số item mỗi trang (hardcode 6)
+  const isFiltered = search !== '' || genre !== 'ALL' || status !== 'ALL' // Đã filter chưa?
+
+  // ═════════════════════════════════════════════════════════════════
+  //  EFFECTS
+  // ═════════════════════════════════════════════════════════════════
+
+  // ── Effect 1: Browse — gọi API mỗi khi filter thay đổi ─────────
+  // Khi user thay đổi search/genre/status/sortBy/page → fetchAll với params mới
+  // Backend xử lý filter + sort + phân trang, trả về Page<SeriesResponse>
   useEffect(() => {
     if (activeTab === 'browse') {
       fetchAll({ search, genre, status, page, size: pageSize, sort: sortBy })
     }
   }, [activeTab, fetchAll, search, genre, status, page, sortBy])
 
-  // ── useEffect: Management tab — fetch all series + at-risk data ──
+  // ── Effect 2: Management — tải tất cả series + at-risk ─────────
+  // Khi chuyển sang tab Management, gọi API lấy 100 series + danh sách at-risk
   useEffect(() => {
     if (activeTab === 'management') {
       fetchAll({ size: 100 })
@@ -144,33 +190,51 @@ export function SeriesListPage() {
     }
   }, [activeTab, fetchAll, fetchAtRisk])
 
-  // Reset về trang 0 khi thay đổi filter
+  // ── Effect 3: Reset về trang 0 khi filter thay đổi ─────────────
+  // Tránh trường hợp đang ở trang 5 rồi filter → page 5 không còn tồn tại
   useEffect(() => {
     if (activeTab === 'browse') setPage(0)
   }, [activeTab, search, genre, status, sortBy])
 
-  // Xử lý "Go to page" — nhập số trang rồi Enter
+  // ═════════════════════════════════════════════════════════════════
+  //  HANDLER FUNCTIONS
+  // ═════════════════════════════════════════════════════════════════
+
+  // ── Go-to-page: nhập số trang → Enter → chuyển trang ──────────
+  // page trong state là 0-indexed, UI hiển thị 1-indexed
   const handleGoToPage = (e) => {
     if (e.key === 'Enter') {
-      const p = parseInt(goToPage, 10)
-      if (!isNaN(p) && p >= 1 && p <= totalPages) setPage(p - 1)
-      setGoToPage('')
+      const p = parseInt(goToPage, 10)       // parse input → số
+      if (!isNaN(p) && p >= 1 && p <= totalPages) setPage(p - 1)  // chuyển về 0-indexed
+      setGoToPage('')                           // reset input
     }
   }
 
-  // ── Management handlers ──
+  // ═════════════════════════════════════════════════════════════════
+  //  MANAGEMENT LOGIC (chỉ dùng trong tab Management)
+  // ═════════════════════════════════════════════════════════════════
+
+  // ── atRiskMap: Map<seriesId, atRiskItem> ───────────────────────
+  // Biến atRiskSeries từ rankingStore chứa danh sách series "có nguy cơ" (ranking thấp)
+  // atRiskMap giúp O(1) lookup để đánh dấu series nào đang at-risk trong bảng
   const atRiskMap = (() => {
     const map = {}
     atRiskSeries.forEach((item) => { map[item.seriesId] = item })
     return map
   })()
 
+  // ── mgmtFiltered: lọc danh sách quản lý theo từ khóa ──────────
+  // Management tab dùng client-side filter (không gọi API riêng)
+  // Vì đã fetchAll({size: 100}) — lọc trên 100 kết quả có sẵn
   const mgmtFiltered = (() => {
     if (!mgmtSearch) return seriesList
     const q = mgmtSearch.toLowerCase()
     return seriesList.filter((s) => s.title?.toLowerCase().includes(q))
   })()
 
+  // ── handleStatusChange: xử lý chọn status mới từ dropdown ─────
+  // Nếu chọn CANCELLED → mở dialog xác nhận trước khi thực hiện
+  // Các status khác → gọi API update ngay
   const handleStatusChange = (seriesId, newStatus) => {
     if (newStatus === 'CANCELLED') {
       setPendingAction({ seriesId, status: newStatus })
@@ -180,22 +244,29 @@ export function SeriesListPage() {
     }
   }
 
+  // ── doUpdateStatus: gọi API PATCH /api/series/{id}/status ─────
+  // Gọi seriesService.updateStatus() → backend SeriesWorkflowService.updateStatus()
+  // Sau khi thành công: toast báo + reload danh sách + reload at-risk
   const doUpdateStatus = async (seriesId, status) => {
-    setUpdatingId(seriesId)
+    setUpdatingId(seriesId)                    // Đánh dấu row đang loading
     try {
       await seriesService.updateStatus(seriesId, { status })
       addToast({ type: 'success', title: 'Status updated', message: `Series is now ${statusLabels[status] || status}` })
-      fetchAll({ size: 100 })
-      fetchAtRisk()
+      fetchAll({ size: 100 })                // Refresh danh sách
+      fetchAtRisk()                          // Refresh at-risk
     } catch (err) {
       addToast({ type: 'error', title: 'Update failed', message: err.message })
     } finally {
-      setUpdatingId(null)
-      setConfirmOpen(false)
-      setPendingAction(null)
+      setUpdatingId(null)                    // Bỏ loading
+      setConfirmOpen(false)                  // Đóng dialog
+      setPendingAction(null)                 // Clear pending
     }
   }
 
+  // ── getAvailableOptions: lấy danh sách status có thể chuyển ────
+  // Dựa vào mgmtTransitions map (state machine)
+  // CANCELLED / COMPLETED là terminal status → không thể chuyển tiếp
+  // Status không có trong mgmtTransitions → trả về [] (không có dropdown)
   const getAvailableOptions = (status) => {
     if (status === 'CANCELLED' || status === 'COMPLETED') return []
     return mgmtTransitions[status] || []
@@ -203,7 +274,7 @@ export function SeriesListPage() {
 
   return (
     <div className="px-10 py-10 max-w-[1400px] mx-auto" style={{ fontFamily: 'Geist, sans-serif' }}>
-      {/* ═══ Header ═══ */}
+      {/* ── Header: Tiêu đề trang "Manga Series" + mô tả ────────────────── */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
         <div className="space-y-3">
           <h1 className="text-4xl font-bold tracking-tight text-white">Manga Series</h1>
@@ -211,8 +282,10 @@ export function SeriesListPage() {
             Manage and track your manga series from draft to final publication.
           </p>
         </div>
-        {/* Tabs: Browse / Management */}
+
+        {/* ── Tab bar: Browse (cho tất cả) / Management (chỉ EB/CE) ───── */}
         <div className="flex items-center gap-4 bg-surface-container-low p-1 rounded-2xl border border-outline-variant/30">
+          {/* Nút tab "Browse" — chuyển sang chế độ xem grid card */}
           <button
             onClick={() => setActiveTab('browse')}
             className={`px-6 py-2 rounded-xl text-sm font-bold transition-all ${
@@ -223,6 +296,7 @@ export function SeriesListPage() {
           >
             Browse
           </button>
+          {/* Nút tab "Management" — ẩn nếu user không phải EB/CE */}
           {isEbCe && (
             <button
               onClick={() => setActiveTab('management')}
@@ -238,12 +312,15 @@ export function SeriesListPage() {
         </div>
       </div>
 
-      {/* ═══ Browse View ═══ */}
+      {/* ═══════════════════════════════════════════════════════════════════
+          BROWSE TAB
+      ═══════════════════════════════════════════════════════════════════ */}
       {activeTab === 'browse' && (
       <>
-      {/* ═══ Search & Filter Bar ═══ */}
+
+      {/* ── Search & Filter Bar ────────────────────────────────────────── */}
       <div className="glass-panel rounded-3xl p-4 mb-10 flex flex-col lg:flex-row gap-4 items-center border border-outline-variant/20">
-        {/* Ô tìm kiếm — gửi search param lên backend LIKE %title% */}
+        {/* Input tìm kiếm — gõ text → setSearch() → fetch lại danh sách */}
         <div className="relative flex-1 w-full">
           <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-outline" />
           <input
@@ -255,7 +332,7 @@ export function SeriesListPage() {
           />
         </div>
         <div className="flex flex-wrap gap-3 w-full lg:w-auto">
-          {/* Filter Genre */}
+          {/* Dropdown Genre — lọc theo genre enum */}
           <div className="relative group">
             <select
               value={genre}
@@ -267,7 +344,7 @@ export function SeriesListPage() {
             </select>
             <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-outline pointer-events-none text-xl">expand_more</span>
           </div>
-          {/* Filter Status — dùng status enum từ backend */}
+          {/* Dropdown Status — lọc theo status enum */}
           <div className="relative group">
             <select
               value={status}
@@ -279,7 +356,7 @@ export function SeriesListPage() {
             </select>
             <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-outline pointer-events-none text-xl">expand_more</span>
           </div>
-          {/* Sort — gửi sort param, backend dùng Spring Data Sort */}
+          {/* Dropdown Sort — sắp xếp kết quả */}
           <div className="relative group">
             <select
               value={sortBy}
@@ -295,14 +372,14 @@ export function SeriesListPage() {
         </div>
       </div>
 
-      {/* ═══ Loading State ═══ */}
+      {/* ── Loading spinner — hiển thị khi đang gọi API ────────────── */}
       {isLoading && (
         <div className="flex justify-center py-20">
           <div className="animate-spin rounded-full h-10 w-10 border-2 border-primary border-t-transparent" />
         </div>
       )}
 
-      {/* ═══ Error State ═══ */}
+      {/* ── Error state — hiển thị khi API lỗi ──────────────────────── */}
       {error && (
         <div className="flex flex-col items-center justify-center py-20 text-center">
           <span className="material-symbols-outlined text-6xl text-red-400 mb-4">error</span>
@@ -311,20 +388,23 @@ export function SeriesListPage() {
         </div>
       )}
 
-      {/* ═══ Empty State ═══ */}
+      {/* ── Empty state — hiển thị khi không có series nào ──────────── */}
       {!isLoading && !error && seriesList.length === 0 ? (
         isFiltered ? (
+          /* Trường hợp đang filter → gợi ý bỏ filter */
           <div className="flex flex-col items-center justify-center py-20 text-center">
             <span className="material-symbols-outlined text-6xl text-outline mb-4">auto_stories</span>
             <h3 className="text-xl font-bold text-white mb-2">No series found</h3>
             <p className="text-on-surface-variant">Try changing your search or filter criteria.</p>
           </div>
         ) : (
+          /* Trường hợp chưa tạo series nào → nút Create New Series */
           <div className="flex flex-col items-center justify-center py-20 text-center">
             <span className="material-symbols-outlined text-6xl text-outline mb-4">auto_stories</span>
             <h3 className="text-xl font-bold text-white mb-2">No series yet</h3>
             <p className="text-on-surface-variant mb-8">Get started by creating your first manga series.</p>
             {user?.role === 'MANGAKA' && (
+              /* Nút "Create New Series" — chỉ MANGAKA, navigate đến /series/new */
               <button
                 onClick={() => navigate('/series/new')}
                 className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-xl font-bold hover:bg-primary/90 transition-all"
@@ -337,28 +417,29 @@ export function SeriesListPage() {
         )
       ) : null}
 
-      {/* ═══ Series Grid ═══ */}
+      {/* ── Series Grid — danh sách series dạng card ──────────────────── */}
       {!isLoading && !error && seriesList.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
           {seriesList.map((series) => {
-            // Mỗi series từ API có:
-            //   - coverImageUrl: string (ảnh thật từ Cloudinary) hoặc null
-            //   - coverColor: string (màu nền fallback)
-            //   - mangaka: UserDTO object (có id, displayName, email...)
-            //   - chapterCount: number (denormalized từ chapter module)
-            //   - genres: string[] (từ List<Genre> trong backend)
-            //   - status: string (từ enum SeriesStatus.name())
+            // Dữ liệu mỗi series lấy từ API response (SeriesResponse):
+            //   coverImageUrl: URL ảnh từ Cloudinary (hoặc null)
+            //   coverColor: màu nền fallback (hex)
+            //   mangaka: { id, displayName, email, username, role, avatarUrl }
+            //   chapterCount: số chapter (denormalized, backend tính)
+            //   genres: ["ACTION", "FANTASY"] — từ collection table series_genres
+            //   status: "DRAFT" | "ONGOING" | ... — từ enum SeriesStatus
             const coverUrl = series.coverImageUrl || seriesPlaceholder(series.title, series.coverColor)
             const mangaka = series.mangaka
 
             return (
+              /* Card series — click vào → navigate đến /series/{id} */
               <div
                 key={series.id}
                 className="bg-surface-container-low rounded-3xl p-5 card-hover group relative overflow-hidden border border-outline-variant/20 cursor-pointer"
                 onClick={() => navigate(`/series/${series.id}`)}
               >
                 <div className="flex gap-5">
-                  {/* Ảnh bìa — nếu không có URL thì dùng placeholder SVG */}
+                  {/* Ảnh bìa — từ Cloudinary hoặc placeholder SVG */}
                   <div className="relative w-32 h-44 rounded-2xl overflow-hidden shrink-0 shadow-xl border border-white/5">
                     <img
                       className="w-full h-full object-cover"
@@ -367,11 +448,13 @@ export function SeriesListPage() {
                     />
                   </div>
 
-                  {/* Thông tin series */}
+                  {/* Thông tin series bên phải ảnh bìa */}
                   <div className="flex-1 flex flex-col justify-between py-1">
                     <div>
                       <div className="flex justify-between items-start">
+                        {/* Tên series */}
                         <h3 className="text-xl font-bold text-white leading-tight group-hover:text-primary transition-colors">{series.title}</h3>
+                        {/* Nút menu 3 chấm (chưa implement action) */}
                         <button
                           onClick={(e) => { e.stopPropagation() }}
                           className="text-on-surface-variant hover:text-white"
@@ -399,7 +482,7 @@ export function SeriesListPage() {
                       </div>
                     </div>
 
-                    {/* Chapter count — từ backend denormalized field */}
+                    {/* Số chapter */}
                     <div className="flex items-center gap-4 text-on-surface-variant">
                       <div className="flex items-center gap-1.5">
                         <span className="material-symbols-outlined text-base">auto_stories</span>
@@ -409,15 +492,16 @@ export function SeriesListPage() {
                   </div>
                 </div>
 
-                {/* Hover Actions — chỉ hiện khi hover vào card */}
+                {/* ── Hover actions — chỉ hiện khi hover vào card ────── */}
                 <div className="mt-4 flex items-center gap-3 opacity-0 group-hover:opacity-100 transition-all translate-y-2 group-hover:translate-y-0 duration-300">
+                  {/* Nút "View Details" — xem chi tiết series */}
                   <button
                     onClick={(e) => { e.stopPropagation(); navigate(`/series/${series.id}`) }}
                     className="flex-1 bg-surface-container-high hover:bg-primary hover:text-on-primary text-white py-2.5 rounded-xl text-xs font-bold transition-all border border-outline-variant/30"
                   >
                     View Details
                   </button>
-                  {/* Chỉ MANGAKA mới thấy nút Edit */}
+                  {/* Nút Edit (icon bút) — chỉ MANGAKA, navigate đến /series/{id}/edit */}
                   {user?.role === 'MANGAKA' && (
                     <button
                       onClick={(e) => { e.stopPropagation(); navigate(`/series/${series.id}/edit`) }}
@@ -431,7 +515,7 @@ export function SeriesListPage() {
             )
           })}
 
-          {/* ═══ Card "Tạo series mới" (chỉ MANGAKA) ═══ */}
+          {/* ── Card "Create New Series" — chỉ MANGAKA, dashed border ───── */}
           {user?.role === 'MANGAKA' && (
             <div
               onClick={() => navigate('/series/new')}
@@ -449,16 +533,15 @@ export function SeriesListPage() {
         </div>
       )}
 
-      {/* ═══ Pagination ═══ */}
-      {/* totalPages > 1 mới hiện pagination */}
+      {/* ── Pagination — phân trang, chỉ hiện khi totalPages > 1 ─────────── */}
       {totalPages > 1 && (
         <div className="mt-16 flex flex-col md:flex-row items-center justify-between gap-6 border-t border-outline-variant/30 pt-8">
-          {/* Hiển thị "Showing 1-6 of 24 series" */}
+          {/* Text hiển thị "Showing X-Y of Z series" */}
           <p className="text-on-surface-variant text-sm">
             Showing <span className="text-white font-medium">{page * pageSize + 1}-{Math.min((page + 1) * pageSize, totalElements)}</span> of <span className="text-white font-medium">{totalElements}</span> series
           </p>
           <div className="flex items-center gap-2">
-            {/* Nút Previous */}
+            {/* Nút Previous trang */}
             <button
               onClick={() => setPage(page - 1)}
               disabled={page === 0}
@@ -466,22 +549,21 @@ export function SeriesListPage() {
             >
               <ChevronLeft size={18} />
             </button>
-            {/* Các nút số trang */}
+            {/* Các nút số trang + dấu ... */}
             <div className="flex items-center gap-2">
               {(() => {
-                // Logic hiển thị số trang: ... 1 2 [3] 4 5 ...
                 const pages = []
                 const range = 2
                 const start = Math.max(0, page - range)
                 const end = Math.min(totalPages - 1, page + range)
                 if (start > 0) {
-                  pages.push(0)                               // Trang đầu
-                  if (start > 1) pages.push('...')            // Dấu ...
+                  pages.push(0)
+                  if (start > 1) pages.push('...')
                 }
                 for (let i = start; i <= end; i++) pages.push(i)
                 if (end < totalPages - 1) {
-                  if (end < totalPages - 2) pages.push('...')  // Dấu ...
-                  pages.push(totalPages - 1)                   // Trang cuối
+                  if (end < totalPages - 2) pages.push('...')
+                  pages.push(totalPages - 1)
                 }
                 return pages.map((p, i) =>
                   p === '...' ? (
@@ -502,7 +584,7 @@ export function SeriesListPage() {
                 )
               })()}
             </div>
-            {/* Nút Next */}
+            {/* Nút Next trang */}
             <button
               onClick={() => setPage(page + 1)}
               disabled={page >= totalPages - 1}
@@ -511,7 +593,7 @@ export function SeriesListPage() {
               <ChevronRight size={18} />
             </button>
           </div>
-          {/* Ô nhập số trang */}
+          {/* Input "Go to page" — nhập số trang → Enter để chuyển */}
           <div className="flex items-center gap-3">
             <span className="text-sm text-on-surface-variant">Go to page</span>
             <input
@@ -528,9 +610,13 @@ export function SeriesListPage() {
       </>
       )}
 
-      {/* ═══ Management View ═══ */}
+      {/* ═══════════════════════════════════════════════════════════════════
+          MANAGEMENT TAB — Bảng quản lý (chỉ EB/CE)
+      ═══════════════════════════════════════════════════════════════════ */}
       {activeTab === 'management' && (
       <div>
+
+        {/* ── Management Search Bar — lọc client-side trên 100 kết quả ──── */}
         <div className="glass-panel rounded-3xl p-4 mb-8 border border-outline-variant/20">
           <div className="relative flex-1 w-full">
             <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-outline" />
@@ -545,17 +631,21 @@ export function SeriesListPage() {
         </div>
 
         {isLoading ? (
+          /* Loading spinner */
           <div className="flex justify-center py-20">
             <LoadingSpinner size="lg" />
           </div>
         ) : error ? (
+          /* Error state */
           <div className="flex flex-col items-center justify-center py-20 text-center">
             <span className="material-symbols-outlined text-6xl text-red-400 mb-4">error</span>
             <h3 className="text-xl font-bold text-white mb-2">Failed to load series</h3>
             <p className="text-on-surface-variant">{error}</p>
           </div>
         ) : (
+          /* ── Management Table ────────────────────────────────────────── */
           <div className="rounded-2xl overflow-hidden border border-outline-variant/20">
+            {/* Header bảng: # | Title | Schedule | Status */}
             <div className="grid grid-cols-12 gap-4 px-6 py-4 bg-surface-container-low text-xs font-bold text-on-surface-variant/60 uppercase tracking-wider">
               <div className="col-span-1">#</div>
               <div className="col-span-7">Title</div>
@@ -564,6 +654,7 @@ export function SeriesListPage() {
             </div>
             <div className="divide-y divide-outline-variant/10">
               {mgmtFiltered.length === 0 ? (
+                /* Empty trong management */
                 <div className="flex flex-col items-center justify-center py-16 text-center">
                   <span className="material-symbols-outlined text-5xl text-outline mb-3">search_off</span>
                   <p className="text-on-surface-variant">No series match your search.</p>
@@ -574,19 +665,24 @@ export function SeriesListPage() {
                   const isAtRisk = series.status === 'AT_RISK'
                   const options = getAvailableOptions(series.status)
                   return (
+                    /* Mỗi dòng trong bảng */
                     <div key={series.id}
                       className={cn(
                         'grid grid-cols-12 gap-4 px-6 py-4 items-center transition-colors',
                         isAtRisk ? 'bg-red-500/5' : 'hover:bg-surface-container-low',
                       )}
                     >
+                      {/* STT */}
                       <div className="col-span-1 text-sm text-on-surface-variant">{idx + 1}</div>
+                      {/* Title + cover thumbnail */}
                       <div className="col-span-7 flex items-center gap-3 min-w-0">
+                        {/* Cover thumbnail nhỏ */}
                         {series.coverImageUrl ? (
                           <img src={series.coverImageUrl} alt="" className="w-8 h-11 rounded object-cover shrink-0" />
                         ) : (
                           <div className="w-8 h-11 rounded shrink-0" style={{ backgroundColor: series.coverColor || '#6B21A8' }} />
                         )}
+                        {/* Tên series + icon at-risk */}
                         <div className="min-w-0">
                           <p className="text-sm font-medium text-white truncate flex items-center gap-2">
                             {series.title}
@@ -594,11 +690,14 @@ export function SeriesListPage() {
                           </p>
                         </div>
                       </div>
+                      {/* Schedule type — lịch xuất bản (WEEKLY/MONTHLY) */}
                       <div className="col-span-2 text-sm text-on-surface-variant">
                         {series.scheduleType || '\u2014'}
                       </div>
+                      {/* Status dropdown — chuyển trạng thái series */}
                       <div className="col-span-2">
                         {options.length > 0 ? (
+                          /* Dropdown chuyển status (ONGOING, AT_RISK, HIATUS có thể chuyển) */
                           <select
                             value={series.status}
                             onChange={(e) => handleStatusChange(series.id, e.target.value)}
@@ -610,9 +709,11 @@ export function SeriesListPage() {
                               mgmtStatusColors[series.status] || 'text-on-surface border-outline-variant/30',
                             )}
                           >
+                            {/* Option hiện tại (disabled, không thể chọn lại) */}
                             <option value={series.status} disabled>
                               {statusLabels[series.status] || series.status}
                             </option>
+                            {/* Các status có thể chuyển đến */}
                             {options.map((opt) => (
                               <option key={opt} value={opt} className="text-on-surface bg-surface-container">
                                 {statusLabels[opt] || opt}
@@ -620,6 +721,7 @@ export function SeriesListPage() {
                             ))}
                           </select>
                         ) : (
+                          /* Text tĩnh — khi series ở terminal status (CANCELLED/COMPLETED) */
                           <span className={cn(
                             'inline-block px-3 py-1.5 rounded-xl text-xs font-bold border',
                             mgmtStatusColors[series.status] || 'bg-surface-container-high text-on-surface-variant border-outline-variant/30',
@@ -638,19 +740,22 @@ export function SeriesListPage() {
       </div>
       )}
 
-      {/* ═══ Footer ═══ */}
+      {/* ── Footer: Copyright + links + version ──────────────────────────── */}
       <footer className="mt-20 border-t border-outline-variant/30 py-10">
         <div className="flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="text-on-surface-variant text-xs">© 2024 MangaFlow Creative Engine. All rights reserved.</p>
           <div className="flex items-center gap-6">
+            {/* Link API Reference */}
             <a className="text-on-surface-variant hover:text-primary transition-colors text-xs" href="#">API Reference</a>
+            {/* Link Privacy Policy */}
             <a className="text-on-surface-variant hover:text-primary transition-colors text-xs" href="#">Privacy Policy</a>
+            {/* Version badge */}
             <span className="text-outline/30 text-xs px-2 py-1 rounded bg-surface-container-highest">v2.4.0-pro</span>
           </div>
         </div>
       </footer>
 
-      {/* ═══ Cancel Confirm Dialog ═══ */}
+      {/* ── Dialog xác nhận "Cancel Series" — khi EB/CE chọn CANCELLED ──── */}
       <Dialog
         open={confirmOpen}
         onClose={() => { setConfirmOpen(false); setPendingAction(null) }}
@@ -659,12 +764,14 @@ export function SeriesListPage() {
         size="sm"
       >
         <div className="flex items-center gap-4 pt-4">
+          {/* Nút "Keep" — đóng dialog, không thay đổi */}
           <button
             onClick={() => { setConfirmOpen(false); setPendingAction(null) }}
             className="flex-1 py-3 rounded-xl bg-surface-container-high text-on-surface-variant hover:bg-surface-container transition-all text-sm font-medium"
           >
             Keep
           </button>
+          {/* Nút "Cancel Series" — xác nhận hủy, gọi API update status */}
           <button
             onClick={() => {
               if (pendingAction) doUpdateStatus(pendingAction.seriesId, pendingAction.status)

@@ -812,9 +812,13 @@ export function SeriesDetailPage() {
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
-      {/* ═══ HERO SECTION ═══ */}
+
+      {/* ═══════════════════════════════════════════════════════════════════
+          HERO SECTION — Cover + Title + Actions
+      ═══════════════════════════════════════════════════════════════════ */}
       <section className="relative w-full h-[400px] overflow-hidden shrink-0">
-        {/* Cover image với fallback gradient */}
+
+        {/* Ảnh bìa full-width (dimmed) — hoặc gradient fallback nếu chưa có */}
         {series.coverImageUrl ? (
           <img
             src={`${series.coverImageUrl}?t=${Date.now()}`}
@@ -829,10 +833,11 @@ export function SeriesDetailPage() {
             }}
           />
         )}
-        {/* Gradient overlay */}
+
+        {/* Gradient overlay — làm mờ dần xuống dưới */}
         <div className="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-transparent" />
 
-        {/* Back button */}
+        {/* Nút "Back to Series" — quay lại danh sách series */}
         <button
           onClick={() => navigate("/series")}
           className="absolute top-6 left-6 z-10 flex items-center gap-1.5 text-sm text-white/70 hover:text-white transition-colors bg-black/20 backdrop-blur-sm px-3 py-1.5 rounded-lg"
@@ -840,10 +845,11 @@ export function SeriesDetailPage() {
           <ArrowLeft size={16} /> Back to Series
         </button>
 
-        {/* Hero content */}
+        {/* Nội dung hero — title, status, badges, actions */}
         <div className="absolute bottom-0 left-0 w-full p-container-padding flex flex-col md:flex-row justify-between items-end gap-6">
           <div className="flex-1">
-            {/* Title + Status — cùng hàng */}
+
+            {/* Title series + Status badge */}
             <div className="flex items-start gap-4 flex-wrap">
               <div>
                 <h2 className="text-4xl font-bold text-on-surface leading-tight">
@@ -855,6 +861,7 @@ export function SeriesDetailPage() {
                   </span>
                 )}
               </div>
+              {/* Badge trạng thái series (Draft, Ongoing, ...) */}
               <span
                 className={cn(
                   "px-4 py-1.5 rounded-full text-sm font-bold border-2 backdrop-blur-md",
@@ -865,7 +872,7 @@ export function SeriesDetailPage() {
               </span>
             </div>
 
-            {/* Badges — genres + demographics, dưới title */}
+            {/* Badges Genre + Demographic */}
             <div className="flex flex-wrap gap-2 mt-4 mb-4">
               {series.genres?.map((g) => (
                 <span
@@ -885,7 +892,7 @@ export function SeriesDetailPage() {
               ))}
             </div>
 
-            {/* Tier + Ranking */}
+            {/* Tier + Global Ranking */}
             <div className="flex items-center gap-6 mt-4">
               {series.currentTier && (
                 <div className="flex items-center gap-2">
@@ -906,8 +913,9 @@ export function SeriesDetailPage() {
             </div>
           </div>
 
-          {/* Edit + New Chapter buttons */}
+          {/* Nút "Edit Series" + "New Chapter" — chỉ MANGAKA */}
           <div className="flex items-center gap-3">
+            {/* Nút "Edit Series" — chỉ owner, chỉ khi DRAFT */}
             {isOwner && series.status === "DRAFT" && (
               <button
                 onClick={() => navigate(`/series/${id}/edit`)}
@@ -916,6 +924,7 @@ export function SeriesDetailPage() {
                 <Edit size={16} /> Edit Series
               </button>
             )}
+            {/* Nút "New Chapter" — chỉ MANGAKA, ẩn nếu CANCELLED/COMPLETED */}
             {isMangaka &&
               series.status !== "CANCELLED" &&
               series.status !== "COMPLETED" && (
@@ -930,17 +939,22 @@ export function SeriesDetailPage() {
         </div>
       </section>
 
-      {/* ═══ CONTENT CONTAINER ═══ */}
+      {/* ═══════════════════════════════════════════════════════════════════
+          CONTENT CONTAINER — Chính giữa trang, xếp dọc
+      ═══════════════════════════════════════════════════════════════════ */}
       <div className="p-container-padding flex flex-col gap-panel-gap">
-        {/* ═══ EDITORIAL BOARD: Series status actions ═══ */}
+
+        {/* ─── EDITORIAL BOARD: Complete/Cancel Series — chỉ EB, chỉ ONGOING ─── */}
         {isEb && series.status === "ONGOING" && (
           <div className="flex items-center gap-3 pb-2">
+            {/* Nút "Complete Series" — đánh dấu hoàn thành */}
             <button
               onClick={() => handleSeriesStatusUpdate("COMPLETED")}
               className="px-4 py-2 bg-emerald-500/10 text-emerald-400 rounded-xl text-xs font-semibold border border-emerald-500/20 hover:bg-emerald-500/20 transition-colors"
             >
               Complete Series
             </button>
+            {/* Nút "Cancel Series" — hủy series */}
             <button
               onClick={() => handleSeriesStatusUpdate("CANCELLED")}
               className="px-4 py-2 bg-red-500/10 text-red-400 rounded-xl text-xs font-semibold border border-red-500/20 hover:bg-red-500/20 transition-colors"
@@ -950,7 +964,7 @@ export function SeriesDetailPage() {
           </div>
         )}
 
-        {/* ═══ DRAFT / PENDING status toast ═══ */}
+        {/* ─── DRAFT mode toast — nhắc chủ sở hữu chỉnh sửa ─── */}
         {series.status === "DRAFT" && isOwner && (
           <div className="border border-yellow-500/30 bg-yellow-500/5 rounded-xl p-4">
             <p className="text-sm text-on-surface-variant font-medium">
@@ -959,6 +973,8 @@ export function SeriesDetailPage() {
             </p>
           </div>
         )}
+
+        {/* ─── PENDING_APPROVAL toast — nhắc chờ duyệt ─── */}
         {series.status === "PENDING_APPROVAL" && isOwner && (
           <div className="border border-yellow-500/30 bg-yellow-500/5 rounded-xl p-4">
             <p className="text-sm text-on-surface-variant font-medium">
@@ -967,9 +983,12 @@ export function SeriesDetailPage() {
           </div>
         )}
 
-        {/* ═══ STATISTICS ROW ═══ */}
+        {/* ═══════════════════════════════════════════════════════════════════
+            STATISTICS ROW — Ranking, Chapters, Progress, Active Tasks
+        ═══════════════════════════════════════════════════════════════════ */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-panel-gap">
-          {/* Current Rank */}
+
+          {/* Current Rank — hiển thị hạng hiện tại + arrow up nếu có */}
           <div className="bg-surface-container rounded-xl p-6 shadow-[0px_4px_20px_rgba(139,92,246,0.05)] border border-outline-variant/30 hover:border-primary/30 transition-all group">
             <p className="text-xs font-medium text-on-surface-variant uppercase tracking-wider mb-2">
               Current Rank
@@ -986,7 +1005,7 @@ export function SeriesDetailPage() {
             </div>
           </div>
 
-          {/* Total Chapters */}
+          {/* Total Chapters — tổng số chapter đã publish */}
           <div className="bg-surface-container rounded-xl p-6 shadow-[0px_4px_20px_rgba(139,92,246,0.05)] border border-outline-variant/30 hover:border-primary/30 transition-all group">
             <p className="text-xs font-medium text-on-surface-variant uppercase tracking-wider mb-2">
               Total Chapters
@@ -996,7 +1015,7 @@ export function SeriesDetailPage() {
             </h3>
           </div>
 
-          {/* Manuscript Progress */}
+          {/* Manuscript Progress — % tiến độ trung bình các chapters + thanh progress */}
           <div className="bg-surface-container rounded-xl p-6 shadow-[0px_4px_20px_rgba(139,92,246,0.05)] border border-outline-variant/30 hover:border-primary/30 transition-all group">
             <p className="text-xs font-medium text-on-surface-variant uppercase tracking-wider mb-2">
               Manuscript Progress
@@ -1013,6 +1032,7 @@ export function SeriesDetailPage() {
                   : 0}
                 %
               </h3>
+              {/* Thanh progress bar */}
               <div className="flex-1 bg-surface-container-highest rounded-full h-2 max-w-[100px]">
                 <div
                   className="bg-primary h-full rounded-full transition-all duration-500"
@@ -1033,7 +1053,7 @@ export function SeriesDetailPage() {
             </div>
           </div>
 
-          {/* Active Tasks — placeholder */}
+          {/* Active Tasks — đếm chapters đang ở trạng thái hoạt động */}
           <div className="bg-surface-container rounded-xl p-6 shadow-[0px_4px_20px_rgba(139,92,246,0.05)] border border-outline-variant/30 hover:border-primary/30 transition-all group">
             <p className="text-xs font-medium text-on-surface-variant uppercase tracking-wider mb-2">
               Active Tasks
@@ -1051,10 +1071,16 @@ export function SeriesDetailPage() {
           </div>
         </div>
 
-        {/* ═══ MAIN CONTENT GRID: 8 + 4 ═══ */}
+        {/* ═══════════════════════════════════════════════════════════════════
+            MAIN CONTENT GRID — Left (8) Chapters / Characters / World & Plots
+                         — Right (4) Info / Team / Activity
+        ═══════════════════════════════════════════════════════════════════ */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-panel-gap mb-12">
-          {/* ─── LEFT COLUMN (8): Chapters / Characters / World & Plots ─── */}
+
+          {/* ─── LEFT COLUMN (8 col) ─── */}
           <div className="lg:col-span-8 flex flex-col gap-base">
+
+            {/* Tab bar: Chapters | Characters | World & Plots */}
             <div className="flex items-center gap-2 bg-surface-container rounded-xl p-2 border border-outline-variant/30 w-full">
               <button
                 onClick={() => setActiveDetailBlock("chapters")}
@@ -1091,8 +1117,10 @@ export function SeriesDetailPage() {
               </button>
             </div>
 
+            {/* ─── Chapters Tab ─── */}
             {activeDetailBlock === "chapters" && (
               <div className="bg-surface-container rounded-xl shadow-[0px_4px_20px_rgba(139,92,246,0.05)] overflow-hidden border border-outline-variant/30">
+                {/* Header: Chapter List + Filter/Sort buttons */}
                 <div className="p-6 border-b border-outline-variant/30 flex justify-between items-center bg-surface-container-high/50">
                   <h3 className="text-xl font-semibold text-on-surface">
                     Chapter List
@@ -1100,6 +1128,7 @@ export function SeriesDetailPage() {
                       ({chapters.length})
                     </span>
                   </h3>
+                  {/* Nút Filter + Sort */}
                   <div className="flex gap-2">
                     <button className="p-2 rounded-lg bg-surface-container-low hover:bg-primary/10 hover:text-primary transition-all">
                       <Filter size={18} />
@@ -1110,6 +1139,7 @@ export function SeriesDetailPage() {
                   </div>
                 </div>
 
+                {/* Empty state — chưa có chapter nào */}
                 {chapters.length === 0 ? (
                   <div className="p-12 text-center">
                     <p className="text-on-surface-variant">
@@ -1118,6 +1148,7 @@ export function SeriesDetailPage() {
                   </div>
                 ) : (
                   <>
+                    {/* Bảng danh sách chapters */}
                     <div className="overflow-x-auto">
                       <table className="w-full">
                         <thead>
@@ -1139,12 +1170,15 @@ export function SeriesDetailPage() {
                                 navigate(`/series/${id}/chapters/${ch.id}`)
                               }
                             >
+                              {/* Số chapter */}
                               <td className="px-6 py-4 text-sm font-medium text-on-surface">
                                 Ch. {ch.chapterNumber}
                               </td>
+                              {/* Tên chapter */}
                               <td className="px-6 py-4 text-sm font-medium text-on-surface">
                                 {ch.title || `Chapter ${ch.chapterNumber}`}
                               </td>
+                              {/* Thanh progress % */}
                               <td className="px-6 py-4">
                                 <div className="flex items-center gap-3">
                                   <div className="w-24 bg-surface-container-highest rounded-full h-1.5">
@@ -1165,6 +1199,7 @@ export function SeriesDetailPage() {
                                   </span>
                                 </div>
                               </td>
+                              {/* Badge trạng thái chapter */}
                               <td className="px-6 py-4">
                                 <span
                                   className={cn(
@@ -1176,9 +1211,11 @@ export function SeriesDetailPage() {
                                   {chapterStatusLabel[ch.status] || ch.status}
                                 </span>
                               </td>
+                              {/* Deadline */}
                               <td className="px-6 py-4 text-xs font-medium text-on-surface-variant">
                                 {formatDate(ch.deadline) || "—"}
                               </td>
+                              {/* Action buttons (Submit/Approve...) */}
                               <td className="px-6 py-4 text-right">
                                 {renderChapterAction(ch)}
                               </td>
@@ -1188,6 +1225,7 @@ export function SeriesDetailPage() {
                       </table>
                     </div>
 
+                    {/* Nút "View All" — nếu > 5 chapters */}
                     {chapters.length > 5 && (
                       <div className="p-4 border-t border-outline-variant/20 flex justify-center bg-surface-container-low/30">
                         <button
@@ -1205,12 +1243,15 @@ export function SeriesDetailPage() {
               </div>
             )}
 
+            {/* ─── Characters Tab ─── */}
             {activeDetailBlock === "characters" && (
               <div className="bg-surface-container rounded-xl shadow-[0px_4px_20px_rgba(139,92,246,0.05)] border border-outline-variant/30 p-6">
+                {/* Header + Import button */}
                 <div className="flex items-center justify-between mb-5">
                   <h3 className="text-xl font-semibold text-on-surface">
                     Characters
                   </h3>
+                  {/* Nút "Import Characters" — chỉ owner */}
                   {isOwner && (
                     <button
                       type="button"
@@ -1223,6 +1264,8 @@ export function SeriesDetailPage() {
                     </button>
                   )}
                 </div>
+
+                {/* Empty state */}
                 {characters.length === 0 ? (
                   <div className="text-center py-14 border border-dashed border-outline-variant/30 rounded-xl bg-surface-container-low/30">
                     <p className="text-on-surface-variant">
@@ -1246,10 +1289,12 @@ export function SeriesDetailPage() {
                             key={char.id || idx}
                             className="rounded-xl bg-surface-container-low border border-outline-variant/20 border-l-4 border-l-primary/30 p-4"
                           >
+                            {/* Character name + Edit/Delete buttons */}
                             <div className="flex items-start justify-between border-b border-outline-variant/10 pb-2 mb-3">
                               <p className="text-xl font-bold text-on-surface">
                                 {char.name || `Character ${idx + 1}`}
                               </p>
+                              {/* Nút Edit + Delete — chỉ owner */}
                               {isOwner && (
                                 <div className="flex items-center gap-1 shrink-0">
                                   <button
@@ -1279,6 +1324,7 @@ export function SeriesDetailPage() {
                               )}
                             </div>
 
+                            {/* Core Motivation — rich text */}
                             <div className="bg-surface-container-lowest rounded-lg p-3.5 border border-outline-variant/10 mb-4">
                               <p className="text-[11px] text-on-surface-variant uppercase tracking-wider mb-2">
                                 Core Motivation
@@ -1291,6 +1337,7 @@ export function SeriesDetailPage() {
                               />
                             </div>
 
+                          {/* Design Sketches — scrollable gallery */}
                           {sketches.length > 0 && (
                             <>
                               <p className="text-[11px] text-on-surface-variant uppercase tracking-wider mb-2">
@@ -1320,6 +1367,7 @@ export function SeriesDetailPage() {
                                     </button>
                                   ))}
                                 </div>
+                                {/* Gradient fade bên phải khi overflow */}
                                 {sketches.length > 2 && (
                                   <div className="absolute right-0 top-0 bottom-0 w-20 bg-gradient-to-l from-surface-container to-transparent pointer-events-none" />
                                 )}
@@ -1334,12 +1382,16 @@ export function SeriesDetailPage() {
               </div>
             )}
 
+            {/* ─── World & Plots Tab ─── */}
             {activeDetailBlock === "worldplots" && (
               <div className="bg-surface-container rounded-xl shadow-[0px_4px_20px_rgba(139,92,246,0.05)] border border-outline-variant/30 p-6">
+
+                {/* Header + Import button */}
                 <div className="flex items-center justify-between mb-5">
                   <h3 className="text-xl font-semibold text-on-surface">
                     World & Plots
                   </h3>
+                  {/* Nút "Import World & Plot" — chỉ owner */}
                   {isOwner && (
                     <button
                       type="button"
@@ -1353,7 +1405,7 @@ export function SeriesDetailPage() {
                   )}
                 </div>
 
-                {/* World Lore — full width */}
+                {/* World Lore — lore của thế giới trong series */}
                 <div className="mb-8">
                   <p className="text-xs text-on-surface-variant uppercase tracking-wider mb-3">
                     World Lore
@@ -1372,7 +1424,7 @@ export function SeriesDetailPage() {
                   )}
                 </div>
 
-                {/* Story Roadmap — full width */}
+                {/* Story Roadmap — timeline các arc */}
                 <div className="mb-8">
                   <p className="text-xs text-on-surface-variant uppercase tracking-wider mb-3">
                     Story Roadmap
@@ -1383,10 +1435,12 @@ export function SeriesDetailPage() {
                     </div>
                   ) : (
                     <div className="relative">
+                      {/* Timeline vertical line */}
                       <div className="absolute left-[11px] top-2 bottom-2 w-0.5 bg-primary/20" />
                       <div className="space-y-6">
                         {storyRoadmap.map((arc, idx) => (
                           <div key={idx} className="relative flex gap-4 pl-1">
+                            {/* Circle number */}
                             <div className="relative z-10 mt-1.5 flex-shrink-0">
                               <div className="w-[22px] h-[22px] rounded-full flex items-center justify-center bg-surface-container-high text-on-surface-variant">
                                 <span className="text-[10px] font-bold">
@@ -1394,6 +1448,7 @@ export function SeriesDetailPage() {
                                 </span>
                               </div>
                             </div>
+                            {/* Arc card: title + summary */}
                             <div className="flex-1 rounded-xl bg-surface-container-low border border-outline-variant/20 p-4">
                               <p className="text-sm font-semibold text-on-surface">
                                 {arc.title || `Arc ${idx + 1}`}
@@ -1409,7 +1464,7 @@ export function SeriesDetailPage() {
                   )}
                 </div>
 
-                {/* Visual References — full width, hidden if empty */}
+                {/* Visual References — gallery ảnh tham khảo */}
                 {visualReferences.length > 0 && (
                   <div>
                     <p className="text-xs text-on-surface-variant uppercase tracking-wider mb-3">
@@ -1439,6 +1494,7 @@ export function SeriesDetailPage() {
                           </button>
                         ))}
                       </div>
+                      {/* Gradient fade bên phải khi overflow */}
                       {visualReferences.length > 4 && (
                         <div className="absolute right-0 top-0 bottom-0 w-20 bg-gradient-to-l from-surface-container to-transparent pointer-events-none" />
                       )}
@@ -1449,17 +1505,20 @@ export function SeriesDetailPage() {
             )}
           </div>
 
-          {/* ─── RIGHT COLUMN (4): Info + Deadlines + Activity ─── */}
+          {/* ─── RIGHT COLUMN (4): Info + Team + Deadlines + Activity ─── */}
           <div className="lg:col-span-4 flex flex-col gap-panel-gap">
-            {/* Series Information */}
+
+            {/* ─── Series Information ─── */}
             <div className="bg-surface-container rounded-xl p-6 shadow-[0px_4px_20px_rgba(139,92,246,0.05)] border border-outline-variant/30">
               <h4 className="text-xl font-semibold text-on-surface mb-6">
                 Series Information
               </h4>
+              {/* Synopsis */}
               <p className="text-base text-on-surface-variant mb-6 leading-relaxed">
                 {series.synopsis || "No synopsis available."}
               </p>
               <div className="space-y-4">
+                {/* Author */}
                 <div className="flex justify-between border-b border-outline-variant/10 pb-2">
                   <span className="text-sm font-medium text-on-surface-variant">
                     Author
@@ -1468,6 +1527,7 @@ export function SeriesDetailPage() {
                     {mangaka?.displayName || "Unknown"}
                   </span>
                 </div>
+                {/* Editor (Tantou) */}
                 {tantou && (
                   <div className="flex justify-between border-b border-outline-variant/10 pb-2">
                     <span className="text-sm font-medium text-on-surface-variant">
@@ -1478,6 +1538,7 @@ export function SeriesDetailPage() {
                     </span>
                   </div>
                 )}
+                {/* Genre tags */}
                 <div className="flex justify-between border-b border-outline-variant/10 pb-2 items-start">
                   <span className="text-sm font-medium text-on-surface-variant pt-0.5">
                     Genre
@@ -1495,6 +1556,7 @@ export function SeriesDetailPage() {
                       : <span className="text-sm text-on-surface">—</span>}
                   </div>
                 </div>
+                {/* Demographic */}
                 <div className="flex justify-between border-b border-outline-variant/10 pb-2 items-start">
                   <span className="text-sm font-medium text-on-surface-variant pt-0.5">
                     Demographic
@@ -1512,6 +1574,7 @@ export function SeriesDetailPage() {
                       : <span className="text-sm text-on-surface">—</span>}
                   </div>
                 </div>
+                {/* Start Date */}
                 <div className="flex justify-between">
                   <span className="text-sm font-medium text-on-surface-variant">
                     Start Date
@@ -1530,15 +1593,15 @@ export function SeriesDetailPage() {
             </div>
 
             {/* ═══════════════════════════════════════ */}
-            {/*  TANTOU EDITOR CARD                    */}
+            {/*  LEAD EDITOR (TANTOU) CARD              */}
             {/* ═══════════════════════════════════════ */}
             {/*
-              Card nay hien thi thong tin Tantou Editor cua series.
-              Gom 4 trang thai:
-                1. Chua co tantou + isOwner + DRAFT  → nut "Moi Tantou"
-                2. Co tantou + isOwner + DRAFT       → nut "Submit cho Tantou"
-                3. isOwner + PENDING_TANTOU           → badge "Cho Tantou duyet"
-                4. isAssignedTantou + PENDING_TANTOU  → nut "Duyet" + "Tu choi"
+              Card hiển thị thông tin Tantou Editor của series.
+              Gồm 4 trạng thái:
+                1. Chưa có tantou + isOwner + DRAFT  → nút "Mời Tantou"
+                2. Có tantou + isOwner + DRAFT       → nút "Submit cho Tantou"
+                3. isOwner + PENDING_TANTOU           → badge "Chờ Tantou duyệt"
+                4. isAssignedTantou + PENDING_TANTOU  → nút "Duyệt" + "Từ chối"
             */}
             <div className="bg-surface-container rounded-xl p-6 shadow-[0px_4px_20px_rgba(139,92,246,0.05)] border border-outline-variant/30">
               <h4 className="text-xl font-semibold text-on-surface mb-4 flex items-center gap-2">
@@ -1546,8 +1609,8 @@ export function SeriesDetailPage() {
                 Lead Editor
               </h4>
 
+              {/* Chưa có tantou — hiện nút mời (nếu là owner + DRAFT) */}
               {!tantou ? (
-                /* Chua co tantou — hien button moi tantou (neu la owner + DRAFT) */
                 <div className="flex flex-col items-center py-6 text-on-surface-variant/50">
                   <Users size={28} className="mb-2 opacity-40" />
                   <p className="text-sm">No lead editor assigned.</p>
@@ -1567,7 +1630,7 @@ export function SeriesDetailPage() {
                   )}
                 </div>
               ) : (
-                /* Da co tantou — hien thong tin tantou + action buttons */
+                /* Đã có tantou — hiển thị thông tin + action buttons */
                 <div className="space-y-3">
                   <div className="flex items-center justify-between bg-surface-container-low rounded-lg px-4 py-2.5 border border-outline-variant/20">
                     <div className="flex items-center gap-3">
@@ -1587,7 +1650,7 @@ export function SeriesDetailPage() {
                     </div>
                   </div>
 
-                  {/* MANGAKA: submit cho tantou (chi khi status = DRAFT) */}
+                  {/* MANGAKA: nút submit cho tantou (chỉ khi DRAFT) */}
                   {isOwner && series?.status === "DRAFT" && (
                     <button
                       onClick={handleSubmitTantou}
@@ -1598,7 +1661,7 @@ export function SeriesDetailPage() {
                     </button>
                   )}
 
-                  {/* MANGAKA: dang cho tantou duyet */}
+                  {/* MANGAKA: đang chờ tantou duyệt */}
                   {isOwner && series?.status === "PENDING_TANTOU" && (
                     <div className="flex items-center justify-center gap-2 py-2 text-sm text-purple-400 font-medium">
                       <Loader size={14} className="animate-spin" />
@@ -1608,7 +1671,7 @@ export function SeriesDetailPage() {
                 </div>
               )}
 
-              {/* TANTOU_EDITOR: nut duyet / tu choi (chi hien khi duoc assigned + series dang PENDING_TANTOU) */}
+              {/* TANTOU_EDITOR: nút duyệt / từ chối — chỉ hiện khi assigned + PENDING_TANTOU */}
               {isAssignedTantou && series?.status === "PENDING_TANTOU" && (
                 <>
                   <hr className="border-outline-variant/20 my-3" />
@@ -1617,6 +1680,7 @@ export function SeriesDetailPage() {
                       This series is pending your review. You can approve it to
                       submit for final review, or reject it back to draft.
                     </p>
+                    {/* Nút Reject + Approve */}
                     <div className="flex gap-3">
                       <button
                         onClick={handleTantouReject}
@@ -1639,12 +1703,11 @@ export function SeriesDetailPage() {
             </div>
 
             {/* ═══════════════════════════════════════ */}
-            {/*  INVITE TANTOU DIALOG                  */}
+            {/*  INVITE TANTOU DIALOG                   */}
             {/* ═══════════════════════════════════════ */}
             {/*
-              Modal tim kiem TANTOU_EDITOR de moi vao series.
-              Co chuc nang search debounce + hien thi ket qua + nut moi.
-              Copy pattern tu Invite Assistant Dialog.
+              Modal tìm kiếm TANTOU_EDITOR để mời vào series.
+              Có chức năng search debounce + hiển thị kết quả + nút mời.
             */}
             <Dialog
               open={showTantouInviteDialog}
@@ -1658,6 +1721,7 @@ export function SeriesDetailPage() {
               size="md"
             >
               <div className="space-y-4">
+                {/* Search input + loading spinner */}
                 <div className="relative">
                   <Search
                     size={16}
@@ -1678,6 +1742,7 @@ export function SeriesDetailPage() {
                   )}
                 </div>
 
+                {/* Danh sách kết quả tìm kiếm */}
                 <div className="max-h-60 overflow-y-auto space-y-1">
                   {!tantouSearchQuery.trim() ? (
                     <p className="text-center py-8 text-sm text-on-surface-variant/40">
@@ -1737,13 +1802,14 @@ export function SeriesDetailPage() {
               </div>
             </Dialog>
 
-            {/* Assistants */}
+            {/* ─── Assistants — danh sách assistant được mời vào series ─── */}
             <div className="bg-surface-container rounded-xl p-6 shadow-[0px_4px_20px_rgba(139,92,246,0.05)] border border-outline-variant/30">
               <div className="flex items-center justify-between mb-6">
                 <h4 className="text-xl font-semibold text-on-surface flex items-center gap-2">
                   <Users size={18} className="text-primary" />
                   Assistants
                 </h4>
+                {/* Nút "Invite" — chỉ owner */}
                 {isOwner && (
                   <button
                     type="button"
@@ -1756,6 +1822,7 @@ export function SeriesDetailPage() {
                 )}
               </div>
 
+              {/* Empty state — chưa có assistant nào */}
               {seriesAssistants.length === 0 ? (
                 <div className="flex flex-col items-center py-6 text-on-surface-variant/50">
                   <Users size={28} className="mb-2 opacity-40" />
@@ -1767,6 +1834,7 @@ export function SeriesDetailPage() {
                   )}
                 </div>
               ) : (
+                /* Danh sách assistant — avatar + name + ACTIVE badge + nút Remove */
                 <div className="space-y-2">
                   {seriesAssistants.map((a) => {
                     const name =
@@ -1791,6 +1859,7 @@ export function SeriesDetailPage() {
                             </p>
                           </div>
                         </div>
+                        {/* Nút Remove assistant — chỉ owner */}
                         {isOwner && (
                           <button
                             type="button"
@@ -1808,7 +1877,7 @@ export function SeriesDetailPage() {
               )}
             </div>
 
-            {/* ── Invite Assistant Dialog ── */}
+            {/* ── Invite Assistant Dialog — Modal tìm kiếm assistant ── */}
             <Dialog
               open={showInviteDialog}
               onClose={() => {
@@ -1821,6 +1890,7 @@ export function SeriesDetailPage() {
               size="md"
             >
               <div className="space-y-4">
+                {/* Search input + loading spinner */}
                 <div className="relative">
                   <Search
                     size={16}
@@ -1841,6 +1911,7 @@ export function SeriesDetailPage() {
                   )}
                 </div>
 
+                {/* Danh sách kết quả tìm kiếm */}
                 <div className="max-h-60 overflow-y-auto space-y-1">
                   {!searchQuery.trim() ? (
                     <p className="text-center py-8 text-sm text-on-surface-variant/40">
@@ -1910,10 +1981,11 @@ export function SeriesDetailPage() {
               </div>
             </Dialog>
 
-            {/* Upcoming Deadlines */}
+            {/* ─── Upcoming Deadlines — danh sách deadline sắp tới ─── */}
             <div className="bg-surface-container rounded-xl p-6 shadow-[0px_4px_20px_rgba(139,92,246,0.05)] border border-outline-variant/30">
               <h4 className="text-xl font-semibold text-on-surface mb-6 flex items-center gap-2">
                 Upcoming Deadlines
+                {/* Alert badge — đếm deadline trong vòng 3 ngày */}
                 {upcomingDeadlines.length > 0 && (
                   <span className="bg-error-container text-on-error-container text-[10px] px-2 py-0.5 rounded-full">
                     {
@@ -1927,6 +1999,8 @@ export function SeriesDetailPage() {
                   </span>
                 )}
               </h4>
+
+              {/* Empty state */}
               {upcomingDeadlines.length === 0 ? (
                 <p className="text-sm text-on-surface-variant/60">
                   No upcoming deadlines.
@@ -1948,6 +2022,7 @@ export function SeriesDetailPage() {
                             : "hover:bg-surface-container-highest border-transparent",
                         )}
                       >
+                        {/* Ngày tháng dạng box */}
                         <div
                           className={cn(
                             "w-10 h-10 rounded-lg flex flex-col items-center justify-center shrink-0",
@@ -1963,6 +2038,7 @@ export function SeriesDetailPage() {
                             {md?.day}
                           </span>
                         </div>
+                        {/* Tên chapter + urgency label */}
                         <div>
                           <p className="text-sm font-medium text-on-surface">
                             {dl.title
@@ -1987,7 +2063,7 @@ export function SeriesDetailPage() {
               )}
             </div>
 
-            {/* Recent Activity */}
+            {/* ─── Recent Activity — timeline 3 chapters gần nhất ─── */}
             <div className="bg-surface-container rounded-xl p-6 shadow-[0px_4px_20px_rgba(139,92,246,0.05)] border border-outline-variant/30">
               <h4 className="text-xl font-semibold text-on-surface mb-6">
                 Recent Activity
@@ -2000,6 +2076,7 @@ export function SeriesDetailPage() {
                     const isLatest = idx === 0;
                     return (
                       <div key={ch.id} className="relative pl-8">
+                        {/* Timeline dot — màu khác nhau tùy trạng thái */}
                         <div
                           className={cn(
                             "absolute left-0 top-1 w-4 h-4 rounded-full border-4 border-surface",
@@ -2011,6 +2088,7 @@ export function SeriesDetailPage() {
                                 : "bg-primary-container",
                           )}
                         />
+                        {/* Tên hành động */}
                         <p className="text-sm font-medium text-on-surface">
                           {ch.status === "PUBLISHED"
                             ? "Chapter Published"
@@ -2022,10 +2100,12 @@ export function SeriesDetailPage() {
                                   ? "Work Started"
                                   : `Chapter ${ch.chapterNumber} Updated`}
                         </p>
+                        {/* Tên chapter + trạng thái */}
                         <p className="text-base text-on-surface-variant text-[13px]">
                           {ch.title || `Chapter ${ch.chapterNumber}`} &mdash;{" "}
                           {chapterStatusLabel[ch.status] || ch.status}
                         </p>
+                        {/* Thời gian */}
                         <p className="text-xs font-medium text-outline mt-1">
                           {ch.updatedAt
                             ? formatDate(ch.updatedAt)
@@ -2042,6 +2122,7 @@ export function SeriesDetailPage() {
                   </p>
                 )}
               </div>
+              {/* Nút "View Full History" */}
               {chapters.length > 0 && (
                 <button className="w-full mt-6 py-2 text-primary text-sm font-medium hover:underline">
                   View Full History
@@ -2052,12 +2133,15 @@ export function SeriesDetailPage() {
         </div>
       </div>
       
-      {/* ═══ SKETCH LIGHTBOX ═══ */}
+      {/* ═══════════════════════════════════════════════════════════════════
+          SKETCH LIGHTBOX — Full-screen image viewer with zoom & navigation
+      ═══════════════════════════════════════════════════════════════════ */}
       {sketchLightbox && (
         <div
           className="fixed inset-0 z-50 flex flex-col items-center justify-center pt-40 bg-black/90 backdrop-blur-sm"
           onClick={() => setSketchLightbox(null)}
           onWheel={(e) => {
+            /* Ctrl+Scroll = zoom in/out */
             if (e.ctrlKey || e.metaKey) {
               e.preventDefault();
               setLightboxZoom((prev) =>
@@ -2066,6 +2150,7 @@ export function SeriesDetailPage() {
             }
           }}
         >
+          {/* Nút Close (X) */}
           <button
             type="button"
             onClick={() => setSketchLightbox(null)}
@@ -2074,6 +2159,7 @@ export function SeriesDetailPage() {
             <X size={20} />
           </button>
 
+          {/* Prev / Next buttons — ẩn nếu chỉ có 1 ảnh */}
           {sketchLightbox.images.length > 1 && (
             <>
               <button
@@ -2109,6 +2195,7 @@ export function SeriesDetailPage() {
             </>
           )}
 
+          {/* Ảnh chính — scrollable + zoom */}
           <div
             className="w-full h-full overflow-auto flex items-start justify-center"
             onClick={(e) => e.stopPropagation()}
@@ -2125,6 +2212,7 @@ export function SeriesDetailPage() {
             />
           </div>
 
+          {/* Zoom controls — Zoom Out / % / Zoom In */}
           <div
             className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-3 bg-surface/80 px-4 py-2 rounded-full text-sm text-on-surface"
             onClick={(e) => e.stopPropagation()}
