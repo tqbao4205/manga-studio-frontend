@@ -21,6 +21,7 @@ import {
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 
+// ── pageStatusConfig: mapping trạng thái page → label + dot color ──
 const pageStatusConfig = {
   UPLOADED:       { label: 'Uploaded', dot: 'bg-outline-variant' },
   REGIONS_DEFINED: { label: 'Sketch',  dot: 'bg-tertiary' },
@@ -28,23 +29,24 @@ const pageStatusConfig = {
   COMPLETED:      { label: 'Complete', dot: 'bg-green-400 shadow-[0_0_8px_rgba(74,222,128,0.5)]' },
 }
 
-
-
 export function ChapterDetailPage() {
   const { seriesId, chapterId } = useParams();
   const navigate = useNavigate();
 
+  // ── User role checks ──
   const user = useAuthStore((s) => s.user);
   const isMangaka = user?.role === "MANGAKA";
   const isEditor = user?.role === "TANTOU_EDITOR" || user?.role === "EDITORIAL_BOARD";
 
   const addToast = useUIStore((s) => s.addToast);
 
+  // ── State: series, chapter, pages ──
   const [series, setSeries] = useState(null);
   const [chapter, setChapter] = useState(null);
   const [pages, setPages] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // ── File upload state ──
   const fileInputRef = useRef(null)
   const [selectedFiles, setSelectedFiles] = useState([])
   const [showUploadModal, setShowUploadModal] = useState(false)
@@ -52,6 +54,7 @@ export function ChapterDetailPage() {
   const [compressing, setCompressing] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
 
+  // ── Fetch series + chapter + pages ──
   useEffect(() => {
     if (!seriesId || !chapterId) return;
     setLoading(true);
@@ -69,6 +72,7 @@ export function ChapterDetailPage() {
       .finally(() => setLoading(false));
   }, [seriesId, chapterId]);
 
+  // ── Computed stats từ pages ──
   const stats = useMemo(() => {
     if (!chapter || pages.length === 0) {
       return { completedPages: '0/0', ongoingTasks: 0, pendingReviews: 0, daysToDeadline: null }
@@ -84,11 +88,13 @@ export function ChapterDetailPage() {
     return { completedPages: `${completed}/${total}`, ongoingTasks: ongoing, pendingReviews: pending, daysToDeadline: days }
   }, [chapter, pages])
 
+  // ── Format date helper ──
   const formatDate = (dateStr) => {
     if (!dateStr) return null;
     return new Date(dateStr).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
   }
 
+  // ── Time ago helper ──
   const timeAgo = (dateStr) => {
     if (!dateStr) return null
     const diff = new Date() - new Date(dateStr)
@@ -99,10 +105,12 @@ export function ChapterDetailPage() {
     return `${Math.floor(hours / 24)}d ago`
   }
 
+  // ── Mở file picker ──
   const handleAddPageClick = () => {
     fileInputRef.current?.click()
   }
 
+  // ── Chọn file → compress → hiện modal upload ──
   const handleFileSelect = async (e) => {
     const rawFiles = Array.from(e.target.files || [])
     if (rawFiles.length === 0) return
@@ -115,6 +123,7 @@ export function ChapterDetailPage() {
     setCompressing(false)
   }
 
+  // ── Xác nhận upload ──
   const handleUploadConfirm = async () => {
     if (selectedFiles.length === 0) return
     setUploading(true)
@@ -209,8 +218,12 @@ export function ChapterDetailPage() {
   return (
     <div className="px-container-padding pt-container-padding space-y-8 max-w-[1400px] mx-auto w-full pb-28">
 
-      {/* ═══ Breadcrumb & Header ═══ */}
+      {/* ═══════════════════════════════════════════════════════════════════
+          BREADCRUMB & HEADER
+      ═══════════════════════════════════════════════════════════════════ */}
       <div className="space-y-4">
+
+        {/* Breadcrumb: Series > Series Title > Ch.X */}
         <nav className="flex items-center gap-2 text-xs text-on-surface-variant">
           <span className="hover:text-primary cursor-pointer" onClick={() => navigate('/series')}>Series</span>
           <ChevronRight size={14} />
@@ -220,9 +233,12 @@ export function ChapterDetailPage() {
         </nav>
 
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+
+          {/* Title + Status badge + Progress bar */}
           <div className="space-y-2">
             <div className="flex items-center gap-4">
               <h1 className="text-3xl font-bold text-on-surface tracking-tight">{chapter.title}</h1>
+              {/* Status badge — màu sắc thay đổi theo trạng thái */}
               <span className={cn(
                 'px-3 py-0.5 rounded text-xs font-medium tracking-wider uppercase',
                 chapter.status === 'PUBLISHED' || chapter.status === 'APPROVED'
@@ -238,6 +254,7 @@ export function ChapterDetailPage() {
                 {{DRAFT:'Draft',PLANNED:'Planned',IN_PROGRESS:'In Progress',IN_REVIEW:'In Review',SUBMITTED:'Submitted',PENDING_BOARD_APPROVAL:'Under Editorial Review',PENDING_BOARD_VOTE:'Pending Editorial Review',APPROVED:'Approved',REVISION_REQUIRED:'Revision Needed',REJECTED:'Rejected',PUBLISHED:'Published'}[chapter.status] || chapter.status?.replace(/_/g, ' ')}
               </span>
             </div>
+            {/* Progress bar + % */}
             <div className="flex items-center gap-3">
               <span className="text-sm text-on-surface-variant">Ch. {chapter.chapterNumber}</span>
               <div className="w-48 h-1.5 bg-surface-container-highest rounded-full overflow-hidden">
@@ -250,7 +267,9 @@ export function ChapterDetailPage() {
             </div>
           </div>
 
+          {/* Action buttons: Back + Edit */}
           <div className="flex items-center gap-3">
+            {/* Nút "Back to Series" */}
             <button
               onClick={() => navigate(`/series/${seriesId}`)}
               className="px-6 py-2 border border-outline-variant rounded-xl text-sm text-on-surface hover:bg-surface-container-highest transition-colors flex items-center gap-2"
@@ -258,6 +277,7 @@ export function ChapterDetailPage() {
               <ChevronLeft size={18} />
               Back to Series
             </button>
+            {/* Nút "Edit Chapter" — chỉ MANGAKA */}
             {isMangaka && (
               <Link
                 to={`/series/${seriesId}/chapters/${chapterId}/edit`}
@@ -271,14 +291,18 @@ export function ChapterDetailPage() {
         </div>
       </div>
 
-      {/* ═══ Main Layout Grid ═══ */}
+      {/* ═══════════════════════════════════════════════════════════════════
+          MAIN LAYOUT GRID — Left (9) Pages + Right (3) Info
+      ═══════════════════════════════════════════════════════════════════ */}
       <div className="grid grid-cols-12 gap-panel-gap">
 
-        {/* ─── Left Column (9 cols) ─── */}
+        {/* ─── LEFT COLUMN (9 cols): Stats + Manuscript Pages ─── */}
         <div className="col-span-12 lg:col-span-9 space-y-panel-gap">
 
-          {/* Stats Grid */}
+          {/* ─── Stats Grid: 4 cards ─── */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+
+            {/* Completed Pages */}
             <div className="p-5 bg-surface-container rounded-xl border border-outline-variant/30 hover:border-primary/50 transition-colors group">
               <p className="text-xs text-on-surface-variant mb-1">Completed Pages</p>
               <div className="flex items-end justify-between">
@@ -286,6 +310,8 @@ export function ChapterDetailPage() {
                 <FileText size={20} className="text-on-surface-variant/40 group-hover:text-primary transition-colors" />
               </div>
             </div>
+
+            {/* Ongoing Tasks */}
             <div className="p-5 bg-surface-container rounded-xl border border-outline-variant/30 hover:border-primary/50 transition-colors group">
               <p className="text-xs text-on-surface-variant mb-1">Ongoing Tasks</p>
               <div className="flex items-end justify-between">
@@ -293,6 +319,8 @@ export function ChapterDetailPage() {
                 <CheckSquare size={20} className="text-on-surface-variant/40 group-hover:text-primary transition-colors" />
               </div>
             </div>
+
+            {/* Pending Reviews */}
             <div className="p-5 bg-surface-container rounded-xl border border-outline-variant/30 hover:border-primary/50 transition-colors group">
               <p className="text-xs text-on-surface-variant mb-1">Pending Reviews</p>
               <div className="flex items-end justify-between">
@@ -300,6 +328,8 @@ export function ChapterDetailPage() {
                 <MessageSquare size={20} className="text-on-surface-variant/40 group-hover:text-primary transition-colors" />
               </div>
             </div>
+
+            {/* Days to Deadline — chuyển màu đỏ nếu <= 3 ngày */}
             <div className="p-5 bg-surface-container rounded-xl border border-outline-variant/30 hover:border-primary/50 transition-colors group">
               <p className="text-xs text-on-surface-variant mb-1">Days to Deadline</p>
               <div className="flex items-end justify-between">
@@ -317,8 +347,10 @@ export function ChapterDetailPage() {
             </div>
           </div>
 
-          {/* Manuscript Pages */}
+          {/* ─── Manuscript Pages — Grid pages + Add Page ─── */}
           <section className="space-y-4">
+
+            {/* Section header + Layout toggle */}
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-semibold text-on-surface">Manuscript Pages</h2>
               <div className="flex items-center gap-2">
@@ -327,6 +359,7 @@ export function ChapterDetailPage() {
               </div>
             </div>
 
+            {/* Hidden file input */}
             <input
               ref={fileInputRef}
               type="file"
@@ -335,6 +368,8 @@ export function ChapterDetailPage() {
               className="hidden"
               onChange={handleFileSelect}
             />
+
+            {/* Drag-and-Drop context */}
             <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd} sensors={sensors}>
               <SortableContext items={pages.map((p) => p.id)} strategy={rectSortingStrategy}>
                 <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-6">
@@ -367,6 +402,7 @@ export function ChapterDetailPage() {
                     />
                   ))}
 
+                  {/* Add Page button — chỉ MANGAKA */}
                   {isMangaka && (
                     <div
                       onClick={handleAddPageClick}
@@ -381,10 +417,12 @@ export function ChapterDetailPage() {
             </DndContext>
           </section>
 
-          {/* Upload Modal */}
+          {/* ─── Upload Modal ─── */}
           {showUploadModal && (
             <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-start justify-center pt-[10vh]">
               <div className="bg-surface-container border border-outline-variant rounded-xl p-6 w-full max-w-lg mx-4 shadow-2xl">
+
+                {/* Header: title + Close */}
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg font-semibold text-on-surface">Upload Pages</h3>
                   <button onClick={closeUploadModal} className="p-1 text-on-surface-variant hover:text-on-surface">
@@ -392,6 +430,7 @@ export function ChapterDetailPage() {
                   </button>
                 </div>
 
+                {/* Danh sách file đã chọn */}
                 <div className="space-y-2 max-h-60 overflow-y-auto mb-4">
                   {selectedFiles.map((file, i) => (
                     <div key={i} className="flex items-center gap-3 bg-surface-container-low p-3 rounded-lg">
@@ -404,6 +443,7 @@ export function ChapterDetailPage() {
                   ))}
                 </div>
 
+                {/* Progress bar khi uploading / compressing */}
                 {(uploading || compressing) && (
                   <div className="mb-3">
                     <div className="w-full bg-surface-container-highest rounded-full h-2 overflow-hidden">
@@ -417,6 +457,8 @@ export function ChapterDetailPage() {
                     </p>
                   </div>
                 )}
+
+                {/* Nút Cancel + Upload */}
                 <div className="flex justify-end gap-3">
                   <button
                     onClick={closeUploadModal}
@@ -439,19 +481,22 @@ export function ChapterDetailPage() {
           )}
         </div>
 
-        {/* ─── Right Column (3 cols) ─── */}
+        {/* ─── RIGHT COLUMN (3 cols): Chapter Info Panel ─── */}
         <div className="col-span-12 lg:col-span-3 space-y-panel-gap">
 
-          {/* Chapter Info Panel */}
           <div className="bg-[#1E1E20]/70 backdrop-blur-xl border border-outline-variant/30 rounded-xl p-6 space-y-6">
             <h3 className="text-xs font-medium text-primary uppercase tracking-widest border-b border-outline-variant/30 pb-3">
               Chapter Info
             </h3>
             <div className="space-y-4">
+
+              {/* Series Title */}
               <div>
                 <p className="text-xs text-on-surface-variant">Series Title</p>
                 <p className="text-sm text-on-surface font-semibold">{series.title}</p>
               </div>
+
+              {/* Deadline + Publish Date */}
               <div className="flex justify-between items-start gap-4">
                 <div>
                   <p className="text-xs text-on-surface-variant">Deadline</p>
@@ -467,6 +512,8 @@ export function ChapterDetailPage() {
                   <p className="text-sm text-on-surface">{formatDate(chapter.publishDate) || '—'}</p>
                 </div>
               </div>
+
+              {/* Total Pages + Last Updated */}
               <div className="flex justify-between items-start gap-4">
                 <div>
                   <p className="text-xs text-on-surface-variant">Total Pages</p>
@@ -478,6 +525,8 @@ export function ChapterDetailPage() {
                 </div>
               </div>
             </div>
+
+            {/* Nút "Manage Permissions" */}
             <button className="w-full border border-primary/30 text-primary py-2.5 rounded-xl text-sm font-medium hover:bg-primary/5 transition-colors">
               Manage Permissions
             </button>
@@ -489,12 +538,12 @@ export function ChapterDetailPage() {
   );
 }
 
-// ── Helper: cn for conditional classes ──
+// ── cn helper: join conditional class names ──
 function cn(...classes) {
   return classes.filter(Boolean).join(' ')
 }
 
-// ── SortablePageCard: page card có thể kéo thả ──
+// ── SortablePageCard: page card có thể kéo-thả (dùng @dnd-kit) ──
 function SortablePageCard({ page, chapterId, isMangaka, onDelete, onMarkDone }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: page.id })
   const navigate = useNavigate()
@@ -515,7 +564,8 @@ function SortablePageCard({ page, chapterId, isMangaka, onDelete, onMarkDone }) 
       className={`group bg-surface-container-low border border-outline-variant/50 rounded-xl overflow-hidden hover:shadow-[0_8px_30px_rgb(139,92,246,0.1)] transition-all ${isMangaka ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'} ${isDragging ? 'opacity-40 z-50' : ''}`}
     >
       <div className="aspect-[3/4] relative bg-surface-container-highest overflow-hidden">
-        {/* Delete button */}
+
+        {/* Nút Delete page (góc trên trái) — chỉ MANGAKA */}
         {isMangaka && (
           <button
             onClick={(e) => { e.stopPropagation(); onDelete(page) }}
@@ -525,7 +575,7 @@ function SortablePageCard({ page, chapterId, isMangaka, onDelete, onMarkDone }) 
           </button>
         )}
 
-        {/* Thumbnail */}
+        {/* Thumbnail image — grayscale mặc định, hover full color */}
         {(page.finalImageUrl || page.thumbnailUrl || page.originalImageUrl) ? (
           <img src={page.finalImageUrl || page.thumbnailUrl || page.originalImageUrl} alt={`Page ${page.pageNumber}`} className="w-full h-full object-cover grayscale opacity-80 group-hover:opacity-100 transition-opacity" />
         ) : (
@@ -534,7 +584,7 @@ function SortablePageCard({ page, chapterId, isMangaka, onDelete, onMarkDone }) 
           </div>
         )}
 
-        {/* Mark Done / Undo button */}
+        {/* Nút Mark Done / Undo — chỉ MANGAKA */}
         {isMangaka && page.status === 'COMPLETED' ? (
           <button
             onClick={(e) => { e.stopPropagation(); onMarkDone?.() }}
@@ -551,14 +601,14 @@ function SortablePageCard({ page, chapterId, isMangaka, onDelete, onMarkDone }) 
           </button>
         )}
 
-        {/* Gradient overlay + Open Workspace */}
+        {/* Gradient overlay + "Open Workspace" khi hover */}
         <div className="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-4 pointer-events-none">
           <span className="w-full bg-primary text-white py-2 rounded-lg text-xs font-medium text-center pointer-events-none">
             Open Workspace
           </span>
         </div>
 
-        {/* Page number badge */}
+        {/* Page number badge (góc trên phải) */}
         <div className="absolute top-2 right-2">
           <span className="bg-surface/80 backdrop-blur px-2 py-1 rounded text-[10px] font-bold text-on-surface border border-outline-variant">
             P. {String(page.pageNumber).padStart(2, '0')}
@@ -566,6 +616,7 @@ function SortablePageCard({ page, chapterId, isMangaka, onDelete, onMarkDone }) 
         </div>
       </div>
 
+      {/* Footer: status label + dot */}
       <div className="p-3 flex items-center justify-between">
         <span className="text-xs text-on-surface-variant">{cfg.label}</span>
         <span className={`w-2 h-2 rounded-full ${cfg.dot}`} />

@@ -576,7 +576,10 @@ export function NewSeriesPage() {
 
   return (
     <div className="max-w-5xl mx-auto space-y-panel-gap pb-12 pt-container-padding">
+
+      {/* ── Header: Back button + tiêu đề trang ─────────────────────────── */}
       <div className="mb-8">
+        {/* Nút Back — quay lại series detail (edit) hoặc series list (create) */}
         <button
           onClick={() =>
             navigate(isEdit && seriesId ? `/series/${seriesId}` : "/series")
@@ -591,6 +594,7 @@ export function NewSeriesPage() {
             {isEdit ? "Back to Series Detail" : "Back"}
           </span>
         </button>
+        {/* Tiêu đề + mô tả */}
         <h1 className="text-headline-lg font-semibold text-on-surface mb-2">
           {isEdit ? "Edit Series" : "Create New Series"}
         </h1>
@@ -601,6 +605,8 @@ export function NewSeriesPage() {
         </p>
       </div>
 
+      {/* ── Tab bar: Basic Info / Character Sheets / World & Plot ────────── */}
+      {/* Chỉ hiển thị khi edit mode */}
       {isEdit && (
         <div className="flex space-x-2 border-b border-outline-variant/50 mb-2 overflow-x-auto pb-2">
           {TABS.map((tab) => {
@@ -625,8 +631,13 @@ export function NewSeriesPage() {
         </div>
       )}
 
+      {/* ═══════════════════════════════════════════════════════════════════
+          TAB 1: BASIC INFORMATION
+      ═══════════════════════════════════════════════════════════════════ */}
       {(activeTab === "basic" || !isEdit) && (
         <>
+
+          {/* ── Section: Basic Information ───────────────────────────────── */}
           <div className="bg-surface-container border border-outline-variant/30 rounded-xl p-8 shadow-sm">
             <div className="flex items-center gap-2 mb-6">
               <Info size={16} className="text-primary" />
@@ -636,6 +647,7 @@ export function NewSeriesPage() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Input Series Title — bắt buộc */}
               <div className="md:col-span-2">
                 <label className="block font-label-md text-label-md text-on-surface-variant mb-2">
                   Series Title
@@ -648,6 +660,7 @@ export function NewSeriesPage() {
                 />
               </div>
 
+              {/* Input Subtitle / Title JP — không bắt buộc */}
               <div className="md:col-span-2">
                 <label className="block font-label-md text-label-md text-on-surface-variant mb-2">
                   Subtitle / English Title (Optional)
@@ -660,11 +673,13 @@ export function NewSeriesPage() {
                 />
               </div>
 
+              {/* Textarea Synopsis + nút help */}
               <div className="md:col-span-2">
                 <div className="flex items-center gap-2 mb-2">
                   <label className="font-label-md text-label-md text-on-surface-variant">
                     Synopsis
                   </label>
+                  {/* Nút help — mở dialog hướng dẫn viết synopsis */}
                   <button
                     type="button"
                     onClick={() => setHelpModal("synopsis")}
@@ -682,11 +697,13 @@ export function NewSeriesPage() {
                 />
               </div>
 
+              {/* ── Genre, Demographic & Tags ─────────────────────────────── */}
               <div className="md:col-span-2">
                 <div className="flex items-center gap-2 mb-2">
                   <label className="font-label-md text-label-md text-on-surface-variant">
                     Genre, Demographic & Tags
                   </label>
+                  {/* Nút help — mở dialog hướng dẫn chọn tags */}
                   <button
                     type="button"
                     onClick={() => setHelpModal("tags")}
@@ -694,11 +711,13 @@ export function NewSeriesPage() {
                   >
                     <HelpCircle size={14} />
                   </button>
+                  {/* Đếm số tags đã chọn: X/5 */}
                   <span className="ml-auto text-xs text-on-surface-variant">
                     {selectedTags.length}/5 selected
                   </span>
                 </div>
 
+                {/* Tags đã chọn — hiển thị dạng badge + nút X để bỏ chọn */}
                 {selectedTags.length > 0 && (
                   <div className="flex flex-wrap gap-2 mb-3">
                     {selectedTags.map((tag) => (
@@ -707,6 +726,7 @@ export function NewSeriesPage() {
                         className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-primary/20 text-primary text-xs font-medium border border-primary/30"
                       >
                         {tag}
+                        {/* Nút X — bỏ chọn tag */}
                         <button
                           type="button"
                           onClick={() => toggleTag(tag)}
@@ -719,6 +739,7 @@ export function NewSeriesPage() {
                   </div>
                 )}
 
+                {/* Grid các tag có thể chọn — chia theo nhóm Genre / Demographic / Tags */}
                 <div className="bg-surface-container-lowest border border-outline-variant/50 rounded-lg p-4 space-y-4">
                   {tagGroups.map((group) => (
                     <div key={group.label}>
@@ -729,6 +750,7 @@ export function NewSeriesPage() {
                         {group.options.map((opt) => {
                           const active = selectedTags.includes(opt);
                           return (
+                            /* Nút tag — click để chọn/bỏ chọn, disabled nếu đã đạt 5 tag */
                             <button
                               key={opt}
                               type="button"
@@ -755,11 +777,13 @@ export function NewSeriesPage() {
             </div>
           </div>
 
+          {/* ── Section: Cover Artwork ────────────────────────────────────── */}
           <div className="bg-surface-container border border-outline-variant/30 rounded-xl p-8 shadow-sm">
             <div className="flex items-center gap-2 mb-6">
               <h2 className="text-headline-md font-semibold text-on-surface">
                 Cover Artwork
               </h2>
+              {/* Nút help — mở dialog hướng dẫn upload cover */}
               <button
                 type="button"
                 onClick={() => setHelpModal("cover")}
@@ -770,6 +794,7 @@ export function NewSeriesPage() {
             </div>
 
             <div className="flex flex-col md:flex-row gap-8 items-start">
+              {/* Preview ảnh mới (vừa chọn) — có nút X để xóa */}
               {newCoverPreview ? (
                 <div className="w-full md:w-48 aspect-[3/4] bg-surface-container-lowest rounded-lg overflow-hidden relative group border border-outline-variant/30">
                   <img
@@ -777,6 +802,7 @@ export function NewSeriesPage() {
                     alt="Cover preview"
                     className="w-full h-full object-cover"
                   />
+                  {/* Nút X — bỏ ảnh vừa chọn */}
                   <button
                     type="button"
                     onClick={clearNewCover}
@@ -786,12 +812,14 @@ export function NewSeriesPage() {
                   </button>
                 </div>
               ) : showExistingCover ? (
+                /* Ảnh cover hiện tại (edit mode) — hover để thấy "Replace Cover" */
                 <div className="w-full md:w-48 aspect-[3/4] bg-surface-container-lowest rounded-lg overflow-hidden relative group border border-outline-variant/30">
                   <img
                     src={coverImageUrl}
                     alt="Current cover"
                     className="w-full h-full object-cover"
                   />
+                  {/* Overlay "Replace Cover" — click để chọn ảnh mới */}
                   <div
                     onClick={() => fileInputRef.current?.click()}
                     className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center cursor-pointer"
@@ -803,6 +831,7 @@ export function NewSeriesPage() {
                   </div>
                 </div>
               ) : (
+                /* Upload area (dashed border) — click để chọn ảnh cover */
                 <div
                   onClick={() => fileInputRef.current?.click()}
                   className="w-full md:w-48 aspect-[3/4] bg-surface-container-lowest border-2 border-dashed border-outline-variant rounded-lg flex flex-col items-center justify-center text-on-surface-variant hover:border-primary hover:text-primary cursor-pointer transition-all group overflow-hidden relative"
@@ -816,6 +845,7 @@ export function NewSeriesPage() {
                 </div>
               )}
 
+              {/* Input file ẩn — trigger từ click vào upload area */}
               <input
                 ref={fileInputRef}
                 type="file"
@@ -824,6 +854,7 @@ export function NewSeriesPage() {
                 onChange={handleFileSelect}
               />
 
+              {/* Requirements box — thông số yêu cầu cho ảnh bìa */}
               <div className="flex-1 space-y-4">
                 <div className="bg-surface-container-high/30 p-4 rounded-lg border border-outline-variant/20">
                   <h3 className="font-label-md text-primary mb-1">Requirements</h3>
@@ -843,6 +874,7 @@ export function NewSeriesPage() {
             </div>
           </div>
 
+          {/* ── Nút "Create Series" / "Save Basic Info" — submit form ────── */}
           <div className="flex justify-end gap-3">
             <button
               type="button"
@@ -860,6 +892,9 @@ export function NewSeriesPage() {
         </>
       )}
 
+      {/* ═══════════════════════════════════════════════════════════════════
+          TAB 2: CHARACTER SHEETS
+      ═══════════════════════════════════════════════════════════════════ */}
       {isEdit && activeTab === "characters" && (
         <CharacterEditorSection
           name={charName}
@@ -879,6 +914,7 @@ export function NewSeriesPage() {
           characters={characters}
           onEdit={handleEditCharacter}
           onDelete={handleDeleteCharacter}
+          /* Nút "Next: World & Plot" — chuyển sang tab 3 */
           secondaryAction={
             <button
               type="button"
@@ -891,6 +927,9 @@ export function NewSeriesPage() {
         />
       )}
 
+      {/* ═══════════════════════════════════════════════════════════════════
+          TAB 3: WORLD & PLOT
+      ═══════════════════════════════════════════════════════════════════ */}
       {isEdit && activeTab === "worldplot" && (
         <WorldPlotEditorSection
           loading={loadingProfile}
@@ -914,6 +953,7 @@ export function NewSeriesPage() {
           uploadProgress={uploadProgressWorldPlot}
           showProgress={savingWorldPlot}
           saveLabel="Save World & Plot"
+          /* Nút "Back: Characters" — quay lại tab 2 */
           secondaryAction={
             <button
               type="button"
@@ -926,6 +966,7 @@ export function NewSeriesPage() {
         />
       )}
 
+      {/* ── Help Dialog — hiển thị hướng dẫn khi click nút help ────────── */}
       <Dialog
         open={!!helpModal}
         onClose={() => setHelpModal(null)}

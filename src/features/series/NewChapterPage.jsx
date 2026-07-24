@@ -73,7 +73,8 @@ export function NewChapterPage() {
 
   return (
     <div className="pb-28 px-container-padding pt-container-padding">
-      {/* Back link */}
+
+      {/* ── Nút back — quay lại chapter detail (edit) hoặc series detail (create) ── */}
       <button
         onClick={() => {
           if (isChapterEdit) {
@@ -88,7 +89,7 @@ export function NewChapterPage() {
         {isChapterEdit ? 'Back to Chapter Detail' : 'Back to Series Detail'}
       </button>
 
-      {/* Header */}
+      {/* ── Header: tiêu đề + mô tả ────────────────────────────────────── */}
       <h1 className="text-3xl font-bold text-on-surface mb-2">
         {isChapterEdit ? 'Edit Chapter' : 'Create Chapter'}
       </h1>
@@ -96,16 +97,19 @@ export function NewChapterPage() {
         {isChapterEdit ? 'Update chapter details and manage the production workflow.' : 'Set up a new chapter and initiate the production workflow.'}
       </p>
 
-      {/* Form Grid */}
+      {/* ═══════════════════════════════════════════════════════════════
+          FORM: Chapter Information + Production Planning
+      ═══════════════════════════════════════════════════════════════ */}
       <div className="space-y-panel-gap">
 
-        {/* ═══ Chapter Information ═══ */}
+        {/* ── Section: Chapter Information ─────────────────────────────── */}
         <section className="bg-[#1E1E20] border border-[#3F3F46] rounded-xl p-6">
           <div className="flex items-center gap-3 mb-6 border-b border-outline-variant pb-3">
             <Info size={22} className="text-primary" />
             <h2 className="text-xl font-semibold text-on-surface">Chapter Information</h2>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Input Chapter Number — bắt buộc, phải là số > 0 */}
             <div className="flex flex-col gap-2">
               <label className="text-sm font-medium text-on-surface-variant">
                 Chapter Number <span className="text-error">*</span>
@@ -120,6 +124,7 @@ export function NewChapterPage() {
               />
             </div>
 
+            {/* Input Chapter Title — bắt buộc */}
             <div className="flex flex-col gap-2 md:col-span-2">
               <label className="text-sm font-medium text-on-surface-variant">
                 Chapter Title <span className="text-error">*</span>
@@ -132,6 +137,7 @@ export function NewChapterPage() {
               />
             </div>
 
+            {/* Rich Editor Chapter Summary — không bắt buộc */}
             <div className="flex flex-col gap-2 md:col-span-2">
               <label className="text-sm font-medium text-on-surface-variant">
                 Chapter Summary
@@ -146,13 +152,14 @@ export function NewChapterPage() {
           </div>
         </section>
 
-        {/* ═══ Production Planning ═══ */}
+        {/* ── Section: Production Planning ─────────────────────────────── */}
         <section className="bg-[#1E1E20] border border-[#3F3F46] rounded-xl p-6">
           <div className="flex items-center gap-3 mb-6 border-b border-outline-variant pb-3">
             <Calendar size={22} className="text-primary" />
             <h2 className="text-xl font-semibold text-on-surface">Production Planning</h2>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Input Estimated Page Count — số trang dự kiến */}
             <div className="flex flex-col gap-2">
               <label className="text-sm font-medium text-on-surface-variant">
                 Estimated Page Count
@@ -168,6 +175,7 @@ export function NewChapterPage() {
               />
             </div>
 
+            {/* Input Deadline Date — hạn chót (date picker) */}
             <div className="flex flex-col gap-2">
               <label className="text-sm font-medium text-on-surface-variant">
                 Deadline Date
@@ -184,11 +192,13 @@ export function NewChapterPage() {
 
       </div>
 
-      {/* Sticky Footer */}
+      {/* ── Sticky Footer: Cancel + Submit buttons ─────────────────────── */}
+      {/* Fixed ở bottom, chỉnh left dựa vào sidebar collapsed */}
       <div
         className={`fixed bottom-0 right-0 z-40 bg-surface-container-lowest/80 backdrop-blur-xl border-t border-outline-variant p-6 ${collapsed ? 'left-0' : 'left-[280px]'}`}
       >
         <div className="max-w-5xl mx-auto flex flex-col md:flex-row justify-end items-center gap-4">
+          {/* Nút Cancel — quay lại mà không lưu */}
           <button
             type="button"
             onClick={handleCancel}
@@ -196,6 +206,7 @@ export function NewChapterPage() {
           >
             Cancel
           </button>
+          {/* Nút Create Chapter / Save Changes — submit form */}
           <button
             type="button"
             disabled={!canSubmit}
